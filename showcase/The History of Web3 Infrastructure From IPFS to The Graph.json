@@ -1,0 +1,2578 @@
+{
+  "taskInfo": {
+    "id": "a8fe48c8-501d-4ef5-8a06-7202aec60815",
+    "topic": "The History of Web3 Infrastructure: From IPFS to The Graph",
+    "status": "completed",
+    "createdAt": "2025-07-09T04:39:18.890012Z",
+    "dataSourcePreference": "dataset_wikipedia_en"
+  },
+  "exportedAt": "2025-07-09T05:38:29.286Z",
+  "eventsCount": 42,
+  "events": [
+    {
+      "id": "8e8989e2-9f3b-49fd-b1b2-ff747a98102b",
+      "event_date_str": "over time",
+      "description": "The internet itself was designed around principles of decentralization, allowing an unknown network of machines to be organically connected, addressed, and updated over time without a central administration.",
+      "main_entities": [
+        {
+          "entity_id": "fc72c313-4c38-406b-adba-4886733c2cfd",
+          "original_name": "Internet",
+          "entity_type": "network",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "over time(1960s-1990s)",
+        "display_text": "1960s-1990s",
+        "precision": "decade",
+        "start_year": 1960,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 1999,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The internet itself was designed around principles of decentralization, allowing an unknown network of machines to be organically connected, addressed, and updated over time without a central administration.",
+          "event_date_str": "over time",
+          "date_info": {
+            "original_text": "over time(1960s-1990s)",
+            "display_text": "1960s-1990s",
+            "precision": "decade",
+            "start_year": 1960,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 1999,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "The internet itself was designed around principles of decentralization, allowing an unknown network of machines to be organically connected, addressed, and updated over time without a central administration."
+        }
+      ],
+      "source_text_snippet": "The internet itself was designed around principles of decentralization, allowing an unknown network of machines to be organically connected, addressed, and updated over time without a central administration.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "21c1512e-08e0-4457-998c-b5c57a8dab75",
+      "event_date_str": "recentralization",
+      "description": "The rise of cloud computing and large platforms that served the needs of Web 2.0 led to a recentralization of the internet around those services.",
+      "main_entities": [
+        {
+          "entity_id": "5dd4a7fb-242c-4ca9-9f3c-8ab9d4d8e375",
+          "original_name": "Cloud computing",
+          "entity_type": "technology",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "f905ed8f-70fa-42a3-8201-ca87b42affd3",
+          "original_name": "Web 2.0",
+          "entity_type": "technology",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "fc72c313-4c38-406b-adba-4886733c2cfd",
+          "original_name": "Internet",
+          "entity_type": "network",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "recentralization(2000s-2010s)",
+        "display_text": "2000s-2010s",
+        "precision": "decade",
+        "start_year": 2000,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2019,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The rise of cloud computing and large platforms that served the needs of Web 2.0 led to a recentralization of the internet around those services.",
+          "event_date_str": "recentralization",
+          "date_info": {
+            "original_text": "recentralization(2000s-2010s)",
+            "display_text": "2000s-2010s",
+            "precision": "decade",
+            "start_year": 2000,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2019,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "The rise of cloud computing and large platforms that served the needs of Web 2.0 led to a recentralization of the internet around those services."
+        }
+      ],
+      "source_text_snippet": "The rise of cloud computing and large platforms that served the needs of Web 2.0 led to a recentralization of the internet around those services.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "7179c701-21e1-4ca3-b92a-112e2bc581bb",
+      "event_date_str": "earliest successful decentralized protocols",
+      "description": "BitTorrent and other peer-to-peer filesharing networks are one of the earliest successful decentralized protocols, allowing for file sharing and storage without a central archive, and allowing large files to be shared by many participants who could not store it in its entirety.",
+      "main_entities": [
+        {
+          "entity_id": "95f53f9a-1162-4082-a1e7-db3c3961d0a0",
+          "original_name": "BitTorrent",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "4ad9ab24-938c-4c57-938b-5247c13ac73e",
+          "original_name": "Peer-to-peer file sharing",
+          "entity_type": "technology",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "earliest successful decentralized protocols(2000s)",
+        "display_text": "2000s",
+        "precision": "decade",
+        "start_year": 2000,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2009,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "BitTorrent and other peer-to-peer filesharing networks are one of the earliest successful decentralized protocols, allowing for file sharing and storage without a central archive, and allowing large files to be shared by many participants who could not store it in its entirety.",
+          "event_date_str": "earliest successful decentralized protocols",
+          "date_info": {
+            "original_text": "earliest successful decentralized protocols(2000s)",
+            "display_text": "2000s",
+            "precision": "decade",
+            "start_year": 2000,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2009,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "BitTorrent and other peer-to-peer filesharing networks are one of the earliest successful decentralized protocols, allowing for file sharing and storage without a central archive, and allowing large files to be shared by many participants who could not store it in its entirety."
+        }
+      ],
+      "source_text_snippet": "BitTorrent and other peer-to-peer filesharing networks are one of the earliest successful decentralized protocols, allowing for file sharing and storage without a central archive, and allowing large files to be shared by many participants who could not store it in its entirety.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "68931470-e762-461d-a87a-3d86e8ce42e1",
+      "event_date_str": "more recent example",
+      "description": "Blockchain networks are a more recent example of decentralized tools and systems, in particular built on low-trust networks and transactions.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "more recent example(2010s)",
+        "display_text": "2010s",
+        "precision": "decade",
+        "start_year": 2010,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2019,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Blockchain networks are a more recent example of decentralized tools and systems, in particular built on low-trust networks and transactions.",
+          "event_date_str": "more recent example",
+          "date_info": {
+            "original_text": "more recent example(2010s)",
+            "display_text": "2010s",
+            "precision": "decade",
+            "start_year": 2010,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2019,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "Blockchain networks are a more recent example of decentralized tools and systems, in particular built on low-trust networks and transactions."
+        }
+      ],
+      "source_text_snippet": "Blockchain networks are a more recent example of decentralized tools and systems, in particular built on low-trust networks and transactions.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "a40cd098-9e3a-4657-8c1a-c0f8411127b7",
+      "event_date_str": "2013–2014",
+      "description": "Gavin Wood was one of the founders of the Ethereum blockchain.",
+      "main_entities": [
+        {
+          "entity_id": "b1c0aeab-bc90-4645-8f45-c1f4dc5b52d0",
+          "original_name": "以太坊",
+          "entity_type": "product",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "0357cb33-61ae-4f12-8e6a-8b8ebc5ab5d4",
+          "original_name": "Vitalik Buterin",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "2ffd95b4-9732-4d27-b64f-b443d22df9eb",
+          "original_name": "Charles Hoskinson",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "0173c6cf-654f-4ae4-a151-7148dc3bbc5f",
+          "original_name": "Anthony Di Iorio",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "6e7c132d-a651-4300-9c6c-214fa6508311",
+          "original_name": "Joseph Lubin",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2013–2014",
+        "display_text": "2013-2014",
+        "precision": "year",
+        "start_year": 2013,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2014,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood was one of the founders of the Ethereum blockchain.",
+          "event_date_str": "2013–2014",
+          "date_info": {
+            "original_text": "2013–2014",
+            "display_text": "2013-2014",
+            "precision": "year",
+            "start_year": 2013,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2014,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "He was one of the founders of the Ethereum blockchain, which he has described as \"one computer for the entire planet,\" with Vitalik Buterin, Charles Hoskinson, Anthony Di Iorio, and Joseph Lubin during 2013–2014."
+        }
+      ],
+      "source_text_snippet": "He was one of the founders of the Ethereum blockchain, which he has described as \"one computer for the entire planet,\" with Vitalik Buterin, Charles Hoskinson, Anthony Di Iorio, and Joseph Lubin during 2013–2014.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "136d7cec-1b74-4ec2-a97c-5183dea0c810",
+      "event_date_str": "2013",
+      "description": "The concepts of web3 were first represented.",
+      "main_entities": [
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2013",
+        "display_text": "2013",
+        "precision": "year",
+        "start_year": 2013,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2013,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The concepts of web3 were first represented.",
+          "event_date_str": "2013",
+          "date_info": {
+            "original_text": "2013",
+            "display_text": "2013",
+            "precision": "year",
+            "start_year": 2013,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2013,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "The concepts of web3 were first represented in 2013."
+        }
+      ],
+      "source_text_snippet": "The concepts of web3 were first represented in 2013.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "50cb5685-e61b-4a93-bc7c-9f697704adf8",
+      "event_date_str": "2014",
+      "description": "The term \"web3\" was coined by Polkadot founder and Ethereum co-founder Gavin Wood, referring to a \"decentralized online ecosystem based on blockchain.\"",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "2014",
+        "display_text": "2014",
+        "precision": "year",
+        "start_year": 2014,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2014,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": true,
+      "sources": [
+        {
+          "original_description": "The term \"web3\" was coined by Ethereum co-founder Gavin Wood.",
+          "event_date_str": "2014",
+          "date_info": {
+            "original_text": "2014",
+            "display_text": "2014",
+            "precision": "year",
+            "start_year": 2014,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2014,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "The term \"web3\" was coined in 2014 by Ethereum co-founder Gavin Wood, and the idea gained interest in 2021 from cryptocurrency enthusiasts, large technology companies, and venture capital firms."
+        },
+        {
+          "original_description": "The term \"web3\" was coined by Polkadot founder and Ethereum co-founder Gavin Wood, referring to a \"decentralized online ecosystem based on blockchain.\"",
+          "event_date_str": "2014",
+          "date_info": {
+            "original_text": "2014",
+            "display_text": "2014",
+            "precision": "year",
+            "start_year": 2014,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2014,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "The term \"web3\" was coined by Polkadot founder and Ethereum co-founder Gavin Wood in 2014, referring to a \"decentralized online ecosystem based on blockchain.\""
+        }
+      ],
+      "source_text_snippet": "The term \"web3\" was coined in 2014 by Ethereum co-founder Gavin Wood, and the idea gained interest in 2021 from cryptocurrency enthusiasts, large technology companies, and venture capital firms.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "2fe88b01-7046-46e2-b6d6-d22701897e28",
+      "event_date_str": "2014",
+      "description": "Gavin Wood released the paper defining the Ethereum Virtual Machine.",
+      "main_entities": [
+        {
+          "entity_id": "b1c0aeab-bc90-4645-8f45-c1f4dc5b52d0",
+          "original_name": "以太坊",
+          "entity_type": "product",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2014",
+        "display_text": "2014",
+        "precision": "year",
+        "start_year": 2014,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2014,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood released the paper defining the Ethereum Virtual Machine.",
+          "event_date_str": "2014",
+          "date_info": {
+            "original_text": "2014",
+            "display_text": "2014",
+            "precision": "year",
+            "start_year": 2014,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2014,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "He also released the paper defining the Ethereum Virtual Machine, the runtime system for smart contracts in Ethereum, in 2014."
+        }
+      ],
+      "source_text_snippet": "He also released the paper defining the Ethereum Virtual Machine, the runtime system for smart contracts in Ethereum, in 2014.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "d5bf0d10-3f46-4538-b2f8-55be3c7d3114",
+      "event_date_str": "May 2014",
+      "description": "Juan Benet founded Protocol Labs.",
+      "main_entities": [
+        {
+          "entity_id": "1c78355f-f83d-4097-8a8c-19fba7a30906",
+          "original_name": "Juan Benet",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "cfb475e2-17cc-47ce-aa90-ad2f3f185d0c",
+          "original_name": "Protocol Labs",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "May 2014",
+        "display_text": "May 2014",
+        "precision": "month",
+        "start_year": 2014,
+        "start_month": 5,
+        "start_day": null,
+        "end_year": 2014,
+        "end_month": 5,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Juan Benet founded Protocol Labs.",
+          "event_date_str": "May 2014",
+          "date_info": {
+            "original_text": "May 2014",
+            "display_text": "May 2014",
+            "precision": "month",
+            "start_year": 2014,
+            "start_month": 5,
+            "start_day": null,
+            "end_year": 2014,
+            "end_month": 5,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "IPFS was created by Juan Benet, who later founded Protocol Labs in May 2014."
+        }
+      ],
+      "source_text_snippet": "IPFS was created by Juan Benet, who later founded Protocol Labs in May 2014.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "8cef69bb-62f5-4e79-989f-2c9dc8d4421a",
+      "event_date_str": "2015",
+      "description": "Parity Technologies, a blockchain infrastructure company, was founded by Gavin Wood and Jutta Steiner.",
+      "main_entities": [
+        {
+          "entity_id": "724094af-cb0f-4d22-97f6-b2e206e1d7a4",
+          "original_name": "Gavin Wood",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2015",
+        "display_text": "2015",
+        "precision": "year",
+        "start_year": 2015,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2015,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Parity Technologies, a blockchain infrastructure company, was founded by Gavin Wood and Jutta Steiner.",
+          "event_date_str": "2015",
+          "date_info": {
+            "original_text": "2015",
+            "display_text": "2015",
+            "precision": "year",
+            "start_year": 2015,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2015,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "The Polkadot SDK and other core technology components are being developed by Parity Technologies, a blockchain infrastructure company founded in 2015 by Gavin Wood and Jutta Steiner."
+        }
+      ],
+      "source_text_snippet": "The Polkadot SDK and other core technology components are being developed by Parity Technologies, a blockchain infrastructure company founded in 2015 by Gavin Wood and Jutta Steiner.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "5027151b-7668-417d-a803-03a651896594",
+      "event_date_str": "February 2015",
+      "description": "An alpha version of IPFS was launched.",
+      "main_entities": [
+        {
+          "entity_id": "f4fdf423-d694-44b7-9cd6-fdf593536c22",
+          "original_name": "InterPlanetary File System",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "February 2015",
+        "display_text": "February 2015",
+        "precision": "month",
+        "start_year": 2015,
+        "start_month": 2,
+        "start_day": null,
+        "end_year": 2015,
+        "end_month": 2,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "An alpha version of IPFS was launched.",
+          "event_date_str": "February 2015",
+          "date_info": {
+            "original_text": "February 2015",
+            "display_text": "February 2015",
+            "precision": "month",
+            "start_year": 2015,
+            "start_month": 2,
+            "start_day": null,
+            "end_year": 2015,
+            "end_month": 2,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "An alpha version was launched in February 2015, and by October of the same year was described by TechCrunch as 'quickly spreading by word of mouth.'"
+        }
+      ],
+      "source_text_snippet": "An alpha version was launched in February 2015, and by October of the same year was described by TechCrunch as 'quickly spreading by word of mouth.'",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "0879770b-5385-4e43-9b81-1834f89b21fb",
+      "event_date_str": "October of the same year",
+      "description": "IPFS was described by TechCrunch as \"quickly spreading by word of mouth.\"",
+      "main_entities": [
+        {
+          "entity_id": "f4fdf423-d694-44b7-9cd6-fdf593536c22",
+          "original_name": "InterPlanetary File System",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "83519067-d3e6-464a-910a-404a17696712",
+          "original_name": "TechCrunch",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "October of the same year(October 2015)",
+        "display_text": "October 2015",
+        "precision": "month",
+        "start_year": 2015,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2015,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "IPFS was described by TechCrunch as \"quickly spreading by word of mouth.\"",
+          "event_date_str": "October of the same year",
+          "date_info": {
+            "original_text": "October of the same year(October 2015)",
+            "display_text": "October 2015",
+            "precision": "month",
+            "start_year": 2015,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2015,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "and by October of the same year was described by TechCrunch as \"quickly spreading by word of mouth.\""
+        }
+      ],
+      "source_text_snippet": "and by October of the same year was described by TechCrunch as \"quickly spreading by word of mouth.\"",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "305ac2fe-1e1b-4930-8dc3-b29ebd98c060",
+      "event_date_str": "2016",
+      "description": "The white paper for Polkadot was published by Wood.",
+      "main_entities": [
+        {
+          "entity_id": "724094af-cb0f-4d22-97f6-b2e206e1d7a4",
+          "original_name": "Gavin Wood",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "116c39ac-c11b-485d-a69a-84f9a24bf428",
+          "original_name": "Polka dot",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2016",
+        "display_text": "2016",
+        "precision": "year",
+        "start_year": 2016,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2016,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The white paper for Polkadot was published by Wood.",
+          "event_date_str": "2016",
+          "date_info": {
+            "original_text": "2016",
+            "display_text": "2016",
+            "precision": "year",
+            "start_year": 2016,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2016,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "The white paper for Polkadot was published by Wood in 2016."
+        }
+      ],
+      "source_text_snippet": "The white paper for Polkadot was published by Wood in 2016.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "89a7a760-b96b-4bcc-be54-10007bd63515",
+      "event_date_str": "January 2016",
+      "description": "Gavin Wood left the Ethereum Foundation.",
+      "main_entities": [
+        {
+          "entity_id": "b1c0aeab-bc90-4645-8f45-c1f4dc5b52d0",
+          "original_name": "以太坊",
+          "entity_type": "product",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "January 2016",
+        "display_text": "January 2016",
+        "precision": "month",
+        "start_year": 2016,
+        "start_month": 1,
+        "start_day": null,
+        "end_year": 2016,
+        "end_month": 1,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood left the Ethereum Foundation.",
+          "event_date_str": "January 2016",
+          "date_info": {
+            "original_text": "January 2016",
+            "display_text": "January 2016",
+            "precision": "month",
+            "start_year": 2016,
+            "start_month": 1,
+            "start_day": null,
+            "end_year": 2016,
+            "end_month": 1,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "Wood left the Ethereum Foundation in January 2016."
+        }
+      ],
+      "source_text_snippet": "Wood left the Ethereum Foundation in January 2016.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "aab3aa86-4b89-4fc9-8300-1a24d875a294",
+      "event_date_str": "early 2016",
+      "description": "Gavin Wood founded Parity Technologies (formerly Ethcore) with Jutta Steiner.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "early 2016",
+        "display_text": "Early 2016",
+        "precision": "year",
+        "start_year": 2016,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2016,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood founded Parity Technologies (formerly Ethcore) with Jutta Steiner.",
+          "event_date_str": "early 2016",
+          "date_info": {
+            "original_text": "early 2016",
+            "display_text": "Early 2016",
+            "precision": "year",
+            "start_year": 2016,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2016,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "The company released the Parity Ethereum software client, written in Rust, in early 2016."
+        }
+      ],
+      "source_text_snippet": "The company released the Parity Ethereum software client, written in Rust, in early 2016.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "33e8668c-5707-4472-8313-2427b46f7e2a",
+      "event_date_str": "early 2016",
+      "description": "Parity Technologies released the Parity Ethereum software client.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "early 2016",
+        "display_text": "Early 2016",
+        "precision": "year",
+        "start_year": 2016,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2016,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Parity Technologies released the Parity Ethereum software client.",
+          "event_date_str": "early 2016",
+          "date_info": {
+            "original_text": "early 2016",
+            "display_text": "Early 2016",
+            "precision": "year",
+            "start_year": 2016,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2016,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "The company released the Parity Ethereum software client, written in Rust, in early 2016."
+        }
+      ],
+      "source_text_snippet": "The company released the Parity Ethereum software client, written in Rust, in early 2016.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "c22adeab-8d1e-47eb-97cc-6103b48562e5",
+      "event_date_str": "Starting in 2016",
+      "description": "The Internet Archive and Protocol Labs began hosting a regular DWeb Summit dedicated to new technical and social communities building the decentralized web.",
+      "main_entities": [
+        {
+          "entity_id": "21f6020a-450c-4e5a-b480-23f852bf6f48",
+          "original_name": "Internet Archive",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "cfb475e2-17cc-47ce-aa90-ad2f3f185d0c",
+          "original_name": "Protocol Labs",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "Starting in 2016",
+        "display_text": "2016",
+        "precision": "year",
+        "start_year": 2016,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2016,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Internet Archive and Protocol Labs began hosting a regular DWeb Summit dedicated to new technical and social communities building the decentralized web.",
+          "event_date_str": "Starting in 2016",
+          "date_info": {
+            "original_text": "Starting in 2016",
+            "display_text": "2016",
+            "precision": "year",
+            "start_year": 2016,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2016,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "Starting in 2016, the Internet Archive and Protocol Labs began hosting a regular DWeb Summit dedicated to new technical and social communities building the decentralized web."
+        }
+      ],
+      "source_text_snippet": "Starting in 2016, the Internet Archive and Protocol Labs began hosting a regular DWeb Summit dedicated to new technical and social communities building the decentralized web.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "ece7ba84-145b-405b-84dc-a4179d824e24",
+      "event_date_str": "October 2017",
+      "description": "Polkadot raised over $144.3 million in its initial coin offering (ICO).",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "October 2017",
+        "display_text": "October 2017",
+        "precision": "month",
+        "start_year": 2017,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2017,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": true,
+      "sources": [
+        {
+          "original_description": "Polkadot raised over $144.3 million in its Initial coin offering.",
+          "event_date_str": "October 2017",
+          "date_info": {
+            "original_text": "October 2017",
+            "display_text": "October 2017",
+            "precision": "month",
+            "start_year": 2017,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2017,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "The project raised over $144.3 million in its Initial coin offering in October 2017."
+        },
+        {
+          "original_description": "Polkadot raised over $144.3 million in its initial coin offering (ICO).",
+          "event_date_str": "October 2017",
+          "date_info": {
+            "original_text": "October 2017",
+            "display_text": "October 2017",
+            "precision": "month",
+            "start_year": 2017,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2017,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "In October 2017, Polkadot raised over $144.3 million in its initial coin offering (ICO)."
+        }
+      ],
+      "source_text_snippet": "The project raised over $144.3 million in its Initial coin offering in October 2017.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "748b3b03-1555-4796-b7b5-7ec017f58eac",
+      "event_date_str": "2017",
+      "description": "Gavin Wood, Aeron Buchanan, Peter Czaban, Reto Trinkler, and Mathias Bucher established the Web3 Foundation.",
+      "main_entities": [
+        {
+          "entity_id": "724094af-cb0f-4d22-97f6-b2e206e1d7a4",
+          "original_name": "Gavin Wood",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "11eb7c66-786d-4acd-9267-66b6ebc9445f",
+          "original_name": "Zug",
+          "entity_type": "location",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2017",
+        "display_text": "2017",
+        "precision": "year",
+        "start_year": 2017,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2017,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood, Aeron Buchanan, Peter Czaban, Reto Trinkler, and Mathias Bucher established the Web3 Foundation.",
+          "event_date_str": "2017",
+          "date_info": {
+            "original_text": "2017",
+            "display_text": "2017",
+            "precision": "year",
+            "start_year": 2017,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2017,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "In 2017, Gavin Wood, Aeron Buchanan, Peter Czaban, Reto Trinkler, and Mathias Bucher, established the Web3 Foundation, a non-profit organization based in Zug, Switzerland, to promote and provide funding for blockchain-based decentralized web technologies."
+        }
+      ],
+      "source_text_snippet": "In 2017, Gavin Wood, Aeron Buchanan, Peter Czaban, Reto Trinkler, and Mathias Bucher, established the Web3 Foundation, a non-profit organization based in Zug, Switzerland, to promote and provide funding for blockchain-based decentralized web technologies.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "4a61b0cf-deb3-4ec0-a065-6f515b661ada",
+      "event_date_str": "Shortly after the ICO",
+      "description": "A vulnerability in the multi-signature wallets developed by Parity Technologies led to the freezing of approximately $150 million worth of Ethereum, including a significant portion of the funds raised.",
+      "main_entities": [
+        {
+          "entity_id": "b1c0aeab-bc90-4645-8f45-c1f4dc5b52d0",
+          "original_name": "以太坊",
+          "entity_type": "product",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "116c39ac-c11b-485d-a69a-84f9a24bf428",
+          "original_name": "Polka dot",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "Shortly after the ICO(late 2017)",
+        "display_text": "Late 2017",
+        "precision": "year",
+        "start_year": 2017,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2017,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "A vulnerability in the multi-signature wallets developed by Parity Technologies led to the freezing of approximately $150 million worth of Ethereum, including a significant portion of the funds raised.",
+          "event_date_str": "Shortly after the ICO",
+          "date_info": {
+            "original_text": "Shortly after the ICO(late 2017)",
+            "display_text": "Late 2017",
+            "precision": "year",
+            "start_year": 2017,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2017,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "Shortly after the ICO, a vulnerability in the multi-signature wallets developed by Parity Technologies led to the freezing of approximately $150 million worth of Ethereum, including a significant portion of the funds raised."
+        }
+      ],
+      "source_text_snippet": "Shortly after the ICO, a vulnerability in the multi-signature wallets developed by Parity Technologies led to the freezing of approximately $150 million worth of Ethereum, including a significant portion of the funds raised.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "37b31f96-1ae7-464c-9ea1-b19a80dbc60f",
+      "event_date_str": "2018",
+      "description": "Gavin Wood held the title of chief web officer at Parity.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "2018",
+        "display_text": "2018",
+        "precision": "year",
+        "start_year": 2018,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2018,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Gavin Wood held the title of chief web officer at Parity.",
+          "event_date_str": "2018",
+          "date_info": {
+            "original_text": "2018",
+            "display_text": "2018",
+            "precision": "year",
+            "start_year": 2018,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2018,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Gavin Wood",
+          "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+          "source_text_snippet": "He held the title of chief web officer at Parity in 2018."
+        }
+      ],
+      "source_text_snippet": "He held the title of chief web officer at Parity in 2018.",
+      "source_url": "https://en.wikipedia.org/wiki/Gavin_Wood",
+      "source_page_title": "Gavin Wood",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "05ffac33-5595-4552-96ac-9f242d01dca1",
+      "event_date_str": "2018",
+      "description": "The Graph was launched on the Ethereum blockchain.",
+      "main_entities": [
+        {
+          "entity_id": "771edea8-bab1-45cb-8cc6-0e4a0be44c5f",
+          "original_name": "The Graph",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2018",
+        "display_text": "2018",
+        "precision": "year",
+        "start_year": 2018,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2018,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph was launched on the Ethereum blockchain.",
+          "event_date_str": "2018",
+          "date_info": {
+            "original_text": "2018",
+            "display_text": "2018",
+            "precision": "year",
+            "start_year": 2018,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2018,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "The Graph was launched on the Ethereum blockchain in 2018 by Yaniv Tal, Brandon Ramirez and Jannis Pohlman."
+        }
+      ],
+      "source_text_snippet": "The Graph was launched on the Ethereum blockchain in 2018 by Yaniv Tal, Brandon Ramirez and Jannis Pohlman.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "bfb98b93-7558-4fff-83d4-8268108beb7f",
+      "event_date_str": "July 2018",
+      "description": "Phishing attacks have been distributed through Cloudflare's IPFS gateway.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "July 2018",
+        "display_text": "July 2018",
+        "precision": "month",
+        "start_year": 2018,
+        "start_month": 7,
+        "start_day": null,
+        "end_year": 2018,
+        "end_month": 7,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": true,
+      "sources": [
+        {
+          "original_description": "Network service provider Cloudflare started using IPFS.",
+          "event_date_str": "2018",
+          "date_info": {
+            "original_text": "2018",
+            "display_text": "2018",
+            "precision": "year",
+            "start_year": 2018,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2018,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "Network service provider Cloudflare started using IPFS in 2018"
+        },
+        {
+          "original_description": "Phishing attacks have been distributed through Cloudflare's IPFS gateway.",
+          "event_date_str": "July 2018",
+          "date_info": {
+            "original_text": "July 2018",
+            "display_text": "July 2018",
+            "precision": "month",
+            "start_year": 2018,
+            "start_month": 7,
+            "start_day": null,
+            "end_year": 2018,
+            "end_month": 7,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "Phishing attacks have also been distributed through Cloudflare's IPFS gateway since July 2018."
+        }
+      ],
+      "source_text_snippet": "Network service provider Cloudflare started using IPFS in 2018",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "53d18d05-cf69-4a72-ade6-80f82ca9b2ef",
+      "event_date_str": "2019",
+      "description": "Polkadot raised an additional $43 million through a private token sale.",
+      "main_entities": [
+        {
+          "entity_id": "116c39ac-c11b-485d-a69a-84f9a24bf428",
+          "original_name": "Polka dot",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2019",
+        "display_text": "2019",
+        "precision": "year",
+        "start_year": 2019,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2019,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Polkadot raised an additional $43 million through a private token sale.",
+          "event_date_str": "2019",
+          "date_info": {
+            "original_text": "2019",
+            "display_text": "2019",
+            "precision": "year",
+            "start_year": 2019,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2019,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "In 2019, Polkadot raised an additional $43 million through a private token sale."
+        }
+      ],
+      "source_text_snippet": "In 2019, Polkadot raised an additional $43 million through a private token sale.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "9c79758c-8987-453e-92d8-0db5ebcf1ea7",
+      "event_date_str": "October 2020",
+      "description": "The Graph raised $12 million in a public sale of its native GRT token.",
+      "main_entities": [
+        {
+          "entity_id": "771edea8-bab1-45cb-8cc6-0e4a0be44c5f",
+          "original_name": "The Graph",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "October 2020",
+        "display_text": "October 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph raised $12 million in a public sale of its native GRT token.",
+          "event_date_str": "October 2020",
+          "date_info": {
+            "original_text": "October 2020",
+            "display_text": "October 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In October 2020, The Graph raised $12 million in a public sale of its native GRT token."
+        }
+      ],
+      "source_text_snippet": "In October 2020, The Graph raised $12 million in a public sale of its native GRT token.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "835408a1-d4c5-45dc-be33-743e7035e76a",
+      "event_date_str": "December 2020",
+      "description": "The Graph mainnet was launched.",
+      "main_entities": [
+        {
+          "entity_id": "771edea8-bab1-45cb-8cc6-0e4a0be44c5f",
+          "original_name": "The Graph",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "December 2020",
+        "display_text": "December 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 12,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 12,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph mainnet was launched.",
+          "event_date_str": "December 2020",
+          "date_info": {
+            "original_text": "December 2020",
+            "display_text": "December 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 12,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 12,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In December 2020, the Graph mainnet was launched."
+        }
+      ],
+      "source_text_snippet": "In December 2020, the Graph mainnet was launched.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "709af857-ccd8-427f-b1a9-e38a90b7464a",
+      "event_date_str": "May 2020",
+      "description": "Polkadot launched its mainnet under a proof-of-authority consensus model.",
+      "main_entities": [
+        {
+          "entity_id": "116c39ac-c11b-485d-a69a-84f9a24bf428",
+          "original_name": "Polka dot",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "May 2020",
+        "display_text": "May 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 5,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 5,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Polkadot launched its mainnet under a proof-of-authority consensus model.",
+          "event_date_str": "May 2020",
+          "date_info": {
+            "original_text": "May 2020",
+            "display_text": "May 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 5,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 5,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Polkadot (blockchain platform)",
+          "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+          "source_text_snippet": "In May 2020, Polkadot launched its mainnet under a proof-of-authority consensus model, managed by the Web3 Foundation during its early phase."
+        }
+      ],
+      "source_text_snippet": "In May 2020, Polkadot launched its mainnet under a proof-of-authority consensus model, managed by the Web3 Foundation during its early phase.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=56086757",
+      "source_page_title": "Polkadot (blockchain platform)",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "b15d2092-842c-47a5-855e-779b25d97318",
+      "event_date_str": "June 2020",
+      "description": "The Graph raised $5 million in a token sale.",
+      "main_entities": [
+        {
+          "entity_id": "771edea8-bab1-45cb-8cc6-0e4a0be44c5f",
+          "original_name": "The Graph",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "67c813cb-9a86-4437-aace-e105bd22e8da",
+          "original_name": "Digital Currency Group",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "June 2020",
+        "display_text": "June 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 6,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 6,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph raised $5 million in a token sale.",
+          "event_date_str": "June 2020",
+          "date_info": {
+            "original_text": "June 2020",
+            "display_text": "June 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 6,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 6,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In June 2020, The Graph raised $5 million in a token sale to Framework Ventures, Coinbase Ventures, CoinDesk parent Digital Currency Group, Multicoin Capital, DTC Capital, and others."
+        }
+      ],
+      "source_text_snippet": "In June 2020, The Graph raised $5 million in a token sale to Framework Ventures, Coinbase Ventures, CoinDesk parent Digital Currency Group, Multicoin Capital, DTC Capital, and others.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "a1eca435-1d62-4f84-beb2-657b08a455ac",
+      "event_date_str": "October 2020",
+      "description": "The governance of The Graph network was turned over to an independent network called The Graph Foundation.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "October 2020",
+        "display_text": "October 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The governance of The Graph network was turned over to an independent network called The Graph Foundation.",
+          "event_date_str": "October 2020",
+          "date_info": {
+            "original_text": "October 2020",
+            "display_text": "October 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In October 2020, the governance of the network was turned over to an independent network called The Graph Foundation."
+        }
+      ],
+      "source_text_snippet": "In October 2020, the governance of the network was turned over to an independent network called The Graph Foundation.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "5c935e51-e941-4f18-91a9-2ac562661cfb",
+      "event_date_str": "October 2020",
+      "description": "Eva Beylin was nominated to serve as director of The Graph Foundation.",
+      "main_entities": [],
+      "date_info": {
+        "original_text": "October 2020",
+        "display_text": "October 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Eva Beylin was nominated to serve as director of The Graph Foundation.",
+          "event_date_str": "October 2020",
+          "date_info": {
+            "original_text": "October 2020",
+            "display_text": "October 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "Eva Beylin was nominated to serve as director."
+        }
+      ],
+      "source_text_snippet": "Eva Beylin was nominated to serve as director.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "2ca24f99-b740-40b6-a301-1d553ddac7db",
+      "event_date_str": "March 2020",
+      "description": "The Opera browser provided access to the centralized resources of the Unstoppable Domains provider by hosting content in IPFS.",
+      "main_entities": [
+        {
+          "entity_id": "5bdb6a0a-f908-413f-9659-a1ad6b951c02",
+          "original_name": "Opera (web browser)",
+          "entity_type": "software",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "276b0a5b-ed77-4cc6-b00e-261138ea6ed3",
+          "original_name": "Unstoppable Domains",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "f4fdf423-d694-44b7-9cd6-fdf593536c22",
+          "original_name": "InterPlanetary File System",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "March 2020",
+        "display_text": "March 2020",
+        "precision": "month",
+        "start_year": 2020,
+        "start_month": 3,
+        "start_day": null,
+        "end_year": 2020,
+        "end_month": 3,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Opera browser provided access to the centralized resources of the Unstoppable Domains provider by hosting content in IPFS.",
+          "event_date_str": "March 2020",
+          "date_info": {
+            "original_text": "March 2020",
+            "display_text": "March 2020",
+            "precision": "month",
+            "start_year": 2020,
+            "start_month": 3,
+            "start_day": null,
+            "end_year": 2020,
+            "end_month": 3,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "In March 2020, the Opera browser provided access to the centralized resources of the Unstoppable Domains provider by hosting content in IPFS."
+        }
+      ],
+      "source_text_snippet": "In March 2020, the Opera browser provided access to the centralized resources of the Unstoppable Domains provider by hosting content in IPFS.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "a2ae508c-5d0e-4e37-852c-3fc95f14809a",
+      "event_date_str": "2021",
+      "description": "The idea of web3 gained popularity.",
+      "main_entities": [
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2021",
+        "display_text": "2021",
+        "precision": "year",
+        "start_year": 2021,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The idea of web3 gained popularity.",
+          "event_date_str": "2021",
+          "date_info": {
+            "original_text": "2021",
+            "display_text": "2021",
+            "precision": "year",
+            "start_year": 2021,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "In 2021, the idea of web3 gained popularity. Particular interest spiked toward the end of 2021, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies."
+        }
+      ],
+      "source_text_snippet": "In 2021, the idea of web3 gained popularity. Particular interest spiked toward the end of 2021, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "30f9a2d8-ee73-426f-b5b3-867b92808b81",
+      "event_date_str": "toward the end of 2021",
+      "description": "Particular interest in web3 spiked, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies.",
+      "main_entities": [
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "5b91c695-3ec7-4726-95a4-129f3db8d3f1",
+          "original_name": "Technologist",
+          "entity_type": "group",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "6e5e498e-86cf-44cb-be62-89329c82a92e",
+          "original_name": "Company",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "toward the end of 2021(late 2021)",
+        "display_text": "Late 2021",
+        "precision": "year",
+        "start_year": 2021,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Particular interest in web3 spiked, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies.",
+          "event_date_str": "toward the end of 2021",
+          "date_info": {
+            "original_text": "toward the end of 2021(late 2021)",
+            "display_text": "Late 2021",
+            "precision": "year",
+            "start_year": 2021,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "Particular interest spiked toward the end of 2021, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies."
+        }
+      ],
+      "source_text_snippet": "Particular interest spiked toward the end of 2021, largely due to interest from cryptocurrency enthusiasts and investments from high-profile technologists and companies.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "fb660a18-b6c3-44ad-a83a-50cadae60649",
+      "event_date_str": "October 2021",
+      "description": "Executives from venture capital firm Andreessen Horowitz traveled to Washington, DC, to lobby for the idea of web3 as a potential solution to questions about regulation of the web.",
+      "main_entities": [
+        {
+          "entity_id": "6df8debe-7029-44c1-903a-955f4d1552cf",
+          "original_name": "Andreessen Horowitz",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "fa167fa2-e655-438b-b162-58a48f87beb4",
+          "original_name": "Washington, D.C.",
+          "entity_type": "location",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "October 2021",
+        "display_text": "October 2021",
+        "precision": "month",
+        "start_year": 2021,
+        "start_month": 10,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": 10,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Executives from venture capital firm Andreessen Horowitz traveled to Washington, DC, to lobby for the idea of web3 as a potential solution to questions about regulation of the web.",
+          "event_date_str": "October 2021",
+          "date_info": {
+            "original_text": "October 2021",
+            "display_text": "October 2021",
+            "precision": "month",
+            "start_year": 2021,
+            "start_month": 10,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": 10,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "Executives from venture capital firm Andreessen Horowitz traveled to Washington, DC, in October 2021 to lobby for the idea as a potential solution to questions about regulation of the web, with which policymakers have been grappling."
+        }
+      ],
+      "source_text_snippet": "Executives from venture capital firm Andreessen Horowitz traveled to Washington, DC, in October 2021 to lobby for the idea as a potential solution to questions about regulation of the web, with which policymakers have been grappling.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "b8315978-9ec9-4d8c-8aa7-5176ceb8f832",
+      "event_date_str": "2021",
+      "description": "Sommelier announced a $1 million R&D grant from The Graph Foundation.",
+      "main_entities": [
+        {
+          "entity_id": "df2b3b3c-7a3d-4a4a-9f6b-efd4546e7c46",
+          "original_name": "Sommelier",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2021",
+        "display_text": "2021",
+        "precision": "year",
+        "start_year": 2021,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Sommelier announced a $1 million R&D grant from The Graph Foundation.",
+          "event_date_str": "2021",
+          "date_info": {
+            "original_text": "2021",
+            "display_text": "2021",
+            "precision": "year",
+            "start_year": 2021,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In 2021, Sommelier announced a $1 million R&D grant from The Graph Foundation."
+        }
+      ],
+      "source_text_snippet": "In 2021, Sommelier announced a $1 million R&D grant from The Graph Foundation.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "9c035532-4d6b-4eda-8343-5d7cc70e6bc6",
+      "event_date_str": "December 2021",
+      "description": "The Graph awarded a $48 million grant to The Guild to join The Graph as a core developer.",
+      "main_entities": [
+        {
+          "entity_id": "771edea8-bab1-45cb-8cc6-0e4a0be44c5f",
+          "original_name": "The Graph",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "0c667e48-9386-496a-af2d-fa9273f1b546",
+          "original_name": "Guild (disambiguation)",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "December 2021",
+        "display_text": "December 2021",
+        "precision": "month",
+        "start_year": 2021,
+        "start_month": 12,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": 12,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph awarded a $48 million grant to The Guild to join The Graph as a core developer.",
+          "event_date_str": "December 2021",
+          "date_info": {
+            "original_text": "December 2021",
+            "display_text": "December 2021",
+            "precision": "month",
+            "start_year": 2021,
+            "start_month": 12,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": 12,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In December 2021, The Graph awarded a $48 million grant to The Guild to join The Graph as a core developer."
+        }
+      ],
+      "source_text_snippet": "In December 2021, The Graph awarded a $48 million grant to The Guild to join The Graph as a core developer.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "66340b14-1d72-47d4-931d-90e9309d9ed4",
+      "event_date_str": "2021",
+      "description": "The idea of web3 gained interest from cryptocurrency enthusiasts, large technology companies, and venture capital firms.",
+      "main_entities": [
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "33247393-1392-41f4-9bc7-444ed08a032e",
+          "original_name": "Technology company",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "9d3155da-9143-4ed3-b38d-6871d2a81221",
+          "original_name": "List of venture capital firms",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2021",
+        "display_text": "2021",
+        "precision": "year",
+        "start_year": 2021,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The idea of web3 gained interest from cryptocurrency enthusiasts, large technology companies, and venture capital firms.",
+          "event_date_str": "2021",
+          "date_info": {
+            "original_text": "2021",
+            "display_text": "2021",
+            "precision": "year",
+            "start_year": 2021,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "The term \"web3\" was coined in 2014 by Ethereum co-founder Gavin Wood, and the idea gained interest in 2021 from cryptocurrency enthusiasts, large technology companies, and venture capital firms."
+        }
+      ],
+      "source_text_snippet": "The term \"web3\" was coined in 2014 by Ethereum co-founder Gavin Wood, and the idea gained interest in 2021 from cryptocurrency enthusiasts, large technology companies, and venture capital firms.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "46a70d42-4496-4aa7-a85b-ba7774a6be74",
+      "event_date_str": "2021",
+      "description": "BitTorrent announced the development of Project Maelstrom to develop a fully decentralized and censorship-resistant browser.",
+      "main_entities": [
+        {
+          "entity_id": "95f53f9a-1162-4082-a1e7-db3c3961d0a0",
+          "original_name": "BitTorrent",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "a8cfd82c-254b-47c5-9fb4-78e91938e1d2",
+          "original_name": "Rainberry, Inc.",
+          "entity_type": "project",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2021",
+        "display_text": "2021",
+        "precision": "year",
+        "start_year": 2021,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2021,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "BitTorrent announced the development of Project Maelstrom to develop a fully decentralized and censorship-resistant browser.",
+          "event_date_str": "2021",
+          "date_info": {
+            "original_text": "2021",
+            "display_text": "2021",
+            "precision": "year",
+            "start_year": 2021,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2021,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Decentralized web",
+          "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+          "source_text_snippet": "In 2021, BitTorrent announced the development of Project Maelstrom to develop a fully decentralized and censorship-resistant browser."
+        }
+      ],
+      "source_text_snippet": "In 2021, BitTorrent announced the development of Project Maelstrom to develop a fully decentralized and censorship-resistant browser.",
+      "source_url": "https://en.wikipedia.org/wiki/Decentralized_web",
+      "source_page_title": "Decentralized web",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "6d40e0c6-80cf-43e0-9cfb-ac0f33ba017d",
+      "event_date_str": "2022",
+      "description": "Academic researchers Tomer J. Chaffer and Justin Goldston described web3 as a possible solution to concerns about the over-centralization of the web in a few \"Big Tech\" companies.",
+      "main_entities": [
+        {
+          "entity_id": "36e17650-c69b-4ebf-9536-b44693c3236e",
+          "original_name": "Justin Goldston",
+          "entity_type": "person",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "0afa532b-02f8-49fe-8402-33153aef2219",
+          "original_name": "Web3",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "7961044b-4bca-4269-9cd9-8eefc3fcfcc2",
+          "original_name": "Big Tech",
+          "entity_type": "industry",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2022",
+        "display_text": "2022",
+        "precision": "year",
+        "start_year": 2022,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2022,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Academic researchers Tomer J. Chaffer and Justin Goldston described web3 as a possible solution to concerns about the over-centralization of the web in a few \"Big Tech\" companies.",
+          "event_date_str": "2022",
+          "date_info": {
+            "original_text": "2022",
+            "display_text": "2022",
+            "precision": "year",
+            "start_year": 2022,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2022,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "Web3",
+          "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+          "source_text_snippet": "Academic researchers, such as Tomer J. Chaffer and Justin Goldston in 2022, have described web3 as a possible solution to concerns about the over-centralization of the web in a few \"Big Tech\" companies."
+        }
+      ],
+      "source_text_snippet": "Academic researchers, such as Tomer J. Chaffer and Justin Goldston in 2022, have described web3 as a possible solution to concerns about the over-centralization of the web in a few \"Big Tech\" companies.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=69233146",
+      "source_page_title": "Web3",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "3ab0db99-7508-43be-aa1d-9310e2ad1bfb",
+      "event_date_str": "January 2022",
+      "description": "The Graph Foundation raised $50 million in a sale of digital tokens to investors led by Tiger Global Management.",
+      "main_entities": [
+        {
+          "entity_id": "9d8b4ed5-c4a2-423b-bfd7-dc65b7cb7901",
+          "original_name": "Tiger Global Management",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "January 2022",
+        "display_text": "January 2022",
+        "precision": "month",
+        "start_year": 2022,
+        "start_month": 1,
+        "start_day": null,
+        "end_year": 2022,
+        "end_month": 1,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "The Graph Foundation raised $50 million in a sale of digital tokens to investors led by Tiger Global Management.",
+          "event_date_str": "January 2022",
+          "date_info": {
+            "original_text": "January 2022",
+            "display_text": "January 2022",
+            "precision": "month",
+            "start_year": 2022,
+            "start_month": 1,
+            "start_day": null,
+            "end_year": 2022,
+            "end_month": 1,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In January 2022, The Graph Foundation raised $50 million in a sale of digital tokens to investors led by Tiger Global Management."
+        }
+      ],
+      "source_text_snippet": "In January 2022, The Graph Foundation raised $50 million in a sale of digital tokens to investors led by Tiger Global Management.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "75b2473f-0b24-4316-806e-5545eaaee65b",
+      "event_date_str": "February 2022",
+      "description": "A group of venture capital firms announced the launch of a $205 million ecosystem fund to support developers building on 'The Graph' protocol.",
+      "main_entities": [
+        {
+          "entity_id": "67c813cb-9a86-4437-aace-e105bd22e8da",
+          "original_name": "Digital Currency Group",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "February 2022",
+        "display_text": "February 2022",
+        "precision": "month",
+        "start_year": 2022,
+        "start_month": 2,
+        "start_day": null,
+        "end_year": 2022,
+        "end_month": 2,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "A group of venture capital firms announced the launch of a $205 million ecosystem fund to support developers building on 'The Graph' protocol.",
+          "event_date_str": "February 2022",
+          "date_info": {
+            "original_text": "February 2022",
+            "display_text": "February 2022",
+            "precision": "month",
+            "start_year": 2022,
+            "start_month": 2,
+            "start_day": null,
+            "end_year": 2022,
+            "end_month": 2,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "The Graph",
+          "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+          "source_text_snippet": "In February 2022, a group of venture capital firms including Digital Currency Group, Multicoin Capital, Reciprocal Ventures, gumi Cryptos Capital, NGC Ventures, and HashKey announced the launch of a $205 million ecosystem fund to support developers building on ‘The Graph’ protocol."
+        }
+      ],
+      "source_text_snippet": "In February 2022, a group of venture capital firms including Digital Currency Group, Multicoin Capital, Reciprocal Ventures, gumi Cryptos Capital, NGC Ventures, and HashKey announced the launch of a $205 million ecosystem fund to support developers building on ‘The Graph’ protocol.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=74636894",
+      "source_page_title": "The Graph",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    },
+    {
+      "id": "d9ddfba9-3b75-4a69-8244-f31f9eb21f80",
+      "event_date_str": "2022",
+      "description": "Cloudflare launched its own gateway in the IPFS system.",
+      "main_entities": [
+        {
+          "entity_id": "786a776d-652b-4754-b920-783f8dcb6530",
+          "original_name": "Cloudflare",
+          "entity_type": "organization",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        },
+        {
+          "entity_id": "f4fdf423-d694-44b7-9cd6-fdf593536c22",
+          "original_name": "InterPlanetary File System",
+          "entity_type": "UNKNOWN",
+          "status_code": 200,
+          "message": null,
+          "disambiguation_options": null,
+          "is_verified_existent": true
+        }
+      ],
+      "date_info": {
+        "original_text": "2022",
+        "display_text": "2022",
+        "precision": "year",
+        "start_year": 2022,
+        "start_month": null,
+        "start_day": null,
+        "end_year": 2022,
+        "end_month": null,
+        "end_day": null,
+        "is_bce": false
+      },
+      "is_merged": false,
+      "sources": [
+        {
+          "original_description": "Cloudflare launched its own gateway in the IPFS system.",
+          "event_date_str": "2022",
+          "date_info": {
+            "original_text": "2022",
+            "display_text": "2022",
+            "precision": "year",
+            "start_year": 2022,
+            "start_month": null,
+            "start_day": null,
+            "end_year": 2022,
+            "end_month": null,
+            "end_day": null,
+            "is_bce": false
+          },
+          "source_language": "en",
+          "source_page_title": "InterPlanetary File System",
+          "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+          "source_text_snippet": "and launched its own gateway in the system in 2022."
+        }
+      ],
+      "source_text_snippet": "and launched its own gateway in the system in 2022.",
+      "source_url": "https://en.wikipedia.org/wiki?curid=47785998",
+      "source_page_title": "InterPlanetary File System",
+      "source_language": "en",
+      "viewpoint_id": "4a947b5c-4799-4cd8-b5a1-0c1e0ecb58db"
+    }
+  ]
+}

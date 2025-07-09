@@ -1,0 +1,86 @@
+/* Import Google Fonts for scholarly atmosphere */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-parchment-50 text-scholar-900 font-sans;
+    /* Subtle paper texture (optional) */
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(139, 115, 85, 0.1) 1px,
+      transparent 0
+    );
+    background-size: 20px 20px;
+  }
+
+  /* Apply serif font to headings for scholarly feel */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-serif text-scholar-800;
+  }
+
+  /* Improve reading experience */
+  p {
+    @apply leading-relaxed-plus;
+  }
+}
+
+@layer components {
+  /* Updated button styles with parchment theme */
+  .btn {
+    @apply px-4 py-2 rounded font-medium transition-all duration-200;
+    @apply border border-transparent;
+  }
+
+  .btn-primary {
+    @apply bg-parchment-500 text-parchment-50 border-parchment-600;
+    @apply hover:bg-parchment-600 hover:shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-scholar-700 border-scholar-300;
+    @apply hover:bg-scholar-50 hover:border-scholar-400;
+  }
+
+  /* Updated input styles */
+  .input {
+    @apply w-full px-3 py-2 bg-white border border-parchment-300 rounded;
+    @apply focus:outline-none focus:border-parchment-500 focus:ring-1 focus:ring-parchment-500;
+    @apply transition-colors duration-200;
+  }
+
+  /* Quote/Note block style for status messages */
+  .scholar-note {
+    @apply border-l-4 pl-4 py-3 my-4;
+    @apply bg-parchment-100/30 border-parchment-400;
+  }
+
+  .scholar-note-success {
+    @apply border-l-4 pl-4 py-3 my-4;
+    @apply bg-sage-50/50 border-sage-400;
+  }
+
+  .scholar-note-info {
+    @apply border-l-4 pl-4 py-3 my-4;
+    @apply bg-scholar-50/50 border-scholar-300;
+  }
+
+  /* Card/Section containers */
+  .parchment-card {
+    @apply bg-white border border-parchment-300 rounded-lg;
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Subtle dividers */
+  .scholar-divider {
+    @apply border-parchment-300;
+  }
+}

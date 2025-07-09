@@ -1,0 +1,40 @@
+# web framework
+fastapi==0.115.12
+uvicorn==0.34.2
+
+# async db
+asyncpg==0.30.0
+sqlalchemy==2.0.40
+alembic==1.16.1
+psycopg2-binary==2.9.10
+pgvector==0.4.1
+
+# env
+python-dotenv==1.1.0
+
+#llm_workflow
+
+requests
+beautifulsoup4
+openai
+httpx
+
+websockets==15.0.1
+
+google-genai==1.16.1
+
+# Authentication
+bcrypt==4.3.0
+python-jose[cryptography]==3.5.0
+
+# Configuration management
+pydantic-settings==2.10.1
+
+python-dateutil==2.9.0
+
+async-lru==2.0.5
+
+sentence_transformers==4.1.0
+transformers==4.51.3
+
+httpx[http2]

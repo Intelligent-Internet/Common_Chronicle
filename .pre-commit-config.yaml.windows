@@ -1,0 +1,73 @@
+repos:
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        args: [--line-length=88]
+        exclude: ^(alembic/versions/|scripts/)
+
+  # Import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+        exclude: ^(alembic/versions/)
+
+  # Remove unused imports and variables
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --recursive
+        exclude: ^(alembic/versions/|__pycache__/)
+
+  # Fast Python linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.8
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^(alembic/versions/|__pycache__/|scripts/)
+
+  # Type checking (temporarily disabled for gradual adoption)
+  # Uncomment when ready to enforce type checking:
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.8.0
+  #   hooks:
+  #     - id: mypy
+  #       args: [--config-file=pyproject.toml]
+  #       exclude: ^(alembic/versions/|scripts/|tests/)
+  #       additional_dependencies:
+  #         - types-requests
+  #         - types-PyYAML
+  #         - types-python-jose
+  #         - types-passlib
+  #         - types-beautifulsoup4
+  #         - types-sqlalchemy
+
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: debug-statements
+
+  # Frontend checks (for React/TypeScript)
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: powershell -c "cd frontend; npm run lint"
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
