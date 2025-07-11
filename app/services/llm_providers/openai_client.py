@@ -224,7 +224,7 @@ class OpenAIClient(LLMInterface):
                         logger.debug("Starting streaming chat completion")
                         async for chunk in response_data:
                             chunk_count += 1
-                            chunk_dict = chunk.dict()
+                            chunk_dict = chunk.model_dump()
 
                             # Log chunk details for debugging
                             if (
@@ -256,32 +256,23 @@ class OpenAIClient(LLMInterface):
 
                 return generator()
             else:
-                response_dict = response_data.dict()
-
-                # Log response details
-                if response_dict.get("choices"):
-                    content = (
-                        response_dict["choices"][0]
-                        .get("message", {})
-                        .get("content", "")
-                    )
-                    content_length = len(content) if content else 0
-                    logger.debug(
-                        f"Successfully got chat completion response, content length: {content_length}"
-                    )
-                else:
-                    logger.warning(
-                        "No choices found in OpenAI chat completion response"
-                    )
-
+                # Standard non-streamed response
                 end_time = time.perf_counter()
                 duration = end_time - start_time
+                response_dict = response_data.model_dump()
 
-                # Performance and success logging
-                logger.info(
-                    f"OpenAI generate_chat_completion (non-stream) for model {effective_model} completed successfully in {duration:.4f}s. "
-                    f"Input: {len(messages)} messages, output: {content_length if 'content_length' in locals() else 'unknown'} chars"
-                )
+                # Performance logging
+                if response_dict.get("usage"):
+                    usage = response_dict["usage"]
+                    logger.info(
+                        f"OpenAI generate_chat_completion (non-stream) for model {effective_model} completed successfully in {duration:.4f}s. "
+                        f"Input: {len(messages)} messages, output: {usage.get('total_tokens')} tokens"
+                    )
+                else:
+                    logger.info(
+                        f"OpenAI generate_chat_completion (non-stream) for model {effective_model} completed successfully in {duration:.4f}s. "
+                        f"Input: {len(messages)} messages, output: {len(response_dict.get('choices', [{}])[0].get('message', {}).get('content', ''))} chars"
+                    )
 
                 if duration > 30:
                     logger.warning(f"Slow chat completion response: {duration:.4f}s")

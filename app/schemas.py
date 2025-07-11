@@ -5,7 +5,15 @@ from datetime import date, datetime, time
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from app.config import settings
 from app.models import Event
@@ -17,6 +25,9 @@ class KeywordExtractionResult(BaseModel):
     viewpoint_language: str = "und"
     translated_viewpoint: str | None = None
     error: str | None = None
+    is_verified_existent: bool | None = None
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class EntityServiceResponse(BaseModel):
@@ -36,8 +47,7 @@ class EntityServiceResponse(BaseModel):
             return str(v)
         return str(v) if v else None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class WikiPageInfoResponse(BaseModel):
@@ -65,8 +75,7 @@ class WikiPageInfoResponse(BaseModel):
             return v.lower() in ("true", "1", "yes")
         return bool(v)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserRegister(BaseModel):
@@ -93,8 +102,7 @@ class UserInfo(BaseModel):
     username: str = Field(..., description="Username")
     created_at: str = Field(..., description="Account creation timestamp")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(BaseModel):
@@ -132,8 +140,7 @@ class RawLLMEvent(BaseModel):
         description="The original text snippet from the text that describes the event, for traceability.",
     )
 
-    class Config:
-        populate_by_name = True  # Allow using alias for population
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class SourceArticle(BaseModel):
@@ -244,9 +251,11 @@ class DateRangeInfo(BaseModel):
         None, description="The original 'event_date_str' from LLM, for display context"
     )
 
-    class Config:
-        arbitrary_types_allowed = True
-        json_encoders = {date: lambda v: v.isoformat()}
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("start_date", "end_date")
+    def serialize_date(self, dt: date, _info):
+        return dt.isoformat()
 
     @model_validator(mode="after")
     def validate_date_order(self) -> "DateRangeInfo":
@@ -437,8 +446,7 @@ class MergedEventGroupSchema(BaseModel):
     # Contains all original Event objects involved in this group
     source_events: list[Event]
 
-    class Config:
-        arbitrary_types_allowed = True  # Allow Event object
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # Allow Event object
 
 
 # Pydantic model for an event after LLM extraction and entity processing
@@ -449,6 +457,8 @@ class ProcessedEvent(BaseModel):
     main_entities: list[Any] = Field(default_factory=list)
     source_text_snippet: str
     # other fields can be added as the event is processed further
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- START: Original Pydantic models for Merged Event API Response (will be modified) ---
@@ -479,8 +489,7 @@ class EventSourceInfoForAPI(BaseModel):
                 return "unknown"
         return str(v)
 
-    class Config:
-        from_attributes = True  # Pydantic v2, replaces orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- END: Original Pydantic models for Merged Event API Response ---
@@ -524,8 +533,7 @@ class TimelineEventForAPI(BaseModel):
             return str(v)
         return str(v) if v else None
 
-    class Config:
-        from_attributes = True  # Pydantic v2, replaces orm_mode
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TimelineResponse(BaseModel):
@@ -587,8 +595,7 @@ class ViewpointProgressStepInfo(BaseModel):
     message: str
     event_timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ViewpointInfo(BaseModel):
@@ -601,8 +608,7 @@ class ViewpointInfo(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ViewpointDetailResponse(BaseModel):
@@ -610,8 +616,7 @@ class ViewpointDetailResponse(BaseModel):
     progress_steps: list[ViewpointProgressStepInfo]
     timeline_events: list[TimelineEventForAPI]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Base model for Task data ---
@@ -630,8 +635,7 @@ class TaskBase(BaseModel):
     updated_at: datetime
     processed_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TaskResponse(TaskBase):
@@ -730,8 +734,7 @@ class RepresentativeEventInfo(BaseModel):
     source_page_title: str | None
     source_language: str | None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class SourceContributionInfo(BaseModel):
@@ -752,8 +755,7 @@ class MergedEventGroupOutput(BaseModel):
 class TaskResultDetailResponse(TaskBase):
     viewpoint_details: ViewpointDetailResponse | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Wiki API Response Models ---
@@ -771,8 +773,7 @@ class WikiPageTextResponse(BaseModel):
     error: str | None = None
     redirect_info: dict[str, Any] | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InterlanguageLinkResponse(BaseModel):
@@ -788,8 +789,7 @@ class InterlanguageLinkResponse(BaseModel):
     source_redirect_info: dict[str, str] | None = None
     raw_response_data: dict[str, Any] | None = None  # For debugging
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CrosslingualWikiTextResponse(BaseModel):
@@ -806,8 +806,7 @@ class CrosslingualWikiTextResponse(BaseModel):
     title: str | None = None
     page_id: int | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WikinewsArticleCore(BaseModel):
@@ -821,8 +820,7 @@ class WikinewsArticleCore(BaseModel):
     error: str | None = None
     status: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WikinewsSearchResponse(BaseModel):
@@ -835,5 +833,4 @@ class WikinewsSearchResponse(BaseModel):
     status: str
     error: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
