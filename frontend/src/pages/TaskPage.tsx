@@ -491,7 +491,7 @@ function TaskPage() {
         {/* Main Content */}
         <div className="relative px-8 pb-16 pt-8">
           <div className="max-w-7xl mx-auto">
-            <div ref={chronicleHeaderRef}>
+            <div ref={chronicleHeaderRef} className="relative z-40">
               <ChronicleHeader
                 task={task}
                 onExport={handleExport}
