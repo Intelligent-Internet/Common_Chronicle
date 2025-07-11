@@ -174,21 +174,10 @@ cython_debug/
 .pypirc
 
 
-.specstory/
 related_repo/
-gemini.py
-temp*.md
-test*.py
-temp*.json
+temp*.*
 
 
 alembic/versions/
 docs/
 *copy*
-tests/*
-
-# Specific files to ignore (instead of all .txt files)
-temp*.txt
-test*.txt
-debug*.txt
-log*.txt

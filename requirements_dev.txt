@@ -13,8 +13,6 @@ types-setuptools
 types-sqlalchemy
 types-passlib
 
-# Runtime dependencies that may be needed for development
-bcrypt
-python-jose[cryptography]
-httpx
-asyncpg
+# Testing
+pytest
+pytest-asyncio
