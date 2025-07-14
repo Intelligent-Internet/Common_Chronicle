@@ -9,6 +9,16 @@ For each event, please extract the following information:
 2.  **event_date_str**: Required. The original, verbatim text from the source that describes the date of the event. This is crucial for preserving context. Examples: "the 3rd century CE", "since the time of the Roman Empire", "In early 2002", "May 6, 2002", "recent years", "within a few years".
 3.  **enhanced_event_date_str**: Optional. When the event_date_str is vague or imprecise (e.g., "recent years", "within a few years", "around that time"), analyze the surrounding context, historical background, and other temporal clues in the text to provide a more specific time estimation. Examples: "2010s-2020s" for "recent years", "1847-1850" if the context suggests Irish Famine period for "within a few years". If the event_date_str is already specific and precise, set this field to null.
 4.  **main_entities**: Required. Identify the key entities (people, organizations, locations, etc.) involved. This field must not be empty. Each entity must contain a "name", a "language" (e.g., "en", "zh", "ja"), and a "type" (e.g., person, organization, location).
+
+   **CRITICAL ENTITY NAMING RULES:**
+   - The entity "name" MUST match the language of the source text
+   - If the source text is in Chinese, use Chinese names (e.g., "北京" not "Beijing")
+   - If the source text is in English, use English names (e.g., "Beijing" not "北京")
+   - The "language" field should match the language of the source text
+   - Extract entity names exactly as they appear in the source text whenever possible
+   - If an entity name appears in the source text, use that exact form
+   - If an entity is referenced but not explicitly named in the source, use the appropriate language version based on the source text language
+
 5.  **source_text_snippet**: Required. The original sentence or phrase from the text that describes the event, for traceability.
 
 **Special Instructions for Handling Vague Time Descriptions:**

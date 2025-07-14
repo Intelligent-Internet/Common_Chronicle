@@ -69,10 +69,19 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
         """Format events from loaded Viewpoint into API models."""
         final_event_api_objects: list[TimelineEventForAPI] = []
 
+        logger.debug(
+            f"[Format Timeline] Processing {len(viewpoint.event_associations)} event associations"
+        )
+
         for association in viewpoint.event_associations:
             db_event = association.event
             if not db_event:
                 continue
+
+            logger.debug(f"[Format Timeline] Processing event {db_event.id}")
+            logger.debug(
+                f"[Format Timeline] Event {db_event.id} has {len(db_event.entity_associations)} entity associations"
+            )
 
             # Format source contributions
             source_contributions_for_api = []
@@ -104,7 +113,15 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
             for entity_assoc in db_event.entity_associations:
                 entity = entity_assoc.entity
                 if not entity:
+                    logger.debug(
+                        f"[Format Timeline] Event {db_event.id} has entity association with no entity object"
+                    )
                     continue
+
+                logger.debug(
+                    f"[Format Timeline] Event {db_event.id} processing entity {entity.id}: entity_name='{entity.entity_name}', entity_type='{entity.entity_type}'"
+                )
+
                 api_main_entities.append(
                     ProcessedEntityInfo(
                         entity_id=str(entity.id),
@@ -116,6 +133,10 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                         is_verified_existent=entity.existence_verified,
                     )
                 )
+
+            logger.debug(
+                f"[Format Timeline] Event {db_event.id} final api_main_entities count: {len(api_main_entities)}"
+            )
 
             # Convert event date_info to proper format
             api_date_info = self._convert_date_info_to_parsed_format(
@@ -155,6 +176,10 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                     ),
                 )
             )
+
+        logger.debug(
+            f"[Format Timeline] Final result: {len(final_event_api_objects)} events formatted"
+        )
         return final_event_api_objects
 
     def _convert_date_info_to_parsed_format(

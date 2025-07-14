@@ -25,6 +25,7 @@ from app.db_handlers import (
 )
 from app.models import (
     Event,
+    EventEntityAssociation,
     EventRawEventAssociation,
     Task,
     Viewpoint,
@@ -1008,66 +1009,72 @@ class TimelineOrchestratorService:
                             "date_str"
                         ) or group.date_info.get("date")
 
-                # Date information processing and validation with robust error handling
-                try:
-                    if isinstance(group.date_info, ParsedDateInfo):
-                        parsed_date_info = group.date_info
-                    else:
-                        parsed_date_info = (
-                            ParsedDateInfo(**group.date_info)
-                            if group.date_info
+                    # Date information processing and validation with robust error handling
+                    try:
+                        if isinstance(group.date_info, ParsedDateInfo):
+                            parsed_date_info = group.date_info
+                        else:
+                            parsed_date_info = (
+                                ParsedDateInfo(**group.date_info)
+                                if group.date_info
+                                else None
+                            )
+
+                        date_info_obj = (
+                            parsed_date_info.to_date_range()
+                            if parsed_date_info
                             else None
                         )
-
-                    date_info_obj = (
-                        parsed_date_info.to_date_range() if parsed_date_info else None
-                    )
-                except Exception as e:
-                    logger.warning(
-                        f"{log_prefix}Failed to create ParsedDateInfo from group.date_info: {e}. "
-                        f"date_info: {group.date_info}"
-                    )
-                    date_info_obj = None
-
-                # Event date string determination with multiple fallback strategies
-                event_date_str_for_new_event = None
-                if date_info_obj and date_info_obj.original_text:
-                    event_date_str_for_new_event = date_info_obj.original_text
-                elif raw_date_str_from_llm:
-                    event_date_str_for_new_event = raw_date_str_from_llm
-                else:
-                    # Fallback: use date_str from first source event
-                    if group.source_events and group.source_events[0].event_date_str:
-                        event_date_str_for_new_event = group.source_events[
-                            0
-                        ].event_date_str
+                    except Exception as e:
                         logger.warning(
-                            f"{log_prefix}Using fallback event_date_str from source event for merged event: {event_date_str_for_new_event}"
+                            f"{log_prefix}Failed to create ParsedDateInfo from group.date_info: {e}. "
+                            f"date_info: {group.date_info}"
                         )
+                        date_info_obj = None
+
+                    # Event date string determination with multiple fallback strategies
+                    event_date_str_for_new_event = None
+                    if date_info_obj and date_info_obj.original_text:
+                        event_date_str_for_new_event = date_info_obj.original_text
+                    elif raw_date_str_from_llm:
+                        event_date_str_for_new_event = raw_date_str_from_llm
                     else:
-                        # Last resort: generate a basic date string
-                        if date_info_obj and date_info_obj.start_date:
-                            event_date_str_for_new_event = str(
-                                date_info_obj.start_date.year
-                            )
+                        # Fallback: use date_str from first source event
+                        if (
+                            group.source_events
+                            and group.source_events[0].event_date_str
+                        ):
+                            event_date_str_for_new_event = group.source_events[
+                                0
+                            ].event_date_str
                             logger.warning(
-                                f"{log_prefix}Generated basic event_date_str from start_date: {event_date_str_for_new_event}"
+                                f"{log_prefix}Using fallback event_date_str from source event for merged event: {event_date_str_for_new_event}"
                             )
                         else:
-                            event_date_str_for_new_event = "Unknown"
-                            logger.error(
-                                f"{log_prefix}Could not determine event_date_str for merged event, using 'Unknown'"
-                            )
+                            # Last resort: generate a basic date string
+                            if date_info_obj and date_info_obj.start_date:
+                                event_date_str_for_new_event = str(
+                                    date_info_obj.start_date.year
+                                )
+                                logger.warning(
+                                    f"{log_prefix}Generated basic event_date_str from start_date: {event_date_str_for_new_event}"
+                                )
+                            else:
+                                event_date_str_for_new_event = "Unknown"
+                                logger.error(
+                                    f"{log_prefix}Could not determine event_date_str for merged event, using 'Unknown'"
+                                )
 
-                new_merged_event = Event(
-                    description=group.description,
-                    event_date_str=event_date_str_for_new_event,
-                    date_info=(
-                        group.date_info.model_dump()
-                        if isinstance(group.date_info, ParsedDateInfo)
-                        else group.date_info
-                    ),
-                )
+                    new_merged_event = Event(
+                        description=group.description,
+                        event_date_str=event_date_str_for_new_event,
+                        date_info=(
+                            group.date_info.model_dump()
+                            if isinstance(group.date_info, ParsedDateInfo)
+                            else group.date_info
+                        ),
+                    )
+
                 db.add(new_merged_event)
                 await db.flush()  # To get the ID
 
@@ -1085,6 +1092,21 @@ class TimelineOrchestratorService:
                     db.add(
                         EventRawEventAssociation(
                             event_id=new_merged_event.id, raw_event_id=raw_event.id
+                        )
+                    )
+
+                # Collect and associate all entities from source events
+                all_source_entities = set()
+                for source_event in group.source_events:
+                    if source_event.entity_associations:
+                        for assoc in source_event.entity_associations:
+                            all_source_entities.add(assoc.entity_id)
+
+                # Create entity associations for merged event
+                for entity_id in all_source_entities:
+                    db.add(
+                        EventEntityAssociation(
+                            event_id=new_merged_event.id, entity_id=entity_id
                         )
                     )
 

@@ -10,6 +10,9 @@ from sqlalchemy.orm import selectinload
 from app.db_handlers.base import BaseDBHandler, check_local_db
 from app.models.entity import Entity
 from app.models.source_document import SourceDocument
+from app.utils.logger import setup_logger
+
+logger = setup_logger(__name__, level="DEBUG")
 
 
 class EntityDBHandler(BaseDBHandler[Entity]):
@@ -142,6 +145,10 @@ class EntityDBHandler(BaseDBHandler[Entity]):
                 # Use the first occurrence to determine entity attributes
                 sample_index = wikibase_to_indices[wikibase_item][0]
                 sample_info = entities_to_process[sample_index]
+
+                logger.info(
+                    f"Creating new entity for {wikibase_item} with attributes: {sample_info}"
+                )
 
                 entity = Entity(
                     entity_name=sample_info["title"],

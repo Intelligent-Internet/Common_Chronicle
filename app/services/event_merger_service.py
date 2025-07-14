@@ -230,11 +230,22 @@ class RawEventInput(BaseModel):
         self._description_hash: str | None = None
 
         # Precompute entity sets for fast intersection operations
+        entities_before = getattr(self.event_data, "main_entities", [])
+        logger.debug(
+            f"[RawEventInput Init] Event {self.original_id} entities_before processing: "
+            f"{entities_before} (count: {len(entities_before) if entities_before else 0})"
+        )
+
         self.processed_entities_uuids = {
             entity.entity_id
             for entity in self.event_data.main_entities
             if entity.entity_id
         }
+
+        logger.debug(
+            f"[RawEventInput Init] Event {self.original_id} processed_entities_uuids: "
+            f"{self.processed_entities_uuids} (count: {len(self.processed_entities_uuids)})"
+        )
 
         # Precompute entity types for category-based matching
         self.entity_types = {
@@ -242,6 +253,11 @@ class RawEventInput(BaseModel):
             for entity in self.event_data.main_entities
             if entity.entity_type
         }
+
+        logger.debug(
+            f"[RawEventInput Init] Event {self.original_id} entity_types: "
+            f"{self.entity_types} (count: {len(self.entity_types)})"
+        )
 
         # Convert date information to normalized range format
         if self.event_data.date_info:
@@ -303,6 +319,21 @@ class MergedEventGroup:
             f"[Group Init] Created group with event {first_raw_event.original_id}. "
             f"Initial date_info type: {type(self.representative_date_info)}"
         )
+
+        # DEBUG: Log entity information inheritance
+        logger.debug(
+            f"[Group Init] Group {self.original_id} representative_entities_uuids: "
+            f"{self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+        )
+        logger.debug(
+            f"[Group Init] Group {self.original_id} first_raw_event main_entities: "
+            f"{getattr(first_raw_event.event_data, 'main_entities', 'MISSING')}"
+        )
+        if hasattr(first_raw_event.event_data, "main_entities"):
+            logger.debug(
+                f"[Group Init] Group {self.original_id} main_entities details: "
+                f"{[{getattr(e, 'original_name', 'NO_NAME'): getattr(e, 'entity_id', 'NO_ID')} for e in first_raw_event.event_data.main_entities]}"
+            )
 
     @property
     def entity_types(self) -> set[str]:
@@ -533,9 +564,25 @@ Ensure your JSON response is valid and contains no other text or explanations ou
 
         stats["total_try_add_contribution_calls"] += 1
 
+        # DEBUG: Log entity information at start
+        logger.debug(
+            f"[Try Add] Attempting to add event {raw_event.original_id} to group {self.original_id}"
+        )
+        logger.debug(
+            f"[Try Add] New event {raw_event.original_id} entities: "
+            f"{raw_event.processed_entities_uuids} (count: {len(raw_event.processed_entities_uuids)})"
+        )
+        logger.debug(
+            f"[Try Add] Group {self.original_id} current entities: "
+            f"{self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+        )
+
         # Stage 1: Quick exclusion check
         if self.quick_exclude_check(raw_event):
             stats["quick_exclusions"] += 1
+            logger.debug(
+                f"[Try Add] Event {raw_event.original_id} excluded by quick check"
+            )
             return False
 
         # Stage 2: Rule-based matching
@@ -543,6 +590,10 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             self.source_contributions.append(raw_event)
             stats["rule_based_merges"] += 1
             logger.debug("Rule-based merge successful")
+            logger.debug(
+                f"[Try Add] Rule-based merge: added event {raw_event.original_id} to group {self.original_id}. "
+                f"Group now has {len(self.source_contributions)} contributions"
+            )
             return True
 
         # Stage 3: Calculate match score for LLM candidacy
@@ -555,9 +606,17 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             )
         )
 
+        logger.debug(
+            f"[Try Add] Event {raw_event.original_id} vs Group {self.original_id}: "
+            f"match_score={match_score}, common_entities={common_entities}"
+        )
+
         # Require at least 2 common entities for LLM consideration
         if common_entities < 2:
             stats["low_score_rejections"] += 1
+            logger.debug(
+                f"[Try Add] Event {raw_event.original_id} rejected: insufficient common entities"
+            )
             return False
 
         # Time window check: events should be within reasonable time range (3 years)
@@ -567,11 +626,17 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             and abs(self.event_year - raw_event.event_year) > 3
         ):
             stats["low_score_rejections"] += 1
+            logger.debug(
+                f"[Try Add] Event {raw_event.original_id} rejected: time window too large"
+            )
             return False
 
         # Only proceed to LLM if score is promising (raised threshold from 10 to 20)
         if match_score < 20:  # Stricter threshold for LLM consideration
             stats["low_score_rejections"] += 1
+            logger.debug(
+                f"[Try Add] Event {raw_event.original_id} rejected: low match score"
+            )
             return False
 
         # Stage 4: LLM semantic matching for high-score candidates
@@ -580,15 +645,40 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             self.source_contributions.append(raw_event)
             stats["llm_confirmed_merges"] += 1
             logger.debug(f"LLM semantic merge successful (score: {match_score})")
+            logger.debug(
+                f"[Try Add] LLM merge: added event {raw_event.original_id} to group {self.original_id}. "
+                f"Group now has {len(self.source_contributions)} contributions"
+            )
             return True
 
+        logger.debug(
+            f"[Try Add] Event {raw_event.original_id} rejected by LLM semantic match"
+        )
         return False
 
     async def finalize_representative_event(
         self, user_lang: str | None = None, default_lang: str = "en"
     ):
         if not self.source_contributions:
+            logger.debug(
+                f"[Finalize] Group {self.original_id} has no source contributions"
+            )
             return
+
+        logger.debug(
+            f"[Finalize] Starting finalization for group {self.original_id} with {len(self.source_contributions)} contributions"
+        )
+
+        # Log all contribution entities before finalization
+        for i, contrib in enumerate(self.source_contributions):
+            logger.debug(
+                f"[Finalize] Contribution {i} (ID: {contrib.original_id}) entities: "
+                f"{contrib.processed_entities_uuids} (count: {len(contrib.processed_entities_uuids)})"
+            )
+            logger.debug(
+                f"[Finalize] Contribution {i} main_entities: "
+                f"{getattr(contrib.event_data, 'main_entities', 'MISSING')}"
+            )
 
         # If there's only one event, it's automatically the representative one.
         if len(self.source_contributions) == 1:
@@ -597,6 +687,10 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             self.representative_entities_uuids = best_event.processed_entities_uuids
             self.representative_date_range = best_event.date_range
             self.representative_date_info = best_event.event_data.date_info
+            logger.debug(
+                f"[Finalize] Single event group {self.original_id}: using only contribution as representative. "
+                f"Entities: {self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+            )
             return
 
         # Prepare the list of events for the LLM to evaluate.
@@ -608,6 +702,10 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             }
             for event in self.source_contributions
         ]
+
+        logger.debug(
+            f"[Finalize] Group {self.original_id} preparing LLM evaluation for {len(events_to_evaluate)} events"
+        )
 
         prompt = f"""
 You are an expert historian AI. Your task is to analyze a list of event descriptions that refer to the same core event and select the one that is the most comprehensive and definitive summary.
@@ -672,19 +770,33 @@ Do NOT create a new description or date. Your only job is to CHOOSE the best eve
                         f"Final date_info type: {type(self.representative_date_info)}. "
                         f"date_info content: {self.representative_date_info.model_dump() if self.representative_date_info else 'None'}"
                     )
+                    logger.debug(
+                        f"[LLM Finalize] Group {self.original_id} LLM selected representative event {best_event_id}. "
+                        f"Representative entities: {self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+                    )
                     return
 
         except Exception as e:
             logger.error(f"Error during LLM selection: {e}. Falling back to heuristic.")
 
         # Fallback to heuristic if LLM fails or doesn't return a valid ID
+        logger.debug(
+            f"[Finalize] Group {self.original_id} falling back to heuristic selection"
+        )
         self._finalize_by_picking_best(user_lang, default_lang)
 
     def _finalize_by_picking_best(
         self, user_lang: str | None = None, default_lang: str = "en"
     ):
         if not self.source_contributions:
+            logger.debug(
+                f"[Heuristic] Group {self.original_id} has no source contributions"
+            )
             return
+
+        logger.debug(
+            f"[Heuristic] Starting heuristic selection for group {self.original_id}"
+        )
 
         best_candidate = self.source_contributions[0]
         best_score = -1
@@ -710,9 +822,17 @@ Do NOT create a new description or date. Your only job is to CHOOSE the best eve
                 }
                 current_score += precision_scores.get(precision, 0)
 
+            logger.debug(
+                f"[Heuristic] Group {self.original_id} event {contrib_input.original_id} score: {current_score}. "
+                f"Entities: {contrib_input.processed_entities_uuids} (count: {len(contrib_input.processed_entities_uuids)})"
+            )
+
             if current_score > best_score:
                 best_score = current_score
                 best_candidate = contrib_input
+                logger.debug(
+                    f"[Heuristic] Group {self.original_id} new best candidate: {contrib_input.original_id}"
+                )
 
         # Enhanced robustness: Ensure the best candidate always has date information
         if not best_candidate.date_range:
@@ -761,11 +881,36 @@ Do NOT create a new description or date. Your only job is to CHOOSE the best eve
             f"Final date_info type: {type(self.representative_date_info)}. "
             f"date_info content: {self.representative_date_info.model_dump() if self.representative_date_info else 'None'}"
         )
+        logger.debug(
+            f"[Heuristic Finalize] Group {self.original_id} final representative event: {best_candidate.original_id}. "
+            f"Final representative entities: {self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+        )
 
     def to_output_schema(self) -> MergedEventGroupOutput:
+        logger.debug(
+            f"[To Output] Starting output schema conversion for group {self.original_id}"
+        )
+        logger.debug(
+            f"[To Output] Group {self.original_id} representative_entities_uuids: "
+            f"{self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+        )
+        logger.debug(
+            f"[To Output] Group {self.original_id} representative_event_input main_entities: "
+            f"{getattr(self.representative_event_input.event_data, 'main_entities', 'MISSING')}"
+        )
+
         # Finalize the representative event data from the best candidate
         final_rep_event_data = self.representative_event_input.event_data.model_copy()
         timestamp_for_db: datetime | None = None
+
+        logger.debug(
+            f"[To Output] Group {self.original_id} final_rep_event_data main_entities: "
+            f"{getattr(final_rep_event_data, 'main_entities', 'MISSING')}"
+        )
+        logger.debug(
+            f"[To Output] Group {self.original_id} final_rep_event_data main_entities_processed: "
+            f"{getattr(final_rep_event_data, 'main_entities_processed', 'MISSING')}"
+        )
 
         # Update date details and calculate timestamp from the merged date range
         if self.representative_date_range:
@@ -785,20 +930,32 @@ Do NOT create a new description or date. Your only job is to CHOOSE the best eve
         )
 
         # Build the representative event part of the output
+        main_entities_for_output = (
+            final_rep_event_data.main_entities_processed
+            if final_rep_event_data.main_entities_processed is not None
+            else [e.model_dump() for e in final_rep_event_data.main_entities]
+        )
+
+        logger.debug(
+            f"[To Output] Group {self.original_id} main_entities_for_output: "
+            f"{main_entities_for_output} (count: {len(main_entities_for_output) if main_entities_for_output else 0})"
+        )
+
         representative_event_info = RepresentativeEventInfo(
             event_date_str=final_rep_event_data.event_date_str,
             description=final_rep_event_data.description,
-            main_entities=(
-                final_rep_event_data.main_entities_processed
-                if final_rep_event_data.main_entities_processed is not None
-                else [e.model_dump() for e in final_rep_event_data.main_entities]
-            ),
+            main_entities=main_entities_for_output,
             date_info=final_date_info,  # Use the preserved ParsedDateInfo
             timestamp=timestamp_for_db,
             source_text_snippet=self.representative_event_input.event_data.source_text_snippet,
             source_url=self.representative_event_input.source_info.page_url,
             source_page_title=self.representative_event_input.source_info.page_title,
             source_language=self.representative_event_input.source_info.language,
+        )
+
+        logger.debug(
+            f"[To Output] Group {self.original_id} created RepresentativeEventInfo with main_entities: "
+            f"{getattr(representative_event_info, 'main_entities', 'MISSING')}"
         )
 
         # Build the source contributions part of the output
@@ -811,11 +968,18 @@ Do NOT create a new description or date. Your only job is to CHOOSE the best eve
         ]
 
         # Combine into the final schema object
-        return MergedEventGroupOutput(
+        final_output = MergedEventGroupOutput(
             representative_event=representative_event_info,
             source_contributions=source_contributions_info,
             original_id=self.original_id,
         )
+
+        logger.debug(
+            f"[To Output] Group {self.original_id} final output main_entities: "
+            f"{getattr(final_output.representative_event, 'main_entities', 'MISSING')}"
+        )
+
+        return final_output
 
 
 class EventMergerService:
@@ -881,6 +1045,14 @@ class EventMergerService:
         # 1. Convert DB ORM Events to internal RawEventInput Pydantic models
         processed_raw_events = []
         for event in events:
+            logger.debug(f"[DB Convert] Processing DB event {event.id}")
+            logger.debug(
+                f"[DB Convert] Event {event.id} entity_associations count: {len(event.entity_associations) if event.entity_associations else 0}"
+            )
+            logger.debug(
+                f"[DB Convert] Event {event.id} raw_events count: {len(event.raw_events) if event.raw_events else 0}"
+            )
+
             # This is the critical step where data from the DB is shaped into our internal models.
             # We assume event.date_info is a dict that conforms to ParsedDateInfo schema.
             if event.date_info and isinstance(event.date_info, dict):
@@ -909,17 +1081,56 @@ class EventMergerService:
                 primary_raw_event.source_text_snippet if primary_raw_event else None
             )
 
+            # Convert entity associations to main_entities format
+            main_entities_list = []
+            for assoc in event.entity_associations:
+                logger.debug(
+                    f"[DB Convert] Event {event.id} processing entity association: "
+                    f"entity_id={assoc.entity_id}, has_entity_attr={hasattr(assoc, 'entity')}"
+                )
+
+                entity_dict = {"entity_id": str(assoc.entity_id)}
+                # Add more entity information if available
+                if hasattr(assoc, "entity") and assoc.entity:
+                    entity_obj = assoc.entity
+                    logger.debug(
+                        f"[DB Convert] Event {event.id} entity object found: "
+                        f"entity_id={entity_obj.id}, entity_name={getattr(entity_obj, 'entity_name', 'MISSING')}, "
+                        f"entity_type={getattr(entity_obj, 'entity_type', 'MISSING')}"
+                    )
+                    entity_dict.update(
+                        {
+                            "original_name": getattr(entity_obj, "entity_name", None),
+                            "entity_type": getattr(entity_obj, "entity_type", None),
+                        }
+                    )
+                else:
+                    logger.warning(
+                        f"[DB Convert] Event {event.id} entity association {assoc.entity_id} has no entity object loaded! "
+                        f"hasattr(assoc, 'entity')={hasattr(assoc, 'entity')}, "
+                        f"assoc.entity={getattr(assoc, 'entity', 'MISSING')}"
+                    )
+                main_entities_list.append(entity_dict)
+
+            logger.debug(
+                f"[DB Convert] Event {event.id} converted main_entities: "
+                f"{main_entities_list} (count: {len(main_entities_list)})"
+            )
+
             event_data_for_merger = EventDataForMerger(
                 id=str(event.id),
                 description=event.description,
                 event_date_str=event.event_date_str,
                 date_info=date_info_model,  # Use the validated model
-                main_entities=[
-                    {"entity_id": str(assoc.entity_id)}
-                    for assoc in event.entity_associations
-                ],
+                main_entities=main_entities_list,
                 source_text_snippet=snippet,
             )
+
+            logger.debug(
+                f"[DB Convert] Event {event.id} EventDataForMerger main_entities: "
+                f"{getattr(event_data_for_merger, 'main_entities', 'MISSING')}"
+            )
+
             # Source info can be reconstructed here if needed, or assumed to be part of the event model
             source_info_for_merger = SourceInfoForMerger(
                 language=getattr(primary_raw_event, "language", None),
@@ -934,8 +1145,16 @@ class EventMergerService:
                 )
             )
 
+        logger.debug(
+            f"[DB Convert] Converted {len(processed_raw_events)} DB events to RawEventInput objects"
+        )
+
         # 2. Use the existing merge_events logic, but get back the internal groups
         merged_groups = await self._perform_merge(processed_raw_events)
+
+        logger.debug(
+            f"[Merge Complete] Created {len(merged_groups)} merged groups from {len(processed_raw_events)} events"
+        )
 
         # 3. Finalize each group (e.g., synthesize description)
         for group in merged_groups:
@@ -943,9 +1162,18 @@ class EventMergerService:
 
         # 4. Finalize and convert to output format
         output_instructions = []
-        for group in merged_groups:
+        for i, group in enumerate(merged_groups):
+            logger.debug(
+                f"[Final Convert] Processing group {i+1}/{len(merged_groups)} (ID: {group.original_id})"
+            )
             await group.finalize_representative_event(user_lang=self.user_lang)
-            output_instructions.append(group.to_output_schema())
+            output_schema = group.to_output_schema()
+            output_instructions.append(output_schema)
+            logger.debug(
+                f"[Final Convert] Group {group.original_id} output main_entities: "
+                f"{getattr(output_schema.representative_event, 'main_entities', 'MISSING')} "
+                f"(count: {len(output_schema.representative_event.main_entities) if output_schema.representative_event.main_entities else 0})"
+            )
 
         duration = time.time() - start_time
         logger.info(

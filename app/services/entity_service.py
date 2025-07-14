@@ -59,11 +59,26 @@ class AsyncEntityService:
             )
 
             remaining_indices = []
+            updated_entities = []
             for i in still_to_process_indices:
                 req_data = requests_map[i]
                 key = (req_data["name"], req_data["language"])
                 if key in found_map:
                     entity = found_map[key]
+
+                    # Check if we need to update the entity type
+                    new_entity_type = req_data["entity_type"]
+                    if (
+                        entity.entity_type.upper() == "UNKNOWN"
+                        and new_entity_type.upper() != "UNKNOWN"
+                        and new_entity_type.upper() != entity.entity_type.upper()
+                    ):
+                        logger.info(
+                            f"[ENTITY_SERVICE] Updating entity {entity.wikibase_item} type from '{entity.entity_type}' to '{new_entity_type}'"
+                        )
+                        entity.entity_type = new_entity_type
+                        updated_entities.append(entity)
+
                     results[i] = EntityServiceResponse(
                         entity_id=entity.id,
                         message=f"Found existing entity by '{req_data['name']}({req_data['language']})'.",
@@ -72,6 +87,13 @@ class AsyncEntityService:
                     )
                 else:
                     remaining_indices.append(i)
+
+            # Flush updates if any entities were modified
+            if updated_entities:
+                await db.flush()
+                logger.info(
+                    f"[ENTITY_SERVICE] Updated {len(updated_entities)} entity types from UNKNOWN to more specific types"
+                )
             still_to_process_indices = remaining_indices
         except Exception as e:
             logger.error(
