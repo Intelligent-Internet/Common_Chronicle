@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
+    port: 5173,
     // Allow access from the custom domain
     allowedHosts: [
       'localhost',
@@ -14,11 +15,12 @@ export default defineConfig({
     ],
     proxy: {
       '/api': {
-        target: process.env.VITE_API_BASE_URL || 'https://api.your-domain.com',
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
         changeOrigin: true,
+        secure: false, // Allow self-signed certificates in development
       },
     },
     hmr: {
-    }
-  },
+      }
+    },
 })

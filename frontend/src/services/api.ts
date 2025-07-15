@@ -14,47 +14,81 @@ import type {
   TaskFailedMessage,
 } from '../types';
 
-// API base configuration
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.your-domain.com';
-const API_DOMAIN = import.meta.env.VITE_API_DOMAIN || 'api.your-domain.com';
+// Environment configuration
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const DEV_BACKEND_PORT = import.meta.env.VITE_DEV_BACKEND_PORT || 8080;
 const WS_PROTOCOL_PROD = import.meta.env.VITE_WS_PROTOCOL_PROD || 'wss';
 const WS_PROTOCOL_DEV = import.meta.env.VITE_WS_PROTOCOL_DEV || 'ws';
 
-let RAW_API_BASE_URL = DEFAULT_API_BASE_URL;
-let API_BASE_URL;
+// Utility function to check if a hostname is an IP address
+const isIpAddress = (hostname: string): boolean => {
+  // IPv4 pattern
+  const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+  // IPv6 pattern (simplified)
+  const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
 
-// Dynamically determine API_BASE_URL for local development vs. production
-const currentHostname = window.location.hostname;
-const isProductionDomain = currentHostname.includes(API_DOMAIN);
+  return ipv4Pattern.test(hostname) || ipv6Pattern.test(hostname);
+};
 
-if (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.trim() !== '') {
-  // If API_BASE_URL is explicitly set in environment variables, use it
-  API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/api`;
-  RAW_API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  console.log(`[api.ts] Using explicit API_BASE_URL: ${API_BASE_URL}`);
-} else if (isProductionDomain) {
-  // If we're on production domain, use production config
-  API_BASE_URL = `${RAW_API_BASE_URL}/api`;
-  console.log(`[api.ts] Using production API_BASE_URL: ${API_BASE_URL}`);
-} else {
-  // For development (any non-production hostname), use current hostname with dev port
-  const protocol = window.location.protocol === 'https:' ? 'http:' : 'http:'; // Assuming local backend is http
-  const port = DEV_BACKEND_PORT;
-  API_BASE_URL = `${protocol}//${currentHostname}:${port}/api`;
-  RAW_API_BASE_URL = `${protocol}//${currentHostname}:${port}`;
-  console.log(`[api.ts] Using development API_BASE_URL: ${API_BASE_URL}`);
-}
+// Utility function to check if we need to add port number
+const needsPort = (hostname: string): boolean => {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    isIpAddress(hostname) ||
+    import.meta.env.MODE === 'development'
+  );
+};
 
-// Determine the WebSocket base URL dynamically
-const WS_BASE_URL = isProductionDomain
-  ? `${WS_PROTOCOL_PROD}://${API_DOMAIN}/api`
-  : (() => {
-      const protocol = window.location.protocol === 'https:' ? WS_PROTOCOL_PROD : WS_PROTOCOL_DEV;
-      const hostname = window.location.hostname;
-      const port = DEV_BACKEND_PORT;
-      return `${protocol}://${hostname}:${port}/api`;
-    })();
+// Build API configuration
+const buildApiConfig = () => {
+  const currentHostname = window.location.hostname;
+  const currentProtocol = window.location.protocol;
+
+  // If explicit API base URL is set, use it directly
+  if (VITE_API_BASE_URL && VITE_API_BASE_URL.trim() !== '') {
+    const rawUrl = VITE_API_BASE_URL;
+    const apiUrl = `${rawUrl}/api`;
+    console.log(`[api.ts] Using explicit API_BASE_URL: ${apiUrl}`);
+    return { apiUrl, rawUrl };
+  }
+
+  // Build URL based on current hostname
+  const protocol = currentProtocol === 'https:' ? 'https:' : 'http:';
+  const portPart = needsPort(currentHostname) ? `:${DEV_BACKEND_PORT}` : '';
+  const rawUrl = `${protocol}//${currentHostname}${portPart}`;
+  const apiUrl = `${rawUrl}/api`;
+
+  console.log(`[api.ts] Auto-detected API_BASE_URL: ${apiUrl}`);
+  return { apiUrl, rawUrl };
+};
+
+// Build WebSocket URL
+const buildWebSocketUrl = () => {
+  const currentHostname = window.location.hostname;
+  const currentProtocol = window.location.protocol;
+
+  // If explicit API base URL is set, derive WebSocket URL from it
+  if (VITE_API_BASE_URL && VITE_API_BASE_URL.trim() !== '') {
+    const url = new URL(VITE_API_BASE_URL);
+    const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${url.host}/api`;
+    console.log(`[api.ts] Using explicit WebSocket URL: ${wsUrl}`);
+    return wsUrl;
+  }
+
+  // Build WebSocket URL based on current hostname
+  const wsProtocol = currentProtocol === 'https:' ? WS_PROTOCOL_PROD : WS_PROTOCOL_DEV;
+  const portPart = needsPort(currentHostname) ? `:${DEV_BACKEND_PORT}` : '';
+  const wsUrl = `${wsProtocol}://${currentHostname}${portPart}/api`;
+
+  console.log(`[api.ts] Auto-detected WebSocket URL: ${wsUrl}`);
+  return wsUrl;
+};
+
+// Initialize URLs
+const { apiUrl: API_BASE_URL } = buildApiConfig();
+const WS_BASE_URL = buildWebSocketUrl();
 
 // Create axios instance
 const api = axios.create({

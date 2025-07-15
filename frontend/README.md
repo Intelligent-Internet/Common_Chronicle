@@ -78,9 +78,13 @@ src/
 
 3. **Set up environment variables**
 
-   Create a `.env` file in the frontend directory (optional - defaults to production API):
+   Create a `.env` file in the frontend directory (optional - has intelligent defaults):
    ```env
+   # For explicit API URL (optional)
    VITE_API_BASE_URL=http://localhost:8080
+
+   # For development port (default: 8080)
+   VITE_DEV_BACKEND_PORT=8080
    ```
 
 ### Development
@@ -181,8 +185,11 @@ The frontend communicates with the backend through:
 
 ### API Configuration
 
-The app automatically detects the environment:
-- **Local Development**: Uses `http://localhost:8080/api`
+The app intelligently detects the environment and builds URLs accordingly:
+- **Domain Access**: `[domain]` → `https://[domain]/api` (no port)
+- **IP Access**: `192.168.1.100` → `http://192.168.1.100:8080/api` (with port)
+- **Local Development**: `localhost` → `http://localhost:8080/api` (with port)
+
 
 ## 💾 Data Management
 
