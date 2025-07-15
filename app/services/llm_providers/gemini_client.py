@@ -42,9 +42,13 @@ class GeminiClient(LLMInterface):
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int | None = 65536,
+        max_tokens: int | None = None,
         **kwargs: Any,
     ) -> str:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         model_name = self.default_model
 
         # Input validation and logging
@@ -188,10 +192,14 @@ class GeminiClient(LLMInterface):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int | None = 65536,
+        max_tokens: int | None = None,
         stream: bool = False,
         **kwargs: Any,
     ) -> dict[str, Any] | AsyncGenerator[dict[str, Any], None]:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         model_name = self.default_model
 
         # Input validation and logging

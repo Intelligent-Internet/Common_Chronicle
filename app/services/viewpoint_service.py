@@ -39,8 +39,12 @@ from app.models.event import Event
 from app.models.source_document import SourceDocument
 from app.schemas import ProcessedEntityInfo, ProcessedEvent, SourceArticle
 from app.services.entity_service import AsyncEntityService
-from app.services.llm_extractor import extract_timeline_events_from_text
+from app.services.llm_extractor import (
+    extract_events_from_chunks,
+    extract_timeline_events_from_text,
+)
 from app.utils.logger import setup_logger
+from app.utils.text_processing import split_text_into_chunks
 
 logger = setup_logger("viewpoint_service", level="DEBUG")
 
@@ -294,8 +298,44 @@ class ViewpointService:
 
                 return event_ids
 
-        # 3. Extract raw events from LLM
-        processed_events = await extract_timeline_events_from_text(article.text_content)
+        # 3. Extract raw events from LLM with intelligent chunking
+        text_content = article.text_content
+        text_length = len(text_content) if text_content else 0
+
+        # Determine if we need to use chunking strategy
+        chunk_size_threshold = settings.text_chunk_size_threshold
+        if text_length > chunk_size_threshold:
+            logger.info(
+                f"{log_prefix}Article text is long ({text_length} chars), using chunking strategy"
+            )
+
+            # Optimized chunking parameters for better event extraction
+            # Smaller chunks with more overlap to prevent event splitting
+            chunk_size = settings.text_chunk_size
+            overlap = settings.text_chunk_overlap
+
+            # Split text into chunks
+            chunks = split_text_into_chunks(
+                text_content, chunk_size=chunk_size, overlap=overlap
+            )
+            logger.info(
+                f"{log_prefix}Split article into {len(chunks)} chunks (chunk_size={chunk_size}, overlap={overlap})"
+            )
+
+            # Extract events from chunks in parallel
+            processed_events = await extract_events_from_chunks(
+                chunks, parent_request_id=request_id
+            )
+            logger.info(
+                f"{log_prefix}Extracted {len(processed_events)} events from {len(chunks)} chunks"
+            )
+        else:
+            logger.info(
+                f"{log_prefix}Article text is short ({text_length} chars), using single extraction"
+            )
+            # Use original single-pass extraction for shorter texts
+            processed_events = await extract_timeline_events_from_text(text_content)
+
         if not processed_events:
             logger.warning(f"{log_prefix}No events extracted from {article.title}.")
             return []

@@ -105,6 +105,32 @@ class Settings(BaseSettings):
         default=120, description="LLM extraction timeout in seconds"
     )
 
+    # ===== LLM Token Configuration =====
+    llm_event_extraction_max_tokens: int = Field(
+        default=32000, description="Maximum tokens for event extraction tasks"
+    )
+
+    llm_event_extraction_retry_max_tokens: int = Field(
+        default=65536, description="Maximum tokens for event extraction retry attempts"
+    )
+
+    llm_default_max_tokens: int = Field(
+        default=12800, description="Default maximum tokens for general LLM calls"
+    )
+
+    # ===== Text Chunking Configuration =====
+    text_chunk_size_threshold: int = Field(
+        default=16000, description="Text length threshold to trigger chunking strategy"
+    )
+
+    text_chunk_size: int = Field(
+        default=10000, description="Size of each text chunk in characters"
+    )
+
+    text_chunk_overlap: int = Field(
+        default=1000, description="Overlap between chunks in characters"
+    )
+
     timeline_generation_timeout_seconds: int = Field(
         default=600,
         description="Timeline generation timeout in seconds (default 10 minutes)",

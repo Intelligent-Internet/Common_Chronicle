@@ -108,7 +108,9 @@ async def extract_keywords_from_viewpoint(
         chat_completion_response = await llm_client.generate_chat_completion(
             messages=messages,
             temperature=0.1,
-            max_tokens=2000,
+            max_tokens=max(
+                2000, settings.llm_default_max_tokens
+            ),  # Use configured default as minimum baseline
             response_format={"type": "json_object"},
         )
 

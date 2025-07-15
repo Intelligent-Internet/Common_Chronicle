@@ -9,6 +9,8 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from app.config import settings
+
 
 class LLMInterface(ABC):
     """
@@ -21,17 +23,20 @@ class LLMInterface(ABC):
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 8000,
+        max_tokens: int = None,
         **kwargs: Any,
     ) -> str:
         """Generates text based on a given prompt."""
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
 
     @abstractmethod
     async def generate_chat_completion(
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 8000,
+        max_tokens: int = None,
         stream: bool = False,
         **kwargs: Any,
     ) -> dict[str, Any] | AsyncGenerator[dict[str, Any], None]:
@@ -40,6 +45,9 @@ class LLMInterface(ABC):
 
         Returns completion dict if stream=False, async generator if stream=True.
         """
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
 
     # Placeholder for embedding generation, can be expanded later
     # @abstractmethod

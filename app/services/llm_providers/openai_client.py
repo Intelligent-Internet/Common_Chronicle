@@ -51,9 +51,13 @@ class OpenAIClient(LLMInterface):
         self,
         prompt: str,
         temperature: float = 0.7,
-        max_tokens: int = 8000,
+        max_tokens: int = None,
         **kwargs: Any,
     ) -> str:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         # Input validation and logging
         if not prompt or not prompt.strip():
             logger.warning("Empty or whitespace-only prompt provided to generate_text")
@@ -150,10 +154,14 @@ class OpenAIClient(LLMInterface):
         self,
         messages: list[dict[str, str]],
         temperature: float = 0.7,
-        max_tokens: int = 8000,
+        max_tokens: int = None,
         stream: bool = False,
         **kwargs: Any,
     ) -> dict[str, Any] | AsyncGenerator[dict[str, Any], None]:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         # Input validation and logging
         if not messages:
             logger.error("Empty messages list provided to generate_chat_completion")

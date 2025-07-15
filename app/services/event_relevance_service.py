@@ -305,7 +305,14 @@ Relevance Scores:"""
             # Each entry is approx. '{"event_index": 12, "relevance_score": 0.25},' -> ~40-50 tokens
             # We add a buffer.
             estimated_tokens_per_event = 50
-            max_output_tokens = (len(events_batch) * estimated_tokens_per_event) + 100
+            estimated_output_tokens = (
+                len(events_batch) * estimated_tokens_per_event
+            ) + 100
+
+            # Use default max_tokens as minimum baseline for batch operations
+            max_output_tokens = max(
+                settings.llm_default_max_tokens, estimated_output_tokens
+            )
 
             try:
                 chat_completion_response = await llm_client.generate_chat_completion(
@@ -446,7 +453,7 @@ Relevance Score:"""
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.1,  # Low temperature for consistent scoring
-                max_tokens=10,  # We only need a single number
+                max_tokens=50,  # Small but reasonable amount for a single score
                 extra_body={
                     "timeout": 30
                 },  # 30 second timeout for individual evaluations

@@ -6,6 +6,7 @@ and processing historical events from text content. It serves as the core intell
 layer for the Common Chronicle system's event extraction pipeline.
 """
 
+import asyncio
 import hashlib
 import json
 import time
@@ -28,6 +29,122 @@ from app.utils.json_parser import extract_json_from_llm_response
 from app.utils.logger import setup_logger
 
 logger = setup_logger("llm_extractor", level="DEBUG")
+
+
+async def extract_events_from_chunks(
+    chunks: list[str],
+    parent_request_id: str | None = None,
+) -> list[ProcessedEvent]:
+    """
+    Extract events from multiple text chunks in parallel.
+
+    This function processes text chunks concurrently to extract events,
+    handling failures gracefully to ensure one chunk's failure doesn't
+    affect others.
+
+    Args:
+        chunks: List of text chunks to process
+        parent_request_id: Request ID for logging and tracking
+
+    Returns:
+        Combined list of all extracted events from all chunks
+    """
+    if not chunks:
+        logger.warning(
+            f"[ParentReqID: {parent_request_id}] No chunks provided for event extraction"
+        )
+        return []
+
+    logger.info(
+        f"[ParentReqID: {parent_request_id}] Starting parallel event extraction from {len(chunks)} chunks"
+    )
+
+    # Create async tasks for each chunk
+    tasks = []
+    for i, chunk in enumerate(chunks):
+        task = _extract_events_from_single_chunk(
+            chunk, i + 1, len(chunks), parent_request_id
+        )
+        tasks.append(task)
+
+    # Execute all tasks concurrently
+    chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    # Process results and collect all events
+    all_events = []
+    successful_chunks = 0
+    failed_chunks = 0
+
+    for i, result in enumerate(chunk_results):
+        if isinstance(result, Exception):
+            logger.error(
+                f"[ParentReqID: {parent_request_id}] Chunk {i + 1} failed with exception: {result}",
+                exc_info=False,
+            )
+            failed_chunks += 1
+        elif isinstance(result, list):
+            chunk_events = result
+            all_events.extend(chunk_events)
+            successful_chunks += 1
+            logger.info(
+                f"[ParentReqID: {parent_request_id}] Chunk {i + 1} extracted {len(chunk_events)} events"
+            )
+        else:
+            logger.warning(
+                f"[ParentReqID: {parent_request_id}] Chunk {i + 1} returned unexpected result type: {type(result)}"
+            )
+            failed_chunks += 1
+
+    logger.info(
+        f"[ParentReqID: {parent_request_id}] Parallel extraction complete: "
+        f"{successful_chunks} successful, {failed_chunks} failed chunks. "
+        f"Total events extracted: {len(all_events)}"
+    )
+
+    return all_events
+
+
+async def _extract_events_from_single_chunk(
+    chunk: str,
+    chunk_number: int,
+    total_chunks: int,
+    parent_request_id: str | None = None,
+) -> list[ProcessedEvent]:
+    """
+    Extract events from a single text chunk with error handling.
+
+    This is a wrapper around extract_timeline_events_from_text that adds
+    chunk-specific logging and error handling.
+
+    Args:
+        chunk: Text chunk to process
+        chunk_number: Current chunk number (1-based)
+        total_chunks: Total number of chunks being processed
+        parent_request_id: Request ID for logging
+
+    Returns:
+        List of events extracted from the chunk
+    """
+    log_prefix = (
+        f"[ParentReqID: {parent_request_id}] Chunk {chunk_number}/{total_chunks}"
+    )
+
+    try:
+        logger.debug(
+            f"{log_prefix} Starting event extraction (chunk length: {len(chunk)})"
+        )
+
+        # Call the existing event extraction function
+        events = await extract_timeline_events_from_text(chunk)
+
+        logger.debug(f"{log_prefix} Successfully extracted {len(events)} events")
+        return events
+
+    except Exception as e:
+        logger.error(f"{log_prefix} Failed to extract events: {e}", exc_info=True)
+        # Return empty list instead of raising exception to prevent
+        # one chunk's failure from affecting others
+        return []
 
 
 async def parse_date_string_with_llm(
@@ -202,6 +319,40 @@ async def extract_timeline_events_from_text(
     try:
         # --- Step 1: Extract Raw Events ---
         logger.info("Step 1: Extracting raw events from text.")
+
+        # Estimate the number of tokens needed for the response
+        # Based on text length, estimate number of events and calculate required tokens
+        text_length = len(input_text) if input_text else 0
+        estimated_events = max(
+            1, text_length // 800
+        )  # More conservative: 1 event per 800 chars instead of 1000
+
+        # Each event JSON structure needs approximately 300-500 tokens
+        # Include buffer for safety - increase based on real-world observations
+        estimated_tokens_per_event = (
+            1200  # Increased from 800 to 1200 for better safety
+        )
+        base_tokens = 3000  # Increased from 2000 to 3000 for JSON structure overhead
+
+        # Calculate estimated tokens, but use default max_tokens as minimum baseline
+        estimated_tokens = base_tokens + (estimated_events * estimated_tokens_per_event)
+
+        # Add additional safety buffer for complex JSON structures
+        safety_multiplier = 1.5  # 50% safety buffer
+        estimated_tokens_with_buffer = int(estimated_tokens * safety_multiplier)
+
+        estimated_max_tokens = min(
+            settings.llm_event_extraction_max_tokens,
+            max(
+                settings.llm_default_max_tokens,  # Use default as minimum baseline
+                estimated_tokens_with_buffer,
+            ),
+        )
+
+        logger.debug(
+            f"Text length: {text_length}, estimated events: {estimated_events}, base estimated tokens: {estimated_tokens}, with buffer: {estimated_tokens_with_buffer}, max_tokens: {estimated_max_tokens} (min baseline: {settings.llm_default_max_tokens})"
+        )
+
         chat_completion_response = await llm_service_client.generate_chat_completion(
             messages=[
                 {"role": "system", "content": EXTRACT_TIMELINE_EVENTS_PROMPT},
@@ -211,6 +362,7 @@ async def extract_timeline_events_from_text(
                 },
             ],
             temperature=0.1,
+            max_tokens=estimated_max_tokens,
             extra_body={"timeout": settings.llm_timeout_extract},
         )
 
@@ -223,9 +375,181 @@ async def extract_timeline_events_from_text(
             logger.warning("Step 1: Empty content in LLM response for raw extraction.")
             return []
 
+        logger.debug(f"Step 1: Raw LLM response length: {len(raw_content)} characters")
+
         parsed_raw_events_json = extract_json_from_llm_response(raw_content)
         if not isinstance(parsed_raw_events_json, list):
             logger.error(f"Step 1: Parsed JSON is not a list. Content: {raw_content}")
+
+            # Enhanced truncation detection - check for multiple indicators
+            is_truncated = False
+            truncation_indicators = [
+                # Common JSON truncation patterns
+                (",", "{", '["', '"'),  # Original patterns
+                # Additional patterns for field names and values
+                ('name":', 'type":', 'language":', '"zh'),
+                # Incomplete JSON structures
+                ('event_description":', 'event_date_str":', "main_entities"),
+                # Partial closing patterns
+                ("]", "}]", "}]}"),
+                # Any text that doesn't end with complete JSON
+                ("```", "```json"),
+            ]
+
+            # Check for incomplete JSON structure
+            trimmed_content = raw_content.rstrip()
+
+            # Check if content ends with any truncation indicators
+            for indicator_group in truncation_indicators:
+                if any(
+                    trimmed_content.endswith(pattern) for pattern in indicator_group
+                ):
+                    is_truncated = True
+                    break
+
+            # Additional check: if JSON parsing failed and content is substantial, likely truncated
+            if not is_truncated and len(raw_content) > 1000:
+                # Try to detect if it looks like incomplete JSON
+                if (
+                    raw_content.count("[") != raw_content.count("]")
+                    or raw_content.count("{") != raw_content.count("}")
+                    or raw_content.count('"') % 2 != 0
+                ):
+                    is_truncated = True
+                    logger.info(
+                        "Step 1: Detected JSON truncation based on unmatched brackets/quotes"
+                    )
+
+            if is_truncated:
+                logger.warning(
+                    "Step 1: JSON appears to be truncated, attempting retry with higher max_tokens"
+                )
+
+                # Retry with increased max_tokens
+                retry_estimated_tokens = estimated_tokens_with_buffer * 2
+                retry_max_tokens = min(
+                    settings.llm_event_extraction_retry_max_tokens,
+                    max(
+                        settings.llm_default_max_tokens,  # Use default as minimum baseline
+                        retry_estimated_tokens,
+                    ),
+                )
+                logger.info(
+                    f"Step 1: Retrying with increased max_tokens: {retry_max_tokens} (retry estimated: {retry_estimated_tokens}, min baseline: {settings.llm_default_max_tokens})"
+                )
+
+                try:
+                    retry_response = await llm_service_client.generate_chat_completion(
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": EXTRACT_TIMELINE_EVENTS_PROMPT,
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Please extract timeline events from the following text: \n\n{input_text}",
+                            },
+                        ],
+                        temperature=0.1,
+                        max_tokens=retry_max_tokens,
+                        extra_body={"timeout": settings.llm_timeout_extract},
+                    )
+
+                    retry_content = (
+                        retry_response.get("choices", [{}])[0]
+                        .get("message", {})
+                        .get("content", "")
+                    )
+
+                    if retry_content:
+                        logger.info(
+                            f"Step 1: Retry response length: {len(retry_content)} characters"
+                        )
+                        parsed_raw_events_json = extract_json_from_llm_response(
+                            retry_content
+                        )
+
+                        if isinstance(parsed_raw_events_json, list):
+                            logger.info("Step 1: Retry successful, got valid JSON list")
+                            raw_content = retry_content  # Update for logging
+                        else:
+                            logger.error(
+                                "Step 1: Retry also failed to produce valid JSON list"
+                            )
+
+                            # If first retry fails, try with maximum tokens
+                            if (
+                                retry_max_tokens
+                                < settings.llm_event_extraction_retry_max_tokens
+                            ):
+                                logger.warning(
+                                    "Step 1: Attempting final retry with maximum tokens"
+                                )
+                                final_retry_response = await llm_service_client.generate_chat_completion(
+                                    messages=[
+                                        {
+                                            "role": "system",
+                                            "content": EXTRACT_TIMELINE_EVENTS_PROMPT,
+                                        },
+                                        {
+                                            "role": "user",
+                                            "content": f"Please extract timeline events from the following text: \n\n{input_text}",
+                                        },
+                                    ],
+                                    temperature=0.1,
+                                    max_tokens=settings.llm_event_extraction_retry_max_tokens,
+                                    extra_body={
+                                        "timeout": settings.llm_timeout_extract
+                                    },
+                                )
+
+                                final_retry_content = (
+                                    final_retry_response.get("choices", [{}])[0]
+                                    .get("message", {})
+                                    .get("content", "")
+                                )
+
+                                if final_retry_content:
+                                    logger.info(
+                                        f"Step 1: Final retry response length: {len(final_retry_content)} characters"
+                                    )
+                                    parsed_raw_events_json = (
+                                        extract_json_from_llm_response(
+                                            final_retry_content
+                                        )
+                                    )
+
+                                    if isinstance(parsed_raw_events_json, list):
+                                        logger.info(
+                                            "Step 1: Final retry successful, got valid JSON list"
+                                        )
+                                        raw_content = final_retry_content
+                                    else:
+                                        logger.error(
+                                            "Step 1: Final retry also failed, giving up"
+                                        )
+                                        return []
+                                else:
+                                    logger.error(
+                                        "Step 1: Final retry returned empty content"
+                                    )
+                                    return []
+                            else:
+                                return []
+                    else:
+                        logger.error("Step 1: Retry returned empty content")
+                        return []
+
+                except Exception as e:
+                    logger.error(f"Step 1: Retry failed with exception: {e}")
+                    return []
+            else:
+                return []
+
+        if not isinstance(parsed_raw_events_json, list):
+            logger.error(
+                f"Step 1: Final parsed JSON is not a list. Content: {raw_content}"
+            )
             return []
 
         logger.info(f"Step 1: LLM extracted {len(parsed_raw_events_json)} raw events.")
@@ -240,7 +564,7 @@ async def extract_timeline_events_from_text(
 
         for i, event_data in enumerate(parsed_raw_events_json):
             try:
-                logger.info(f"Raw event data: {event_data}")
+                logger.debug(f"Raw event data: {event_data}")
                 raw_event = RawLLMEvent(**event_data)
                 event_id = f"event_{i}"
 
@@ -277,7 +601,7 @@ async def extract_timeline_events_from_text(
         logger.info("Step 3: Combining raw events with parsed dates.")
         processed_events: list[ProcessedEvent] = []
         for event_id, date_info in parsed_dates_map.items():
-            logger.info(f"event_id: {event_id}, date_info: {date_info}")
+            logger.debug(f"event_id: {event_id}, date_info: {date_info}")
             raw_event = raw_events_map.get(event_id)
             if not raw_event:
                 logger.warning(

@@ -5,6 +5,7 @@ from typing import Any
 
 import httpx
 
+from app.config import settings
 from app.services.llm_interface import LLMInterface
 from app.utils.logger import setup_logger
 
@@ -173,6 +174,10 @@ class OllamaClient(LLMInterface):
         max_tokens: int | None = None,  # Ollama uses "options": {"num_predict": ...}
         **kwargs: Any,
     ) -> str:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         # Input validation and logging
         if not prompt or not prompt.strip():
             logger.warning("Empty or whitespace-only prompt provided to generate_text")
@@ -255,6 +260,10 @@ class OllamaClient(LLMInterface):
         stream: bool = False,
         **kwargs: Any,
     ) -> dict[str, Any] | AsyncGenerator[dict[str, Any], None]:
+        # Use configured default if max_tokens is None
+        if max_tokens is None:
+            max_tokens = settings.llm_default_max_tokens
+
         # Input validation and logging
         if not messages:
             logger.error("Empty messages list provided to generate_chat_completion")

@@ -17,6 +17,9 @@ def extract_json_from_llm_response(text: str) -> Any | None:
     embedded in markdown code blocks or mixed with other text.
     Uses multi-step approach to locate and extract valid JSON.
     """
+    if not text or not text.strip():
+        return None
+
     # Extract content between ```json ... ``` or ``` ... ```
     match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text)
 
@@ -43,6 +46,13 @@ def extract_json_from_llm_response(text: str) -> Any | None:
     if start_index != -1:
         json_str = json_str[start_index:]
 
+    # Try to parse as-is first
+    try:
+        return json.loads(json_str)
+    except json.JSONDecodeError:
+        pass
+
+    # If direct parsing fails, try to fix truncated JSON
     # Find the last corresponding closing bracket to remove any trailing text
     last_brace = json_str.rfind("}")
     last_square = json_str.rfind("]")
@@ -50,8 +60,67 @@ def extract_json_from_llm_response(text: str) -> Any | None:
 
     if end_index != -1:
         json_str = json_str[: end_index + 1]
+        try:
+            return json.loads(json_str)
+        except json.JSONDecodeError:
+            pass
 
-    try:
-        return json.loads(json_str)
-    except json.JSONDecodeError:
+    # If still failing, try to repair common truncation patterns
+    repaired_json = _attempt_json_repair(json_str)
+    if repaired_json:
+        try:
+            return json.loads(repaired_json)
+        except json.JSONDecodeError:
+            pass
+
+    return None
+
+
+def _attempt_json_repair(json_str: str) -> str | None:
+    """
+    Attempt to repair truncated JSON by adding missing closing brackets.
+
+    This function tries to fix common JSON truncation patterns by:
+    1. Counting opening and closing brackets
+    2. Adding missing closing brackets
+    3. Removing incomplete last entries
+    """
+    if not json_str:
         return None
+
+    # Remove any trailing incomplete content
+    json_str = json_str.rstrip()
+
+    # Count brackets to determine what's missing
+    open_braces = json_str.count("{")
+    close_braces = json_str.count("}")
+    open_squares = json_str.count("[")
+    close_squares = json_str.count("]")
+
+    # If we have a reasonable amount of JSON content
+    if open_braces > 0 or open_squares > 0:
+        # Try to remove incomplete last item if it exists
+        truncated_patterns = [
+            r',\s*"[^"]*$',  # Incomplete key like: , "main
+            r",\s*{[^}]*$",  # Incomplete object like: , {"name": "test
+            r':\s*"[^"]*$',  # Incomplete value like: "name": "test
+            r":\s*[^,}\]]*$",  # Incomplete value like: "type": "organ
+        ]
+
+        for pattern in truncated_patterns:
+            if re.search(pattern, json_str):
+                json_str = re.sub(pattern, "", json_str)
+                break
+
+        # Add missing closing brackets
+        missing_braces = open_braces - close_braces
+        missing_squares = open_squares - close_squares
+
+        if missing_braces > 0:
+            json_str += "}" * missing_braces
+        if missing_squares > 0:
+            json_str += "]" * missing_squares
+
+        return json_str
+
+    return None

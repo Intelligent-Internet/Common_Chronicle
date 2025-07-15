@@ -12,7 +12,7 @@ from app.models.entity import Entity
 from app.models.source_document import SourceDocument
 from app.utils.logger import setup_logger
 
-logger = setup_logger(__name__, level="DEBUG")
+logger = setup_logger(__name__)
 
 
 class EntityDBHandler(BaseDBHandler[Entity]):
@@ -146,7 +146,7 @@ class EntityDBHandler(BaseDBHandler[Entity]):
                 sample_index = wikibase_to_indices[wikibase_item][0]
                 sample_info = entities_to_process[sample_index]
 
-                logger.info(
+                logger.debug(
                     f"Creating new entity for {wikibase_item} with attributes: {sample_info}"
                 )
 
