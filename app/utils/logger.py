@@ -6,12 +6,13 @@ Key Features:
     - Performance monitoring with context managers
     - Dynamic log level management
     - Automatic log cleanup and size management
+    - Combined size and time-based rotation (10MB max per file)
 """
 
 import datetime
 import logging
 import os
-from logging.handlers import TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from pathlib import Path
 
 LOG_DIR = Path("logs")
@@ -34,9 +35,30 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 CONSOLE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
+# Log rotation settings
+MAX_LOG_SIZE_MB = 10  # Maximum size per log file in MB
+MAX_LOG_SIZE_BYTES = MAX_LOG_SIZE_MB * 1024 * 1024
+MAX_BACKUP_COUNT = 10  # Maximum number of backup files per day
+
+
+class SafeRotatingFileHandler(RotatingFileHandler):
+    """Windows-compatible size-based rotation handler with graceful error handling."""
+
+    def doRollover(self):
+        """Override doRollover to handle Windows file permission issues gracefully."""
+        try:
+            super().doRollover()
+        except (OSError, PermissionError) as e:
+            # Log the error to stderr since we can't use the logger itself
+            import sys
+
+            error_msg = f"Log rotation failed: {e}. Continuing with current log file.\n"
+            sys.stderr.write(error_msg)
+            sys.stderr.flush()
+
 
 class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
-    """Windows-compatible file rotation handler with graceful error handling."""
+    """Windows-compatible time-based rotation handler with graceful error handling."""
 
     def doRollover(self):
         """Override doRollover to handle Windows file permission issues gracefully."""
@@ -56,6 +78,75 @@ class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
                 self.rolloverAt = self.rolloverAt + 3600
 
 
+class CombinedRotatingFileHandler(logging.Handler):
+    """
+    Combined handler that rotates logs based on both size and time.
+    Uses size-based rotation as primary mechanism with time-based daily organization.
+    """
+
+    def __init__(
+        self, base_filename, max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT
+    ):
+        super().__init__()
+        self.base_filename = base_filename
+        self.max_bytes = max_bytes
+        self.backup_count = backup_count
+        self.current_handler = None
+        self.current_date = None
+        self.current_log_file = None
+        self._setup_current_handler()
+
+    def _setup_current_handler(self):
+        """Set up the current rotating file handler."""
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+
+        # Create date-based directory
+        date_dir = LOG_DIR / current_date
+        date_dir.mkdir(exist_ok=True)
+
+        # Only create a new log file if the date has changed or this is the first setup
+        if self.current_date != current_date or self.current_log_file is None:
+            current_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            self.current_log_file = (
+                date_dir / f"{LOG_FILE_BASENAME}_{current_timestamp}.log"
+            )
+            self.current_date = current_date
+
+        # Create size-based rotating handler for current date
+        self.current_handler = SafeRotatingFileHandler(
+            self.current_log_file,
+            maxBytes=self.max_bytes,
+            backupCount=self.backup_count,
+            encoding="utf-8",
+        )
+
+        # Set the same formatter as this handler
+        if self.formatter:
+            self.current_handler.setFormatter(self.formatter)
+
+    def emit(self, record):
+        """Emit a record, rotating if necessary."""
+        # Check if we need to create a new handler for a new day
+        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        if self.current_date != current_date:
+            self._setup_current_handler()
+
+        if self.current_handler:
+            self.current_handler.emit(record)
+
+    def setFormatter(self, formatter):
+        """Set the formatter for both this handler and the current handler."""
+        super().setFormatter(formatter)
+        if self.current_handler:
+            self.current_handler.setFormatter(formatter)
+
+    def close(self):
+        """Close the current handler."""
+        if self.current_handler:
+            self.current_handler.close()
+        super().close()
+
+
 def _get_log_level(level_str: str) -> int:
     level_map = {
         "DEBUG": logging.DEBUG,
@@ -67,7 +158,7 @@ def _get_log_level(level_str: str) -> int:
     return level_map.get(level_str.upper(), logging.INFO)
 
 
-def setup_logger(name: str, level: str | None = None) -> logging.Logger:
+def setup_logger(name: str, level: str = None) -> logging.Logger:
     """Set up logger with both console and file handlers."""
     logger = logging.getLogger(name)
 
@@ -89,15 +180,9 @@ def setup_logger(name: str, level: str | None = None) -> logging.Logger:
     console_formatter = logging.Formatter(CONSOLE_FORMAT, DATE_FORMAT)
     console_handler.setFormatter(console_formatter)
 
-    # File handler with time-based rotation (safer for Windows)
-    # Rotate daily at midnight, keep 30 days of logs
-    file_handler = SafeTimedRotatingFileHandler(
-        LOG_FILE,
-        when="midnight",
-        interval=1,
-        backupCount=30,
-        encoding="utf-8",
-        utc=False,
+    # Combined file handler with size and time-based rotation
+    file_handler = CombinedRotatingFileHandler(
+        LOG_FILE, max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT
     )
     file_handler.setLevel(log_level)
     file_formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
@@ -105,6 +190,10 @@ def setup_logger(name: str, level: str | None = None) -> logging.Logger:
 
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
+
+    # Perform cleanup of old/large logs on logger setup
+    cleanup_old_logs(keep_days=7)
+
     return logger
 
 
@@ -128,10 +217,17 @@ def get_current_log_file() -> Path:
 
 def list_log_files() -> list[Path]:
     """Return a list of all log files in the log directory."""
-    # Include both current format and rotated format files
-    current_files = list(LOG_DIR.glob(f"{LOG_FILE_BASENAME}_*.log"))
-    rotated_files = list(LOG_DIR.glob(f"{LOG_FILE_BASENAME}_*.log.*"))
-    return current_files + rotated_files
+    all_files = []
+
+    # Search in all date directories
+    for date_dir in LOG_DIR.iterdir():
+        if date_dir.is_dir():
+            # Include both current format and rotated format files
+            current_files = list(date_dir.glob(f"{LOG_FILE_BASENAME}_*.log"))
+            rotated_files = list(date_dir.glob(f"{LOG_FILE_BASENAME}_*.log.*"))
+            all_files.extend(current_files + rotated_files)
+
+    return all_files
 
 
 def cleanup_old_logs(keep_days: int = 7):
@@ -143,20 +239,43 @@ def cleanup_old_logs(keep_days: int = 7):
     deleted_count = 0
     failed_count = 0
 
+    # Clean up old date directories
+    for date_dir in LOG_DIR.iterdir():
+        if date_dir.is_dir():
+            try:
+                # Parse directory name to get date
+                dir_date = datetime.datetime.strptime(date_dir.name, "%Y-%m-%d")
+                if dir_date < cutoff_time:
+                    # Delete all files in the directory
+                    for log_file in date_dir.iterdir():
+                        try:
+                            log_file.unlink()
+                            deleted_count += 1
+                        except (PermissionError, FileNotFoundError):
+                            failed_count += 1
+
+                    # Try to remove the directory if empty
+                    try:
+                        date_dir.rmdir()
+                    except (PermissionError, OSError):
+                        pass  # Directory may not be empty due to failed deletions
+
+            except ValueError:
+                # Directory name doesn't match date format, skip
+                continue
+            except Exception as e:
+                print(f"Error processing directory {date_dir}: {e}")
+                failed_count += 1
+
+    # Also clean up individual large files
     for log_file in list_log_files():
         try:
             file_time = datetime.datetime.fromtimestamp(log_file.stat().st_mtime)
             if file_time < cutoff_time:
-                # Try to delete the file
                 log_file.unlink()
-                print(f"Deleted old log file: {log_file}")
                 deleted_count += 1
-        except PermissionError as e:
-            print(f"Permission denied when deleting log file {log_file}: {e}")
+        except (PermissionError, FileNotFoundError):
             failed_count += 1
-        except FileNotFoundError:
-            # File was already deleted, ignore
-            pass
         except Exception as e:
             print(f"Error deleting log file {log_file}: {e}")
             failed_count += 1
@@ -167,7 +286,7 @@ def cleanup_old_logs(keep_days: int = 7):
         )
 
 
-def force_cleanup_large_logs(max_size_mb: int = 50):
+def force_cleanup_large_logs(max_size_mb: int = MAX_LOG_SIZE_MB):
     """
     Force cleanup of large log files to prevent disk space issues.
     Enhanced to handle Windows file locking issues gracefully.
