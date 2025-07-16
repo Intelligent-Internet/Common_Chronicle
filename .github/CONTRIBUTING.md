@@ -13,7 +13,7 @@ Thank you for your interest in contributing to Common Chronicle! This document p
 - [Testing Requirements](#testing-requirements)
 - [Commit Guidelines](#commit-guidelines)
 
-## 🎯 Project Overview
+## Project Overview
 
 Common Chronicle is an AI-powered historical research tool that transforms manual research into automated timeline generation. The project consists of:
 
@@ -22,7 +22,7 @@ Common Chronicle is an AI-powered historical research tool that transforms manua
 - **AI Integration**: Multiple LLM providers (OpenAI, Gemini, Ollama)
 - **Data Sources**: Wikipedia, Wikinews, and custom datasets
 
-## 🏛️ System Architecture
+## System Architecture
 
 The following diagram illustrates the high-level architecture of the system, showing the flow from user request to timeline generation.
 
@@ -97,7 +97,7 @@ This project utilizes a **hybrid task processing model** that combines WebSocket
 - **Real-time Progress**: The `Orchestrator` pushes live progress updates back to the client through this same WebSocket.
 - **Reliability**: The WebSocket connection also polls the database for the task's final status (`completed` or `failed`). This ensures that even if the connection is interrupted and re-established, the user will still receive the final result once it's available in the database, providing a robust fault-tolerance mechanism.
 
-## 🛠️ Development Environment Setup
+## Development Environment Setup
 
 ### Prerequisites
 - Python 3.12
@@ -203,7 +203,7 @@ After running `ALTER SYSTEM`, you must **restart the Docker container** for the 
 
 Your local Wikipedia data source is now ready! Ensure your `.env` file's `DATABASE_URL` points to this local database instance to use it.
 
-## 📝 Code Standards
+## Code Standards
 
 ### Python Code Standards
 - **Follow PEP 8** for code style
@@ -262,7 +262,7 @@ git commit --no-verify -m "Emergency fix"
 ruff --fix .
 ```
 
-## 📚 Documentation Standards
+## Documentation Standards
 
 ### Core Principles
 1. **Minimalist Approach** - Add comments only when necessary
@@ -302,7 +302,7 @@ async def calculate_relevance_score(event: TimelineEvent, viewpoint: str) -> flo
 - `HACK:` Temporary workarounds with known limitations
 - `PERF:` Performance optimization opportunities
 
-## 🔄 Contribution Process
+## Contribution Process
 
 ### For New Contributors
 1. **Fork the repository** and create a feature branch
@@ -322,7 +322,7 @@ A great way to start is by looking for issues tagged with `good first issue` or 
 - Ensure all tests pass and documentation is updated
 - Request reviews from relevant maintainers
 
-## 🧪 Testing Requirements
+## Testing Requirements
 
 ### Python Testing
 - Use `pytest` for unit and integration tests
@@ -336,7 +336,7 @@ A great way to start is by looking for issues tagged with `good first issue` or 
 - Include accessibility tests where applicable
 - Mock external dependencies appropriately
 
-## 📝 Commit Guidelines
+## Commit Guidelines
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
@@ -363,7 +363,7 @@ docs(readme): update installation instructions
 ## Submitting Issues
 Before creating an issue, please check if a similar one already exists. We provide several issue templates to help you structure your report. Please use the appropriate template for bug reports, feature requests, or questions to ensure we have all the necessary information.
 
-## 🚨 Quality Assurance
+## Quality Assurance
 
 ### Automated Checks (Pre-commit)
 - Code formatting and linting
@@ -377,12 +377,12 @@ Before creating an issue, please check if a similar one already exists. We provi
 - Documentation quality
 - Integration testing
 
-## 📞 Getting Help
+## Getting Help
 
 - **GitHub Issues**: For bug reports and feature requests
 - **GitHub Discussions**: For general questions and discussions
 
-## 📂 Configuration Files
+## Configuration Files
 
 | File | Purpose |
 |------|---------|
@@ -394,7 +394,7 @@ Before creating an issue, please check if a similar one already exists. We provi
 ### Tool Migration Notes
 **We've replaced pylint with ruff** for better performance and modern Python development.
 
-## 📄 License
+## License
 
 By contributing to Common Chronicle, you agree that your contributions will be licensed under the Apache License 2.0.
 
