@@ -128,6 +128,16 @@ cp config.env.example .env
 # As this project doesn't ship with shared migrations, you need to create an initial one.
 # Make sure your database is created, then run:
 alembic revision --autogenerate -m "Init local database"
+```
+
+Add new line to your first alembic version file:
+
+```bash
+import pgvector.sqlalchemy
+```
+
+Then you can continue:
+```bash
 alembic upgrade head
 
 # Set up pre-commit hooks
@@ -222,6 +232,12 @@ Pre-commit hooks automatically enforce code quality and consistency before each 
 
 ### Setup
 ```bash
+# First, copy the OS-specific configuration file
+# On Linux/macOS:
+cp .pre-commit-config.yaml.linux .pre-commit-config.yaml
+# On Windows:
+copy .pre-commit-config.yaml.windows .pre-commit-config.yaml
+
 # Automatic setup
 python scripts/setup-pre-commit.py
 
