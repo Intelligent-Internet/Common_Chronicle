@@ -121,13 +121,13 @@ Common Chronicle 为各类需要高效学习或研究的用户而设计：
 -   ⭐ **在 GitHub 上给我们一个 star！** 这能帮助更多人发现这个项目。
 -   🐞 **报告 Bug** 或通过创建 Issue 来建议新功能。
 -   📖 **改善文档**，使其对用户和开发者更友好。
--   🧑‍💻 **贡献代码**。请查阅我们的 **[贡献指南](./CONTRIBUTING.md)** 来开始。
+-   🧑‍💻 **贡献代码**。请查阅我们的 **[贡献指南](./.github/CONTRIBUTING.md)** 来开始。
 
 ## 🔧 开始使用
 
 想要在本地运行 Common Chronicle？我们为您提供了完整指南！
 
-**👉 [完整设置指南](./CONTRIBUTING.md#development-environment-setup)** - 为开发者提供的详细安装说明
+**👉 [完整设置指南](./.github/CONTRIBUTING.md#development-environment-setup)** - 为开发者提供的详细安装说明
 
 **快速开始：**
 ```bash
