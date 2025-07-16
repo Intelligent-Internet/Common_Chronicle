@@ -7,7 +7,52 @@ For each event, please extract the following information:
 
 1.  **event_description**: Required. A brief description of the event.
 2.  **event_date_str**: Required. The original, verbatim text from the source that describes the date of the event. This is crucial for preserving context. Examples: "the 3rd century CE", "since the time of the Roman Empire", "In early 2002", "May 6, 2002", "recent years", "within a few years".
-3.  **enhanced_event_date_str**: Optional. When the event_date_str is vague or imprecise (e.g., "recent years", "within a few years", "around that time"), analyze the surrounding context, historical background, and other temporal clues in the text to provide a more specific time estimation. Examples: "2010s-2020s" for "recent years", "1847-1850" if the context suggests Irish Famine period for "within a few years". If the event_date_str is already specific and precise, set this field to null.
+
+   **CRITICAL REQUIREMENTS FOR event_date_str:**
+   - This field MUST contain temporal expressions that can be placed on a chronological timeline
+   - MUST include date information (year, month, day, or historical periods) - NOT just time of day
+   - Do NOT include random words, conjunctions, or non-temporal terms
+   - Do NOT include geographical locations, places, or spatial references
+   - Examples of VALID temporal expressions: "1969", "July 16", "the 1960s", "during the Cold War", "before 1970", "in recent years"
+   - Examples of INVALID entries: "instead", "however", "therefore", "additionally", "meanwhile", "15:50 UTC" (time only without date)
+   - Examples of INVALID geographical references: "In British Columbia", "In New York", "In China", "At the university", "In the laboratory"
+
+   **HANDLING EVENTS WITHOUT EXPLICIT TEMPORAL INFORMATION:**
+   - If an event has no explicit temporal information in the provided text snippet, DO NOT include it in the output
+   - If an event only has time of day (e.g., "15:50 UTC", "3:00 PM") without date context, try to infer the date from surrounding context and use enhanced_event_date_str to provide the inferred date information
+   - Only extract events that have clear temporal markers or can have their temporal context reasonably inferred
+   - This ensures the timeline contains events that can be properly placed in chronological order
+
+   **SPECIAL HANDLING FOR RELATIVE TIME EXPRESSIONS:**
+   - If you encounter relative time expressions (e.g., mission elapsed time like "137:39:13.7", countdown timers, relative durations), you MUST supplement the event_date_str with contextual information from the text.
+   - Format: "original_time_expression (context_description from reference_point)"
+   - Examples:
+     * "137:39:13.7 (mission elapsed time from July 16, 1969, 13:32:00 UTC launch)"
+     * "T-10 seconds (countdown to launch at July 16, 1969, 13:32:00 UTC)"
+     * "3 hours after liftoff (from July 16, 1969, 13:32:00 UTC)"
+   - Always analyze the entire text to find the reference point (launch time, mission start, etc.) and include it in the supplemented event_date_str.
+   - If you cannot find a reference point with date information in the event_date_str, use enhanced_event_date_str to provide the inferred date context.
+
+   **SPECIAL HANDLING FOR INCOMPLETE DATES:**
+   - If you encounter dates that are missing year information (e.g., "April 11", "on March 15"), you MUST analyze the entire text to find contextual clues about the year.
+   - Look for:
+     * Other dates in the text that mention years
+     * Historical events or missions with known timeframes
+     * References to specific people, organizations, or projects with known timelines
+   - Supplement the event_date_str with the inferred year information.
+   - Format: "original_date_expression (inferred_year_from_context)"
+   - Examples:
+     * "April 11 (1970 from Apollo 13 mission context)"
+     * "on March 15 (1969 from Apollo 11 mission context)"
+
+3.  **enhanced_event_date_str**: Optional. Use this field to provide contextual temporal information in the following cases:
+   - When the event_date_str is vague or imprecise (e.g., "recent years", "within a few years", "around that time"), analyze the surrounding context to provide a more specific time estimation
+   - When the event_date_str contains only time of day (e.g., "15:50 UTC"), analyze the surrounding context to infer and provide the date information
+   - Examples: "2010s-2020s" for "recent years", "1847-1850" if context suggests Irish Famine period, "July 21, 1969" if context indicates Apollo 11 mission for "15:50 UTC"
+   - If the event_date_str is already specific and precise, set this field to null.
+
+
+
 4.  **main_entities**: Required. Identify the key entities (people, organizations, locations, etc.) involved. This field must not be empty. Each entity must contain a "name", a "language" (e.g., "en", "zh", "ja"), and a "type" (e.g., person, organization, location).
 
    **CRITICAL ENTITY NAMING RULES:**
@@ -29,6 +74,30 @@ For each event, please extract the following information:
   - Technological or cultural contexts that suggest specific eras
   - References to specific people or organizations with known timelines
 - Provide your best estimation as a specific time range or period in the enhanced_event_date_str field.
+
+**Special Instructions for Handling Relative Time Expressions:**
+- Always read the ENTIRE text first to identify any reference points (launch times, mission starts, project beginnings, etc.)
+- For relative time expressions like mission elapsed time, countdown timers, or durations, supplement the event_date_str with the identified reference point
+- This ensures that relative times can be properly converted to absolute dates in later processing stages
+
+**Special Instructions for Handling Incomplete Dates:**
+- Always read the ENTIRE text first to identify contextual information about timeframes
+- For dates missing year information, analyze the context to infer the year
+- Look for mission names, project names, historical events, or other temporal anchors in the text
+- Supplement incomplete dates with contextual year information to ensure proper chronological placement
+
+**IMPORTANT: Quality Control**
+- Before outputting any event, verify that either event_date_str or enhanced_event_date_str contains temporal information that can be placed on a chronological timeline
+- Never use random words, conjunctions, or non-temporal terms as event_date_str
+- Never use geographical locations, places, or spatial references as event_date_str
+- For events with only time of day (e.g., "15:50 UTC"), use enhanced_event_date_str to provide inferred date context from surrounding text
+- If an event has no chronologically meaningful temporal information and cannot be reasonably inferred from context, exclude it from the output entirely
+- It is better to exclude events than to fabricate or misinterpret temporal data, but always try to infer context first
+
+**COMMON MISTAKES TO AVOID:**
+- Do NOT extract events where the only "time" reference is actually a location (e.g., "In British Columbia", "In New York")
+- Do NOT extract events with only vague relative time expressions without temporal anchors (e.g., "after the policy changed" without knowing when the policy changed)
+- Do NOT confuse spatial prepositions with temporal ones (e.g., "In [place]" vs "In [time period]")
 
 Please output the results in **JSON format**, as a list of event objects. Do NOT calculate, convert, or standardize any dates.
 
@@ -65,18 +134,66 @@ Please output the results in **JSON format**, as a list of event objects. Do NOT
     "source_text_snippet": "Interest in bead crochet has revived somewhat in recent years as a hobbyist pastime."
   }},
   {{
-    "event_description": "Bead crochet was taught in convents and used for Famine Relief Schemes.",
-    "event_date_str": "Within a few years",
-    "enhanced_event_date_str": "1847-1850",
+    "event_description": "The crew fired the engine achieving trajectory.",
+    "event_date_str": "137:39:13.7 (mission elapsed time from July 16, 1969, 13:32:00 UTC launch)",
+    "enhanced_event_date_str": null,
     "main_entities": [
-      {{"name": "convent", "type": "institution", "language": "en"}},
-      {{"name": "Famine Relief Schemes", "type": "program", "language": "en"}},
-      {{"name": "Ireland", "type": "location", "language": "en"}}
+      {{"name": "crew", "type": "group", "language": "en"}},
+      {{"name": "engine", "type": "equipment", "language": "en"}}
     ],
-    "source_text_snippet": "Within a few years it was being taught in almost every convent in the country and used as part of Famine Relief Schemes while providing the means needed to emigrate."
+    "source_text_snippet": "The crew fired the engine achieving such a trajectory at 137:39:13.7."
+  }},
+  {{
+    "event_description": "The Apollo 13 mission was launched.",
+    "event_date_str": "2:13:00 pm EST (19:13:00 UTC) on April 11 (1970 from Apollo 13 mission context)",
+    "enhanced_event_date_str": null,
+    "main_entities": [
+      {{"name": "Apollo 13", "type": "mission", "language": "en"}},
+      {{"name": "NASA", "type": "organization", "language": "en"}}
+    ],
+    "source_text_snippet": "The mission was launched at the planned time, 2:13:00 pm EST (19:13:00 UTC) on April 11."
+  }},
+  {{
+    "event_description": "Luna 15 impacted on the lunar surface.",
+    "event_date_str": "15:50 UTC",
+    "enhanced_event_date_str": "July 21, 1969 (inferred from Apollo 11 mission context)",
+    "main_entities": [
+      {{"name": "Luna 15", "type": "spacecraft", "language": "en"}},
+      {{"name": "lunar surface", "type": "location", "language": "en"}}
+    ],
+    "source_text_snippet": "Luna 15 impacted at 15:50 UTC some hundred kilometers away from Apollo 11."
   }}
 ]
 ```
+
+**EXAMPLES OF PROPER EXTRACTION:**
+Text: "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
+→ This should be EXTRACTED as:
+```json
+{
+  "event_description": "The San peoples tell of ǀKaggen stealing fire from the ostrich and bringing it to people.",
+  "event_date_str": "In African mythology",
+  "enhanced_event_date_str": null,
+  "main_entities": [
+    {"name": "San peoples", "type": "group", "language": "en"},
+    {"name": "ǀKaggen", "type": "mythological_figure", "language": "en"},
+    {"name": "ostrich", "type": "animal", "language": "en"}
+  ],
+  "source_text_snippet": "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
+}
+```
+
+**EXAMPLES OF EVENTS TO EXCLUDE:**
+Text: "In British Columbia, there was an increase in the intensity and scale of wildfires after local bylaws restricted the use of controlled burns."
+→ This should be EXCLUDED because:
+- "In British Columbia" is a geographical location, not a temporal expression
+- "after local bylaws restricted" is a relative time expression without a temporal anchor
+- No chronologically meaningful temporal information can be extracted or reasonably inferred
+
+Text: "The San peoples, the indigenous Southern African hunter-gatherers, tell how ǀKaggen, in the form of a mantis, brought the first fire to the people by stealing it from the ostrich, who kept the fire beneath its wings."
+→ This should be EXCLUDED if extracted as event_date_str: "Africa" because:
+- "Africa" is only a geographical location, not a temporal expression
+- Even though this is about San peoples mythology, without the explicit cultural/temporal context ("In African mythology"), it lacks chronological meaning
 
 Ensure the output is a valid JSON. If no timeline-related historical events are found, please output an empty list [].
 """
@@ -101,8 +218,25 @@ Your output MUST be a single, valid JSON object that conforms to the following s
 - For BCE/BC dates, `start_year` and `end_year` MUST be negative integers.
 - For CE/AD dates, years are positive integers.
 - If a date is too vague (e.g., "long ago"), use "unknown" precision and null for year/month/day fields.
+- For "before" expressions (e.g., "before 1961", "prior to 1961"), the referenced year is the END point, not the start. Set `end_year` to the referenced year and `start_year` to an appropriate earlier year or null.
 - Nth Century CE: `start_year` is (N-1)*100 + 1, `end_year` is N*100.
 - Nth Century BCE: `start_year` is -N*100, `end_year` is -((N-1)*100 + 1).
+
+**Special Handling for Cultural and Mythological Time Expressions:**
+- For mythological, legendary, or folklore references from specific cultures, use "era" precision and estimate time ranges based on cultural and historical knowledge.
+- Consider the historical timeline of the culture, pre-contact periods, and oral tradition patterns.
+- Examples: "In Algonquin myth" → estimate based on pre-Columbian Algonquin culture (c. 1000 BCE - 1600 CE)
+- Examples: "In ancient Greek mythology" → estimate based on Classical antiquity (c. 800 BCE - 600 CE)
+- Examples: "In Norse mythology" → estimate based on Viking Age and earlier (c. 200 BCE - 1300 CE)
+- Examples: "In Chinese folklore" → estimate based on ancient Chinese civilization (c. 2000 BCE - 1000 CE)
+- Examples: "In African mythology" → estimate based on ancient African cultures (c. 3000 BCE - 1000 CE)
+- Examples: "San peoples mythology" → estimate based on indigenous Southern African traditions (c. 20000 BCE - 1500 CE)
+- Use broad time ranges that reflect the likely formation and transmission period of these cultural narratives.
+
+**Special Handling for Geographic-Only References:**
+- If the input is ONLY a geographic location without any cultural/mythological context, use "unknown" precision.
+- Examples of geographic-only inputs: "Africa", "Europe", "Asia", "North America", "British Columbia", "New York"
+- These should be distinguished from cultural expressions like "In African mythology" or "In ancient Egypt"
 
 ---
 **Example 1:**
@@ -198,6 +332,84 @@ Output:
   "is_bce": true
 }
 ```
+
+---
+**Example 6:**
+Input: "Even before the first U.S. astronaut entered space in 1961(Prior to 1961)"
+Output:
+```json
+{
+  "original_text": "Even before the first U.S. astronaut entered space in 1961(Prior to 1961)",
+  "display_text": "Prior to 1961",
+  "precision": "year",
+  "start_year": 1960,
+  "start_month": null,
+  "start_day": null,
+  "end_year": 1960,
+  "end_month": 12,
+  "end_day": 31,
+  "is_bce": false
+}
+```
+
+---
+**Example 7:**
+Input: "In Algonquin myth"
+Output:
+```json
+{
+  "original_text": "In Algonquin myth",
+  "display_text": "Algonquin Mythology",
+  "precision": "era",
+  "start_year": -1000,
+  "start_month": null,
+  "start_day": null,
+  "end_year": 1600,
+  "end_month": null,
+  "end_day": null,
+  "is_bce": false
+}
+```
+
+---
+**Example 8:**
+Input: "In African mythology"
+Output:
+```json
+{
+  "original_text": "In African mythology",
+  "display_text": "African Mythology",
+  "precision": "era",
+  "start_year": -3000,
+  "start_month": null,
+  "start_day": null,
+  "end_year": 1000,
+  "end_month": null,
+  "end_day": null,
+  "is_bce": false
+}
+```
+
+---
+**Example 9:**
+Input: "Africa"
+Output:
+```json
+{
+  "original_text": "Africa",
+  "display_text": "Africa (Geographic Reference)",
+  "precision": "unknown",
+  "start_year": null,
+  "start_month": null,
+  "start_day": null,
+  "end_year": null,
+  "end_month": null,
+  "end_day": null,
+  "is_bce": false
+}
+```
+
+
 """
 
 DATE_PARSING_BATCH_PROMPT = """
@@ -221,9 +433,11 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
 **Key Rules:**
 - Process every object in the input array. The output array must have the same number of objects with matching `id`s.
 - For BCE/BC dates, `start_year` and `end_year` MUST be negative integers.
+- For "before" expressions (e.g., "before 1961", "prior to 1961"), the referenced year is the END point, not the start. Set `end_year` to the referenced year and `start_year` to an appropriate earlier year or null.
 - Nth Century CE: `start_year` is (N-1)*100 + 1, `end_year` is N*100.
 - Nth Century BCE: `start_year` is -N*100, `end_year` is -((N-1)*100 + 1).
 - If a date is too vague (e.g., "ancient times"), use "unknown" precision and null for date component fields.
+- For mythological, legendary, or folklore references, use "era" precision and estimate time ranges based on cultural and historical knowledge.
 
 ---
 **Example:**
@@ -246,6 +460,22 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
   {
     "id": "event_delta",
     "date_str": "Permian-Triassic extinction"
+  },
+  {
+    "id": "event_epsilon",
+    "date_str": "Even before the first U.S. astronaut entered space in 1961(Prior to 1961)"
+  },
+  {
+    "id": "event_zeta",
+    "date_str": "In Algonquin myth"
+  },
+  {
+    "id": "event_eta",
+    "date_str": "In African mythology"
+  },
+  {
+    "id": "event_theta",
+    "date_str": "Africa"
   }
 ]
 ```
@@ -295,6 +525,50 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
       "start_year": -252000000, "start_month": null, "start_day": null,
       "end_year": -251000000, "end_month": null, "end_day": null,
       "is_bce": true
+    }
+  },
+  {
+    "id": "event_epsilon",
+    "parsed_info": {
+      "original_text": "Even before the first U.S. astronaut entered space in 1961(Prior to 1961)",
+      "display_text": "Prior to 1961",
+      "precision": "year",
+      "start_year": 1960, "start_month": null, "start_day": null,
+      "end_year": 1960, "end_month": 12, "end_day": 31,
+      "is_bce": false
+    }
+  },
+  {
+    "id": "event_zeta",
+    "parsed_info": {
+      "original_text": "In Algonquin myth",
+      "display_text": "Algonquin Mythology",
+      "precision": "era",
+      "start_year": -1000, "start_month": null, "start_day": null,
+      "end_year": 1600, "end_month": null, "end_day": null,
+      "is_bce": false
+    }
+  },
+  {
+    "id": "event_eta",
+    "parsed_info": {
+      "original_text": "In African mythology",
+      "display_text": "African Mythology",
+      "precision": "era",
+      "start_year": -3000, "start_month": null, "start_day": null,
+      "end_year": 1000, "end_month": null, "end_day": null,
+      "is_bce": false
+    }
+  },
+  {
+    "id": "event_theta",
+    "parsed_info": {
+      "original_text": "Africa",
+      "display_text": "Africa (Geographic Reference)",
+      "precision": "unknown",
+      "start_year": null, "start_month": null, "start_day": null,
+      "end_year": null, "end_month": null, "end_day": null,
+      "is_bce": false
     }
   }
 ]

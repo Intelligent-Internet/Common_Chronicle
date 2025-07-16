@@ -235,13 +235,49 @@ export const getChronologicalSortValue = (event: {
   const yearMatch = event.event_date_str.match(/\d{4}/);
   if (yearMatch) {
     const year = parseInt(yearMatch[0], 10);
-    // Check if this appears to be a BCE date from the text
-    const isBCEText = /BCE|BC|Before|before.*common.*era/i.test(event.event_date_str);
-    return isBCEText ? -year : year;
+    // Trust the backend's structured is_bce field
+    const isBCE = event.date_info?.is_bce ?? false;
+    return isBCE ? -year : year;
   }
 
   // Default fallback
   return 0;
+};
+
+// Helper function to format year with K/M/B notation for large numbers
+const formatYearWithScale = (year: number, isBCE: boolean): string => {
+  const absoluteYear = Math.abs(year);
+
+  // Handle geological time scales (millions/billions of years)
+  if (absoluteYear >= 1000000) {
+    const millions = absoluteYear / 1000000;
+    if (millions >= 1000) {
+      const billions = millions / 1000;
+      return isBCE ? `${billions.toFixed(1)}B BCE` : `${billions.toFixed(1)}B`;
+    } else {
+      return isBCE ? `${millions.toFixed(0)}M BCE` : `${millions.toFixed(0)}M`;
+    }
+  } else if (absoluteYear >= 10000) {
+    // Handle thousands (10K and above) - simplify large numbers
+    const thousands = absoluteYear / 1000;
+    // If it's a round number of thousands, show without decimal
+    if (absoluteYear % 1000 === 0) {
+      return isBCE ? `${thousands}K BCE` : `${thousands}K`;
+    } else {
+      // For non-round thousands, decide whether to show decimal or round
+      if (thousands >= 100) {
+        // For very large numbers (100K+), round to nearest thousand
+        return isBCE ? `${Math.round(thousands)}K BCE` : `${Math.round(thousands)}K`;
+      } else {
+        // For smaller numbers (10K-99K), show one decimal if needed
+        const rounded = Math.round(thousands * 10) / 10;
+        return isBCE ? `${rounded}K BCE` : `${rounded}K`;
+      }
+    }
+  } else {
+    // For regular years (under 10,000)
+    return isBCE ? `${absoluteYear} BCE` : `${absoluteYear}`;
+  }
 };
 
 // Display-friendly year formatting with K/M/B notation for large numbers
@@ -249,51 +285,55 @@ export const getDisplayYear = (event: {
   date_info: ParsedDateInfo | null;
   event_date_str: string;
 }): string => {
-  if (event.date_info && event.date_info.start_year !== null) {
-    const year = Math.abs(event.date_info.start_year);
-    const isBCE = event.date_info.is_bce;
+  if (event.date_info) {
+    // Priority 1: Use start_year if available
+    if (event.date_info.start_year !== null) {
+      return formatYearWithScale(event.date_info.start_year, event.date_info.is_bce);
+    }
 
-    // Handle geological time scales (millions/billions of years)
-    if (year >= 1000000) {
-      const millions = year / 1000000;
-      if (millions >= 1000) {
-        const billions = millions / 1000;
-        return isBCE ? `${billions.toFixed(1)}B BCE` : `${billions.toFixed(1)}B`;
-      } else {
-        return isBCE ? `${millions.toFixed(0)}M BCE` : `${millions.toFixed(0)}M`;
-      }
-    } else if (year >= 10000) {
-      // Handle thousands (10K and above) - simplify large numbers
-      const thousands = year / 1000;
-      // If it's a round number of thousands, show without decimal
-      if (year % 1000 === 0) {
-        return isBCE ? `${thousands}K BCE` : `${thousands}K`;
-      } else {
-        // For non-round thousands, decide whether to show decimal or round
-        if (thousands >= 100) {
-          // For very large numbers (100K+), round to nearest thousand
-          return isBCE ? `${Math.round(thousands)}K BCE` : `${Math.round(thousands)}K`;
-        } else {
-          // For smaller numbers (10K-99K), show one decimal if needed
-          const rounded = Math.round(thousands * 10) / 10;
-          return isBCE ? `${rounded}K BCE` : `${rounded}K`;
-        }
-      }
-    } else {
-      // For regular years (under 10,000)
-      return isBCE ? `${year} BCE` : `${year}`;
+    // Priority 2: If start_year is null but end_year is available, use end_year
+    if (event.date_info.end_year !== null) {
+      return formatYearWithScale(event.date_info.end_year, event.date_info.is_bce);
+    }
+
+    // Priority 3: If no year information is available, use display_text from date_info
+    // This provides a clean, human-readable format instead of the verbose original text
+    if (event.date_info.display_text && event.date_info.display_text !== event.event_date_str) {
+      return event.date_info.display_text;
     }
   }
 
-  // Fallback to extracting from string
+  // Priority 4: Try to extract year from string
   const yearMatch = event.event_date_str.match(/\d{4}/);
   if (yearMatch) {
     const year = parseInt(yearMatch[0], 10);
-    const isBCEText = /BCE|BC|Before|before.*common.*era/i.test(event.event_date_str);
-    return isBCEText ? `${year} BCE` : `${year}`;
+    // Trust the backend's structured is_bce field
+    const isBCE = event.date_info?.is_bce ?? false;
+    return isBCE ? `${year} BCE` : `${year}`;
   }
 
-  // If we can't parse a specific year, return the original string
+  // Priority 5: If no year can be extracted, try to use a shortened version of the date string
+  // Remove verbose time information and keep only the essential date part
+  let shortenedDate = event.event_date_str;
+
+  // Remove time zone information and detailed time stamps
+  shortenedDate = shortenedDate.replace(
+    /\b\d{1,2}:\d{2}:\d{2}\s*(am|pm)?\s*(EST|PST|UTC|GMT)?\s*(\([^)]+\))?\s*/gi,
+    ''
+  );
+
+  // Remove parenthetical explanations
+  shortenedDate = shortenedDate.replace(/\([^)]+\)/g, '');
+
+  // Remove "on" prefix and clean up
+  shortenedDate = shortenedDate.replace(/^on\s+/i, '').trim();
+
+  // If we managed to shorten it significantly, use the shortened version
+  if (shortenedDate.length < event.event_date_str.length * 0.6 && shortenedDate.length > 0) {
+    return shortenedDate;
+  }
+
+  // Final fallback: return the original string or 'Unknown Date'
   return event.event_date_str || 'Unknown Date';
 };
 

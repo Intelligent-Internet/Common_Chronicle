@@ -16,7 +16,7 @@ import type {
 } from '../types';
 
 import { getTaskResultFromCache, cacheTaskResults } from '../services/indexedDB.service';
-import { getUniqueYearsForNavigation } from '../utils/timelineUtils';
+import { getUniqueYearsForNavigation, sortEventsChronologically } from '../utils/timelineUtils';
 
 interface WebSocketControls {
   close: () => void;
@@ -191,8 +191,40 @@ function TaskPage() {
           cachedData = await getTaskResultFromCache(taskId);
           if (cachedData && isActive) {
             console.log(`[TaskPage.tsx] Found cached results for task ${taskId}`);
+            console.log(
+              '[TaskPage.tsx] Cached events before sorting:',
+              cachedData.viewpoint_details?.timeline_events?.map((e) => ({
+                id: e.id.slice(0, 8),
+                date_str: e.event_date_str,
+                date_info: e.date_info,
+                sort_value: e.date_info
+                  ? e.date_info.is_bce
+                    ? e.date_info.start_year
+                    : e.date_info.start_year
+                  : 'no_date_info',
+              }))
+            );
+
+            const sortedCachedEvents = sortEventsChronologically(
+              cachedData.viewpoint_details?.timeline_events || []
+            );
+
+            console.log(
+              '[TaskPage.tsx] Cached events after sorting:',
+              sortedCachedEvents.map((e) => ({
+                id: e.id.slice(0, 8),
+                date_str: e.event_date_str,
+                date_info: e.date_info,
+                sort_value: e.date_info
+                  ? e.date_info.is_bce
+                    ? e.date_info.start_year
+                    : e.date_info.start_year
+                  : 'no_date_info',
+              }))
+            );
+
             setTask(cachedData);
-            setEvents(cachedData.viewpoint_details?.timeline_events || []);
+            setEvents(sortedCachedEvents);
             setProgressMessages(cachedData.progress_messages || []);
           }
         } catch (cacheError) {
@@ -209,7 +241,37 @@ function TaskPage() {
 
         const timelineEvents = taskData.viewpoint_details?.timeline_events;
         if (timelineEvents && timelineEvents.length > 0) {
-          setEvents(timelineEvents);
+          console.log(
+            '[TaskPage.tsx] Events before sorting:',
+            timelineEvents.map((e) => ({
+              id: e.id.slice(0, 8),
+              date_str: e.event_date_str,
+              date_info: e.date_info,
+              sort_value: e.date_info
+                ? e.date_info.is_bce
+                  ? e.date_info.start_year
+                  : e.date_info.start_year
+                : 'no_date_info',
+            }))
+          );
+
+          const sortedEvents = sortEventsChronologically(timelineEvents);
+
+          console.log(
+            '[TaskPage.tsx] Events after sorting:',
+            sortedEvents.map((e) => ({
+              id: e.id.slice(0, 8),
+              date_str: e.event_date_str,
+              date_info: e.date_info,
+              sort_value: e.date_info
+                ? e.date_info.is_bce
+                  ? e.date_info.start_year
+                  : e.date_info.start_year
+                : 'no_date_info',
+            }))
+          );
+
+          setEvents(sortedEvents);
 
           // Cache the complete task data if it's in a final state
           try {
@@ -369,7 +431,40 @@ function TaskPage() {
       console.log(`[TaskPage.tsx] Refetching final result for task ${taskId}...`);
       const resultData = await getTaskResult(taskId);
       setTask(resultData);
-      setEvents(resultData.viewpoint_details?.timeline_events || []);
+
+      console.log(
+        '[TaskPage.tsx] Refetch events before sorting:',
+        resultData.viewpoint_details?.timeline_events?.map((e) => ({
+          id: e.id.slice(0, 8),
+          date_str: e.event_date_str,
+          date_info: e.date_info,
+          sort_value: e.date_info
+            ? e.date_info.is_bce
+              ? e.date_info.start_year
+              : e.date_info.start_year
+            : 'no_date_info',
+        }))
+      );
+
+      const sortedRefetchEvents = sortEventsChronologically(
+        resultData.viewpoint_details?.timeline_events || []
+      );
+
+      console.log(
+        '[TaskPage.tsx] Refetch events after sorting:',
+        sortedRefetchEvents.map((e) => ({
+          id: e.id.slice(0, 8),
+          date_str: e.event_date_str,
+          date_info: e.date_info,
+          sort_value: e.date_info
+            ? e.date_info.is_bce
+              ? e.date_info.start_year
+              : e.date_info.start_year
+            : 'no_date_info',
+        }))
+      );
+
+      setEvents(sortedRefetchEvents);
       // Cache the newly fetched final result
       if (resultData.status === 'completed' || resultData.status === 'failed') {
         await cacheTaskResults(resultData);

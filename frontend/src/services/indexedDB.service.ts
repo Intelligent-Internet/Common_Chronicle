@@ -3,6 +3,7 @@ import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
 import type { UserTaskRecord } from '../types/db.types';
 import type { BackendTaskRecord, TaskResultResponse } from '../types';
+import { sortEventsChronologically } from '../utils/timelineUtils';
 
 const DB_NAME = 'CommonTimelineDB';
 const DB_VERSION = 3;
@@ -257,7 +258,7 @@ export async function cacheTaskResults(taskData: TaskResultResponse): Promise<vo
     return;
   }
 
-  // Do not cache results for tasks that are still running.
+  // Do not cache results for tasks that are still running or have no events.
   if (
     !taskData.viewpoint_details ||
     (taskData.status !== 'completed' && taskData.status !== 'failed')
@@ -268,6 +269,13 @@ export async function cacheTaskResults(taskData: TaskResultResponse): Promise<vo
     return;
   }
 
+  // Ensure events are sorted before caching.
+  if (taskData.viewpoint_details.timeline_events) {
+    taskData.viewpoint_details.timeline_events = sortEventsChronologically(
+      taskData.viewpoint_details.timeline_events
+    );
+  }
+
   const db = await getDb();
   const recordToCache: CachedTaskResult = {
     taskId: taskData.id,
@@ -276,10 +284,13 @@ export async function cacheTaskResults(taskData: TaskResultResponse): Promise<vo
   };
 
   try {
-    await db.put(TASK_RESULTS_STORE_NAME, recordToCache);
-    console.log(`[DB] Cached results for task ${taskData.id}.`);
+    const tx = db.transaction(TASK_RESULTS_STORE_NAME, 'readwrite');
+    await tx.store.put(recordToCache);
+    await tx.done;
+    console.log(`[DB] Task results cached for task: ${taskData.id}`);
   } catch (error) {
-    console.error(`[DB] Error caching results for task ${taskData.id}:`, error);
+    console.error(`[DB] Error caching task results for ${taskData.id}:`, error);
+    throw error;
   }
 }
 
@@ -368,3 +379,27 @@ export const getLocalPublicTasks = async (): Promise<ExtendedUserTaskRecord[]> =
     (a, b) => new Date(b.completedAt ?? 0).getTime() - new Date(a.completedAt ?? 0).getTime()
   );
 };
+
+export async function clearOldCacheEntries(maxAgeDays: number): Promise<number> {
+  const db = await getDb();
+  const thresholdDate = new Date();
+  thresholdDate.setDate(thresholdDate.getDate() - maxAgeDays);
+  const thresholdISO = thresholdDate.toISOString();
+
+  let deleteCount = 0;
+  const tx = db.transaction(TASK_RESULTS_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(TASK_RESULTS_STORE_NAME);
+  const index = store.index('timestamp');
+
+  let cursor = await index.openCursor(IDBKeyRange.upperBound(thresholdISO));
+  while (cursor) {
+    await cursor.delete();
+    deleteCount++;
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+  if (deleteCount > 0) {
+    console.log(`[DB] Cleared ${deleteCount} cache entries older than ${maxAgeDays} days.`);
+  }
+  return deleteCount;
+}
