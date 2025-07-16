@@ -127,7 +127,7 @@ This project thrives on community contributions. We welcome you to help in any w
 
 Want to run Common Chronicle locally? We've got you covered!
 
-**👉 [Complete Setup Guide](./CONTRIBUTING.md#development-environment-setup)** - Detailed installation instructions for developers
+**👉 [Complete Setup Guide](./.github/CONTRIBUTING.md#development-environment-setup)** - Detailed installation instructions for developers
 
 **Quick Start:**
 ```bash
