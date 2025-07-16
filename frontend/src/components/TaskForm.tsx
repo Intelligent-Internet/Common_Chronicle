@@ -62,11 +62,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
       <div>
         <label
           htmlFor="topic"
-          className="block text-lg font-serif font-medium text-scholar-800 mb-2"
+          className="block text-lg font-sans font-medium text-charcoal dark:text-white mb-2"
         >
           I. Define Your Subject of Inquiry
         </label>
-        <p className="text-scholar-600 mb-4">
+        <p className="text-slate dark:text-mist mb-4">
           Enter the historical topic, event, or question you wish to investigate. Be as specific as
           possible for a more focused chronicle.
         </p>
@@ -74,21 +74,21 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
           id="topic"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
-          className="w-full bg-transparent border-2 border-parchment-300 rounded-md p-3 text-scholar-800 placeholder-scholar-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+          className="w-full bg-white dark:bg-slate border border-pewter rounded-md p-3 text-charcoal dark:text-mist placeholder-pewter focus:ring-1 focus:ring-slate focus:border-slate dark:focus:ring-sky-blue dark:focus:border-sky-blue transition"
           placeholder="e.g., The economic impact of the Silk Road during the Tang Dynasty"
           required
           disabled={isSubmitting}
           rows={3}
           maxLength={1000}
         />
-        <p className="text-right text-xs text-scholar-500 mt-1">{topic.length} / 1000</p>
+        <p className="text-right text-xs text-pewter mt-1">{topic.length} / 1000</p>
       </div>
 
       <div>
-        <label className="block text-lg font-serif font-medium text-scholar-800 mb-2">
+        <label className="block text-lg font-sans font-medium text-charcoal dark:text-white mb-2">
           II. Select Primary Sources
         </label>
-        <p className="text-scholar-600 mb-4">
+        <p className="text-slate dark:text-mist mb-4">
           Choose the archives from which to draw information for your chronicle. At least one source
           is required.
         </p>
@@ -96,7 +96,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
           {dataSourceOptions.map(({ key, label, description }) => (
             <div
               key={key}
-              className="relative flex items-start bg-transparent p-4 border-2 border-parchment-200 rounded-lg"
+              className="relative flex items-start bg-mist/30 dark:bg-slate/30 p-4 border border-mist dark:border-pewter rounded-lg"
             >
               <div className="flex h-6 items-center">
                 <input
@@ -106,14 +106,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
                   checked={dataSources[key]}
                   onChange={(e) => handleDataSourceToggle(key, e.target.checked)}
                   disabled={isSubmitting}
-                  className="h-5 w-5 rounded border-parchment-400 text-amber-700 focus:ring-amber-600"
+                  className="h-5 w-5 rounded border-pewter text-slate dark:text-sky-blue focus:ring-slate dark:focus:ring-sky-blue"
                 />
               </div>
               <div className="ml-3 text-sm leading-6">
-                <label htmlFor={key} className="font-medium text-scholar-800">
+                <label htmlFor={key} className="font-medium text-charcoal dark:text-white">
                   {label}
                 </label>
-                <p className="text-scholar-600">{description}</p>
+                <p className="text-slate dark:text-mist">{description}</p>
               </div>
             </div>
           ))}
@@ -122,10 +122,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
 
       {user && (
         <div>
-          <label className="block text-lg font-serif font-medium text-scholar-800 mb-2">
+          <label className="block text-lg font-sans font-medium text-charcoal dark:text-white mb-2">
             III. Set Visibility
           </label>
-          <div className="relative flex items-start bg-transparent p-4 border-2 border-parchment-200 rounded-lg">
+          <div className="relative flex items-start bg-mist/30 dark:bg-slate/30 p-4 border border-mist dark:border-pewter rounded-lg">
             <div className="flex h-6 items-center">
               <input
                 id="is_public"
@@ -134,14 +134,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
                 disabled={isSubmitting}
-                className="h-5 w-5 rounded border-parchment-400 text-amber-700 focus:ring-amber-600"
+                className="h-5 w-5 rounded border-pewter text-slate dark:text-sky-blue focus:ring-slate dark:focus:ring-sky-blue"
               />
             </div>
             <div className="ml-3 text-sm leading-6">
-              <label htmlFor="is_public" className="font-medium text-scholar-800">
+              <label htmlFor="is_public" className="font-medium text-charcoal dark:text-white">
                 Make this Chronicle Public
               </label>
-              <p className="text-scholar-600">
+              <p className="text-slate dark:text-mist">
                 Allow anyone to view the generated timeline. If unchecked, it will be private.
               </p>
             </div>
@@ -156,11 +156,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
         </div>
       )}
 
-      <div className="text-center pt-4 border-t-2 border-dashed border-parchment-200">
+      <div className="text-center pt-4 border-t-2 border-dashed border-mist dark:border-pewter">
         <button
           type="submit"
           disabled={isSubmitting || !topic.trim()}
-          className="bg-amber-800 hover:bg-amber-900 text-parchment-50 font-bold py-3 px-12 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-gray-400 disabled:shadow-none disabled:transform-none disabled:cursor-not-allowed"
+          className="btn btn-primary font-bold py-3 px-12 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-gray-400 disabled:shadow-none disabled:transform-none disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Initiating Research...' : 'Create Chronicle'}
         </button>

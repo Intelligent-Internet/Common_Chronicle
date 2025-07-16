@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import TaskForm from '../components/TaskForm';
 import type { TaskFormData } from '../types';
 import { createTask } from '../services/api';
-import ParchmentPaper from '../components/ParchmentPaper';
+import ContentCard from '../components/ContentCard';
 import WavyLine from '../components/WavyLine';
 
 const NewTaskPage: React.FC = () => {
@@ -76,23 +76,25 @@ const NewTaskPage: React.FC = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-3xl font-serif text-scholar-800 mb-4">Task Submitted Successfully!</h2>
-        <p className="text-lg text-scholar-600 mb-2">
+        <h2 className="text-3xl font-sans font-semibold text-charcoal dark:text-white mb-4">
+          Task Submitted Successfully!
+        </h2>
+        <p className="text-lg text-slate dark:text-mist mb-2">
           Your chronicle task has been submitted and is now being processed in a new tab.
         </p>
-        <p className="text-sm text-scholar-500">
+        <p className="text-sm text-pewter dark:text-mist">
           Switch to the new tab to monitor the processing progress, or continue submitting more
           tasks here.
         </p>
       </div>
 
       <div className="max-w-md mx-auto mb-6">
-        <WavyLine className="text-parchment-400" />
+        <WavyLine className="text-pewter dark:text-mist" />
       </div>
 
       <button
         onClick={handleCreateAnother}
-        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-scholar-600 hover:bg-scholar-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-scholar-500 transition-colors duration-200"
+        className="btn btn-primary inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate dark:focus:ring-sky-blue transition-colors duration-200"
       >
         <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -106,16 +108,18 @@ const NewTaskPage: React.FC = () => {
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-serif text-scholar-800">Submit a New Chronicle Task</h1>
-          <p className="mt-4 text-lg text-scholar-600">
+          <h1 className="text-5xl font-sans font-bold text-charcoal dark:text-white">
+            Submit a New Chronicle Task
+          </h1>
+          <p className="mt-4 text-lg text-slate dark:text-mist">
             Define the subject of your historical inquiry to generate a timeline.
           </p>
           <div className="mt-6 max-w-md mx-auto">
-            <WavyLine className="text-parchment-400" />
+            <WavyLine className="text-pewter dark:text-mist" />
           </div>
         </div>
 
-        <ParchmentPaper>
+        <ContentCard>
           {submissionSuccess ? (
             renderSuccessMessage()
           ) : (
@@ -126,7 +130,7 @@ const NewTaskPage: React.FC = () => {
               error={error}
             />
           )}
-        </ParchmentPaper>
+        </ContentCard>
       </div>
     </div>
   );

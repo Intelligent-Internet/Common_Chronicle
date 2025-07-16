@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/auth';
-import ParchmentPaper from '../ParchmentPaper';
+import ContentCard from '../ContentCard';
 import WavyLine from '../WavyLine';
 
 interface LoginModalProps {
@@ -58,11 +58,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
       onClick={handleClose}
     >
       <div className="w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-        <ParchmentPaper padding="p-8">
+        <ContentCard padding="p-8">
           <div className="text-center mb-6">
-            <h2 className="text-3xl font-serif text-scholar-800">Scholar Login</h2>
+            <h2 className="text-3xl font-sans font-semibold text-charcoal dark:text-white">
+              Scholar Login
+            </h2>
             <div className="mt-4 max-w-xs mx-auto">
-              <WavyLine className="text-parchment-400" />
+              <WavyLine className="text-pewter dark:text-mist" />
             </div>
           </div>
 
@@ -70,7 +72,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-serif font-medium text-scholar-700 mb-1"
+                className="block text-sm font-alt font-medium text-slate dark:text-mist mb-1"
               >
                 Scholar Name
               </label>
@@ -79,7 +81,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 block w-full bg-parchment-50 border-2 border-parchment-300 rounded-md p-3 text-scholar-800 placeholder-scholar-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                className="input mt-1 block w-full p-3"
                 placeholder="Your scholar identification"
                 disabled={isLoading}
               />
@@ -88,7 +90,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-serif font-medium text-scholar-700 mb-1"
+                className="block text-sm font-alt font-medium text-slate dark:text-mist mb-1"
               >
                 Secret Word (Password)
               </label>
@@ -97,7 +99,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 block w-full bg-parchment-50 border-2 border-parchment-300 rounded-md p-3 text-scholar-800 placeholder-scholar-400 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition"
+                className="input mt-1 block w-full p-3"
                 placeholder="Your secret passphrase"
                 disabled={isLoading}
               />
@@ -114,7 +116,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-amber-800 hover:bg-amber-900 text-parchment-50 font-bold py-3 px-8 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-gray-400 disabled:shadow-none disabled:transform-none"
+                className="btn btn-primary w-full py-3 px-8 font-bold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-gray-400 disabled:shadow-none disabled:transform-none"
               >
                 {isLoading ? 'Authenticating...' : 'Enter the Archives'}
               </button>
@@ -122,13 +124,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
                 type="button"
                 onClick={onSwitchToRegister}
                 disabled={isLoading}
-                className="text-sm text-scholar-600 hover:text-scholar-800 hover:underline disabled:text-gray-400"
+                className="text-sm text-slate hover:text-charcoal hover:underline disabled:text-gray-400 dark:text-mist dark:hover:text-white dark:disabled:text-gray-500"
               >
                 Need to join the order? Register as a Scholar
               </button>
             </div>
           </form>
-        </ParchmentPaper>
+        </ContentCard>
       </div>
     </div>
   );

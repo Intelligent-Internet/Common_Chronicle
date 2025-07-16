@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { ExtendedUserTaskRecord } from '../services/indexedDB.service';
 import { getCheckboxStateFromString } from '../utils/timelineUtils'; // Adjusted path
 import WavyLine from './WavyLine';
-import ParchmentPaper from './ParchmentPaper';
+import ContentCard from './ContentCard';
 
 // Helper function to render task date
 const renderTaskDate = (task: ExtendedUserTaskRecord): string => {
@@ -30,15 +30,15 @@ const renderTaskDate = (task: ExtendedUserTaskRecord): string => {
 const getStatusStyles = (status: string): string => {
   switch (status) {
     case 'completed':
-      return 'bg-sage-100 text-sage-800';
+      return 'bg-slate/10 text-slate dark:bg-sky-blue/20 dark:text-sky-blue';
     case 'failed':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
     case 'processing':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
     case 'pending':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-mist/80 text-pewter dark:bg-slate/80 dark:text-pewter';
     default:
-      return 'bg-parchment-200 text-scholar-700';
+      return 'bg-mist text-slate dark:bg-slate dark:text-mist';
   }
 };
 
@@ -82,22 +82,24 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 bg-scholar-900/60 backdrop-blur-sm z-30 transition-opacity duration-300 ease-in-out"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity duration-300 ease-in-out"
         onClick={onClose}
         aria-hidden="true"
       ></div>
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-parchment-50 shadow-2xl z-40 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-2xl z-40 transform transition-transform duration-300 ease-in-out dark:bg-charcoal dark:border-slate ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
-        } p-6 flex flex-col border-l-4 border-parchment-200`}
+        } p-6 flex flex-col border-l-4 border-mist`}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-3xl font-serif text-scholar-800">{title}</h2>
+          <h2 className="text-3xl font-sans font-semibold text-charcoal dark:text-white">
+            {title}
+          </h2>
           <div className="flex items-center gap-2">
             <button
               onClick={onRefreshTasks}
               disabled={isLoading}
-              className="p-2 rounded-full hover:bg-parchment-200/60 focus:outline-none focus:ring-2 focus:ring-scholar-500/50 disabled:opacity-50 disabled:cursor-not-allowed text-scholar-600 hover:text-scholar-800 transition-colors"
+              className="p-2 rounded-full hover:bg-mist/60 focus:outline-none focus:ring-2 focus:ring-slate/50 disabled:opacity-50 disabled:cursor-not-allowed text-slate hover:text-charcoal transition-colors dark:text-mist dark:hover:text-white dark:hover:bg-slate/60"
               aria-label="Refresh chronicle list"
               title="Refresh chronicle list"
             >
@@ -117,7 +119,7 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
             </button>
             <button
               onClick={onClose}
-              className="p-1 rounded-full hover:bg-parchment-200/60 text-scholar-600 hover:text-scholar-800 transition-colors"
+              className="p-1 rounded-full hover:bg-mist/60 text-slate hover:text-charcoal transition-colors dark:text-mist dark:hover:text-white dark:hover:bg-slate/60"
               aria-label={`Close ${title} panel`}
             >
               <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,17 +136,19 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
 
         {/* Decorative wavy line separator */}
         <div className="mb-6">
-          <WavyLine className="text-parchment-300" />
+          <WavyLine className="text-pewter dark:text-mist" />
         </div>
 
         {isLoading &&
           tasks.length === 0 && ( // Show loading only if there are no tasks to display yet
-            <p className="text-scholar-600 italic">Loading chronicles...</p>
+            <p className="text-slate italic dark:text-mist">Loading chronicles...</p>
           )}
         {!isLoading && tasks.length === 0 && (
-          <div className="text-center p-8 bg-parchment-100 border-2 border-dashed border-parchment-300 rounded-lg">
-            <p className="font-serif text-scholar-700">No chronicles found in your archive.</p>
-            <p className="text-sm text-scholar-500 mt-2">
+          <div className="text-center p-8 bg-mist/30 border-2 border-dashed border-mist rounded-lg dark:bg-slate/30 dark:border-mist">
+            <p className="font-sans text-slate dark:text-mist">
+              No chronicles found in your archive.
+            </p>
+            <p className="text-sm text-pewter dark:text-mist mt-2">
               Create a new one to begin your research.
             </p>
           </div>
@@ -162,15 +166,15 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
                       isActive ? 'scale-105' : 'hover:scale-102'
                     }`}
                   >
-                    <ParchmentPaper
+                    <ContentCard
                       padding="p-4"
-                      className={isActive ? 'ring-2 ring-scholar-400/50' : ''}
+                      className={isActive ? 'ring-2 ring-slate/50 dark:ring-sky-blue' : ''}
                     >
                       <div className="flex justify-between items-center mb-2">
                         <p
                           className={`text-xs font-medium ${
-                            isActive ? 'text-scholar-700' : 'text-scholar-500'
-                          } group-hover:text-scholar-600`}
+                            isActive ? 'text-slate' : 'text-pewter'
+                          } group-hover:text-slate dark:group-hover:text-mist`}
                         >
                           {renderTaskDate(task)}
                         </p>
@@ -183,17 +187,17 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
                         </span>
                       </div>
                       <p
-                        className={`text-base font-serif font-semibold truncate ${
-                          isActive ? 'text-scholar-900' : 'text-scholar-800'
-                        }`}
+                        className={`text-base font-sans font-semibold truncate ${
+                          isActive ? 'text-charcoal' : 'text-charcoal'
+                        } dark:text-white`}
                         title={task.viewpoint || 'Untitled Chronicle'}
                       >
                         {task.viewpoint || 'Untitled Chronicle'}
                       </p>
                       <p
                         className={`text-xs mt-1 ${
-                          isActive ? 'text-scholar-700' : 'text-scholar-600'
-                        }`}
+                          isActive ? 'text-slate' : 'text-pewter'
+                        } dark:text-mist`}
                       >
                         Source(s):{' '}
                         {(() => {
@@ -217,7 +221,7 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
                           <span className="font-semibold">Error:</span> {task.error.message}
                         </p>
                       )}
-                    </ParchmentPaper>
+                    </ContentCard>
                   </Link>
                 </li>
               );

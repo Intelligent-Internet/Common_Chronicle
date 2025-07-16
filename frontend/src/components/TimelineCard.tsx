@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import type { ExtendedUserTaskRecord } from '../services/indexedDB.service';
 
-import ParchmentPaper from './ParchmentPaper';
+import ContentCard from './ContentCard';
 
 const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
   const formatDate = (dateString: string) => {
@@ -22,10 +22,10 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
     text: task.status.charAt(0).toUpperCase() + task.status.slice(1),
     className:
       task.status === 'completed'
-        ? 'text-sage-700'
+        ? 'text-slate dark:text-sky-blue'
         : task.status === 'failed'
-          ? 'text-red-700'
-          : 'text-scholar-600',
+          ? 'text-red-700 dark:text-red-400'
+          : 'text-slate dark:text-mist',
   };
 
   const sourceText = (() => {
@@ -44,19 +44,19 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
           : 'Pending Review';
 
   return (
-    <Link to={`/task/${task.id}`} target="_blank" rel="noopener noreferrer" className="block">
-      <ParchmentPaper padding="p-0">
-        <div className="p-6">
+    <Link to={`/task/${task.id}`} target="_blank" rel="noopener noreferrer" className="block group">
+      <ContentCard padding="p-0" className="h-full flex flex-col">
+        <div className="p-6 flex-grow">
           <div className="flex items-start justify-between mb-4">
-            <h3 className="text-xl font-serif font-bold text-scholar-800 group-hover:text-scholar-900 transition-colors duration-300 line-clamp-2 leading-tight">
+            <h3 className="text-xl font-sans font-bold text-charcoal group-hover:text-slate transition-colors duration-300 line-clamp-2 leading-tight dark:text-white dark:group-hover:text-sky-blue">
               {task.viewpoint || 'Untitled Chronicle'}
             </h3>
           </div>
 
-          <div className="space-y-3 text-sm text-scholar-700">
+          <div className="space-y-3 text-sm text-slate dark:text-mist">
             <div className="flex items-center">
               <svg
-                className="w-4 h-4 mr-2 text-scholar-500"
+                className="w-4 h-4 mr-2 text-pewter dark:text-mist"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -71,7 +71,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
             </div>
             <div className="flex items-center">
               <svg
-                className="w-4 h-4 mr-2 text-scholar-500"
+                className="w-4 h-4 mr-2 text-pewter dark:text-mist"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -87,7 +87,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
             </div>
             <div className="flex items-center">
               <svg
-                className="w-4 h-4 mr-2 text-scholar-500"
+                className="w-4 h-4 mr-2 text-pewter dark:text-mist"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -104,11 +104,11 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
 
           {/* Collapsible section */}
           <div className="overflow-hidden max-h-0 group-hover:max-h-40 transition-[max-height] duration-500 ease-in-out">
-            <hr className="border-t-2 border-dashed border-parchment-300/50 my-3" />
-            <div className="space-y-2 text-sm text-scholar-600">
+            <hr className="border-t-2 border-dashed border-mist/50 my-3 dark:border-mist/50" />
+            <div className="space-y-2 text-sm text-slate dark:text-mist">
               <div className="flex items-center">
                 <svg
-                  className="w-4 h-4 mr-2 text-scholar-500"
+                  className="w-4 h-4 mr-2 text-pewter dark:text-mist"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -123,7 +123,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
               </div>
               <div className="flex items-center">
                 <svg
-                  className="w-4 h-4 mr-2 text-scholar-500"
+                  className="w-4 h-4 mr-2 text-pewter dark:text-mist"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -141,7 +141,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
           </div>
 
           <div className="absolute bottom-4 right-5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="flex items-center text-scholar-600">
+            <div className="flex items-center text-slate dark:text-mist">
               <span className="text-sm font-semibold">Explore</span>
               <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -154,7 +154,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
             </div>
           </div>
         </div>
-      </ParchmentPaper>
+      </ContentCard>
     </Link>
   );
 };

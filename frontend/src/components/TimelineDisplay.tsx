@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import type { TimelineEvent } from '../types';
-import ParchmentPaper from './ParchmentPaper';
+import ContentCard from './ContentCard';
 import InkBlotButton from './InkBlotButton';
 import VerticalWavyLine from './VerticalWavyLine';
 import {
@@ -118,10 +118,10 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
   if (events.length === 0 && selectedKeyword) {
     return (
       <div className="mt-12">
-        <ParchmentPaper className="max-w-md mx-auto" padding="p-8">
+        <ContentCard className="max-w-md mx-auto" padding="p-8">
           <div className="text-center">
             <svg
-              className="w-16 h-16 text-parchment-400 mx-auto mb-6"
+              className="w-16 h-16 text-pewter mx-auto mb-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -133,14 +133,14 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <h3 className="text-xl font-serif font-medium text-scholar-700 mb-2">
+            <h3 className="text-xl font-sans font-semibold text-slate dark:text-mist mb-2">
               No Matching Chronicles
             </h3>
-            <p className="text-scholar-600 leading-relaxed">
+            <p className="font-alt text-slate dark:text-mist leading-relaxed">
               No events match the current filter. Try selecting another source.
             </p>
           </div>
-        </ParchmentPaper>
+        </ContentCard>
       </div>
     );
   }
@@ -156,7 +156,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
             isActive={!selectedKeyword}
             onClick={() => onSelectedKeywordChange(null)}
             variant="default"
-            className="rounded-lg"
+            className=""
           >
             All Sources ({totalEventsCount})
           </InkBlotButton>
@@ -169,7 +169,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                 isActive={selectedKeyword === keyword}
                 onClick={() => onSelectedKeywordChange(keyword)}
                 variant="default"
-                className="rounded-lg"
+                className=""
                 title={keywordToTitleMap.get(keyword) || keyword}
               >
                 {keywordToTitleMap.get(keyword) || keyword} ({count})
@@ -184,17 +184,14 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
         {/* Smart Vertical Year Quick Navigation */}
         {timelineYears.length > 0 && onYearSelect && showNavigation && (
           <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 ml-[-36rem] transition-all duration-300 ease-in-out max-h-[90vh] flex flex-col">
-            <ParchmentPaper
-              padding="p-4"
-              className="backdrop-blur-sm shadow-lg flex-1 flex flex-col"
-            >
+            <ContentCard padding="p-4" className="backdrop-blur-sm shadow-lg flex-1 flex flex-col">
               <div className="flex flex-col gap-3 flex-1 min-h-0">
                 {/* Top navigation button - always visible */}
                 <InkBlotButton
                   isActive={false}
                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                   variant="default"
-                  className="rounded-md w-14 h-8 text-xs font-medium"
+                  className="w-14 h-8 text-xs font-medium"
                   title="Scroll to top"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,7 +204,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                   </svg>
                 </InkBlotButton>
 
-                <div className="h-px bg-parchment-300 mx-2"></div>
+                <div className="h-px bg-pewter mx-2"></div>
 
                 {/* Paginated year list */}
                 <div className="flex flex-col gap-2 flex-1 overflow-hidden py-2 min-h-0">
@@ -225,7 +222,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                           isActive={activeYear === year}
                           onClick={() => onYearSelect(year)}
                           variant="year"
-                          className={`rounded-md ${widthClass} h-10 ${fontSizeClass} font-medium`}
+                          className={`${widthClass} h-10 ${fontSizeClass} font-medium`}
                         >
                           {year}
                         </InkBlotButton>
@@ -234,7 +231,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                   </div>
                 </div>
 
-                <div className="h-px bg-parchment-300 mx-2"></div>
+                <div className="h-px bg-pewter mx-2"></div>
 
                 {/* Bottom navigation button - always visible */}
                 <InkBlotButton
@@ -243,7 +240,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
                   }
                   variant="default"
-                  className="rounded-md w-14 h-8 text-xs font-medium"
+                  className="w-14 h-8 text-xs font-medium"
                   title="Scroll to bottom"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,7 +253,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                   </svg>
                 </InkBlotButton>
               </div>
-            </ParchmentPaper>
+            </ContentCard>
           </div>
         )}
 
@@ -275,10 +272,10 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
           <svg width="0" height="0" className="absolute">
             <defs>
               <linearGradient id="timelineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#c7b299" stopOpacity="0.6" />
-                <stop offset="30%" stopColor="#8b7355" stopOpacity="0.9" />
-                <stop offset="70%" stopColor="#8b7355" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#c7b299" stopOpacity="0.6" />
+                <stop offset="0%" stopColor="#919eae" stopOpacity="0.6" />
+                <stop offset="30%" stopColor="#56696d" stopOpacity="0.9" />
+                <stop offset="70%" stopColor="#56696d" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#919eae" stopOpacity="0.6" />
               </linearGradient>
 
               {/* High-performance texture pattern for the timeline stroke */}
@@ -289,7 +286,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                 height="150"
               >
                 <image
-                  href={`data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150"><rect width="100%" height="100%" fill="rgb(139, 111, 78)"/><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="5" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.4"/></svg>`}
+                  href={`data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150"><rect width="100%" height="100%" fill="#56696d"/><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="5" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23n)" opacity="0.4"/></svg>`}
                   width="150"
                   height="150"
                 />
@@ -302,7 +299,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
             {[...Array(12)].map((_, i) => (
               <div
                 key={i}
-                className="absolute w-1 h-1 bg-scholar-400 rounded-full"
+                className="absolute w-1 h-1 bg-pewter rounded-full"
                 style={{
                   top: `${(i + 1) * 8}%`,
                   left: `${2 + Math.sin(i * 0.7) * 4}px`,
@@ -317,7 +314,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                className="absolute text-parchment-400 text-xs"
+                className="absolute text-pewter text-xs"
                 style={{
                   top: `${(i + 1) * 12}%`,
                   left: `${Math.sin(i * 0.5) * 8}px`,
@@ -377,19 +374,19 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                               >
                                 <path
                                   d="M10 40 C5 20, 30 5, 60 8 S 115 15, 110 40 S 100 75, 60 72 S 15 60, 10 40Z"
-                                  className={`fill-parchment-100 ${
+                                  className={`fill-white dark:fill-slate ${
                                     activeYear === displayYear
-                                      ? 'stroke-scholar-400'
-                                      : 'stroke-parchment-600'
+                                      ? 'stroke-slate dark:stroke-sky-blue'
+                                      : 'stroke-pewter dark:stroke-mist'
                                   }`}
                                   strokeWidth="4"
                                 />
                               </svg>
                               <span
-                                className={`relative font-serif ${fontSize} font-semibold leading-none text-center px-1 ${
+                                className={`relative font-sans ${fontSize} font-semibold leading-none text-center px-1 ${
                                   activeYear === displayYear
-                                    ? 'text-scholar-800'
-                                    : 'text-scholar-700'
+                                    ? 'text-charcoal dark:text-white'
+                                    : 'text-slate dark:text-mist'
                                 }`}
                               >
                                 {displayYear}
@@ -400,17 +397,17 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                       </div>
                       <div className="ml-4 flex items-center gap-1">
                         {/* Decorative dots with decreasing size */}
-                        <div className="w-2 h-2 bg-parchment-800 rounded-full"></div>
-                        <div className="w-1.5 h-1.5 bg-parchment-400 rounded-full"></div>
-                        <div className="w-1 h-1 bg-parchment-400 rounded-full opacity-80"></div>
-                        <div className="w-0.5 h-0.5 bg-parchment-300 rounded-full opacity-60"></div>
+                        <div className="w-2 h-2 bg-slate rounded-full"></div>
+                        <div className="w-1.5 h-1.5 bg-pewter rounded-full"></div>
+                        <div className="w-1 h-1 bg-pewter rounded-full opacity-80"></div>
+                        <div className="w-0.5 h-0.5 bg-pewter rounded-full opacity-60"></div>
                         {/* Classical flourish */}
-                        <span className="text-parchment-400 text-sm ml-1 opacity-30">❦</span>
+                        <span className="text-pewter text-sm ml-1 opacity-30">❦</span>
                         {/* Ink brush stroke */}
                         <svg className="w-8 h-2 ml-2 opacity-40" viewBox="0 0 32 8">
                           <path
                             d="M2 4 Q8 2 16 4 Q24 6 30 4"
-                            stroke="#8b7355"
+                            stroke="#919eae"
                             strokeWidth="1.5"
                             fill="none"
                             strokeLinecap="round"
@@ -425,7 +422,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                 <div className="relative mb-12 max-w-2xl">
                   {/* Irregular connector line from timeline to card */}
                   <svg
-                    className="absolute top-1/2 w-[176px] h-auto text-parchment-500"
+                    className="absolute top-1/2 w-[176px] h-auto text-pewter dark:text-mist"
                     style={{ left: '-11rem', transform: 'translateY(-50%)' }}
                     viewBox="0 0 176 10"
                     fill="none"
@@ -440,7 +437,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                   </svg>
                   {/* Hollow circle on the timeline spine */}
                   <div
-                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-parchment-500 bg-parchment-100 shadow-sm"
+                    className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-slate bg-white shadow-sm dark:bg-slate dark:border-mist"
                     style={{ left: '-11rem' }}
                   ></div>
 
@@ -454,14 +451,14 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      <span className="bg-parchment-100 px-2 py-0.5 rounded-sm text-sm font-serif text-scholar-700 shadow-sm">
+                      <span className="bg-white px-2 py-0.5 rounded-sm text-sm font-alt text-slate shadow-sm dark:bg-slate dark:text-mist">
                         {formatEventDate(event.date_info)}
                       </span>
                     </div>
                   )}
 
-                  <ParchmentPaper padding="p-6">
-                    <h3 className="font-serif text-xl font-semibold text-scholar-800 mb-3">
+                  <ContentCard padding="p-6">
+                    <h3 className="font-sans text-xl font-semibold text-charcoal dark:text-white mb-3">
                       {event.description}
                     </h3>
 
@@ -471,13 +468,15 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                           {event.main_entities.map((entity) => (
                             <span
                               key={entity.original_name}
-                              className="px-2.5 py-1 text-xs font-medium text-sage-800 bg-transparent border border-sage-200 rounded-md flex items-center gap-1.5"
+                              className="px-2.5 py-1 text-xs font-medium text-slate bg-sky-blue/20 border border-sky-blue rounded-md flex items-center gap-1.5 dark:bg-sky-blue/10 dark:border-sky-blue/50 dark:text-mist"
                             >
                               {entity.original_name}
-                              <span className="text-sage-400">({entity.entity_type})</span>
+                              <span className="text-pewter dark:text-mist">
+                                ({entity.entity_type})
+                              </span>
                               {entity.is_verified_existent && (
                                 <svg
-                                  className="w-3 h-3 text-sage-500"
+                                  className="w-3 h-3 text-slate dark:text-sky-blue"
                                   fill="currentColor"
                                   viewBox="0 0 20 20"
                                 >
@@ -495,17 +494,17 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                     )}
 
                     {event.source_text_snippet && (
-                      <blockquote className="border-l-4 border-parchment-300 pl-4 text-sm text-scholar-600 italic my-4">
+                      <blockquote className="border-l-4 border-pewter pl-4 text-sm text-slate italic my-4 font-alt dark:text-mist dark:border-mist">
                         {event.source_text_snippet}
                       </blockquote>
                     )}
 
                     {/* --- Source Information --- */}
-                    <div className="mt-4 pt-4 border-t border-parchment-200">
+                    <div className="mt-4 pt-4 border-t border-pewter/50 dark:border-mist/30">
                       {event.source_url && (
                         <div className="flex items-center gap-3 text-sm">
                           <svg
-                            className="w-4 h-4 text-scholar-500 flex-shrink-0"
+                            className="w-4 h-4 text-pewter flex-shrink-0 dark:text-mist"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -521,7 +520,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                             href={event.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-scholar-600 hover:text-scholar-800 underline truncate"
+                            className="text-slate hover:text-charcoal underline truncate font-alt dark:text-mist dark:hover:text-white"
                             title={event.source_url}
                           >
                             {getSourceLinkText(event.source_page_title, event.source_url)}
@@ -552,7 +551,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                           <>
                             <button
                               onClick={() => onToggleShowSources(event.id)}
-                              className="text-xs text-scholar-500 hover:text-scholar-700 mt-2 flex items-center gap-1"
+                              className="text-xs text-slate hover:text-charcoal mt-2 flex items-center gap-1 font-alt dark:text-mist dark:hover:text-white"
                             >
                               {expandedSources[event.id]
                                 ? 'Hide other sources'
@@ -573,12 +572,12 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                             </button>
 
                             {expandedSources[event.id] && (
-                              <div className="mt-3 space-y-3 pl-4 border-l-2 border-parchment-200">
+                              <div className="mt-3 space-y-3 pl-4 border-l-2 border-pewter/50 dark:border-mist/30">
                                 {otherSources.map((source, idx) => (
-                                  <div key={idx} className="text-xs">
+                                  <div key={idx} className="text-xs font-alt">
                                     <div className="flex items-center gap-2">
                                       <svg
-                                        className="w-3 h-3 text-scholar-400 flex-shrink-0"
+                                        className="w-3 h-3 text-pewter flex-shrink-0 dark:text-mist"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -594,7 +593,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                                         href={source.source_url || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-scholar-600 hover:text-scholar-800 underline truncate font-medium"
+                                        className="text-slate hover:text-charcoal underline truncate font-medium dark:text-mist dark:hover:text-white"
                                         title={source.source_url || 'No URL available'}
                                       >
                                         {getSourceLinkText(
@@ -604,13 +603,13 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                                       </a>
                                       {source.source_url &&
                                         getDataSourceLabel(source.source_url) && (
-                                          <span className="text-scholar-500">
+                                          <span className="text-pewter dark:text-mist">
                                             ({getDataSourceLabel(source.source_url)})
                                           </span>
                                         )}
                                     </div>
                                     {source.source_text_snippet && (
-                                      <blockquote className="border-l-2 border-parchment-300 pl-3 ml-1.5 mt-2 py-1 text-scholar-600 italic">
+                                      <blockquote className="border-l-2 border-pewter pl-3 ml-1.5 mt-2 py-1 text-slate italic dark:text-mist dark:border-mist">
                                         "{source.source_text_snippet}"
                                       </blockquote>
                                     )}
@@ -623,7 +622,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                       })()}
                     </div>
                     {/* --- End Source Information --- */}
-                  </ParchmentPaper>
+                  </ContentCard>
                 </div>
               </React.Fragment>
             );

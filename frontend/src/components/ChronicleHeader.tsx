@@ -123,7 +123,7 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
                   {dataSourcePref.split(',').map((source) => (
                     <span
                       key={source.trim()}
-                      className="px-2.5 py-0.5 bg-white text-scholar-700 border border-parchment-300 rounded-md text-xs"
+                      className="px-2.5 py-0.5 text-scholar-700 border border-parchment-300 rounded-md text-xs"
                     >
                       {source.trim()}
                     </span>

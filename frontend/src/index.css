@@ -1,31 +1,32 @@
-/* Import Google Fonts for scholarly atmosphere */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-parchment-50 text-scholar-900 font-sans;
-    /* Subtle paper texture (optional) */
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      rgba(139, 115, 85, 0.1) 1px,
-      transparent 0
-    );
-    background-size: 20px 20px;
+    @apply bg-white text-charcoal font-alt transition-colors duration-300;
+    @apply dark:bg-charcoal dark:text-mist;
   }
 
-  /* Apply serif font to headings for scholarly feel */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-serif text-scholar-800;
+  /* Apply brand fonts to headings */
+  h1 {
+    @apply font-sans font-bold;
   }
+  h2 {
+    @apply font-sans font-semibold;
+  }
+  h3 {
+    @apply font-sans font-normal;
+  }
+  h4 {
+    @apply font-alt font-normal;
+  }
+  h5 {
+    @apply font-alt font-light;
+  }
+  h6 {
+    @apply font-alt font-light;
+  } /* Defaulting h6 to light */
 
   /* Improve reading experience */
   p {
@@ -34,53 +35,66 @@
 }
 
 @layer components {
-  /* Updated button styles with parchment theme */
+  /* Button styles with new brand colors */
   .btn {
     @apply px-4 py-2 rounded font-medium transition-all duration-200;
     @apply border border-transparent;
   }
 
   .btn-primary {
-    @apply bg-parchment-500 text-parchment-50 border-parchment-600;
-    @apply hover:bg-parchment-600 hover:shadow-sm;
+    @apply bg-slate text-white;
+    @apply hover:bg-slate/90 hover:shadow-sm;
+    @apply dark:bg-sky-blue dark:text-charcoal dark:hover:bg-sky-blue/90;
   }
 
   .btn-secondary {
-    @apply bg-transparent text-scholar-700 border-scholar-300;
-    @apply hover:bg-scholar-50 hover:border-scholar-400;
+    @apply bg-mist text-slate border-pewter;
+    @apply hover:bg-sky-blue hover:border-slate;
+    @apply dark:bg-slate dark:text-mist dark:border-pewter dark:hover:bg-pewter dark:hover:text-white;
   }
 
-  /* Updated input styles */
+  .btn-secondary-outline {
+    @apply bg-transparent text-slate border border-pewter;
+    @apply hover:bg-mist/50 hover:border-slate;
+    @apply dark:text-mist dark:border-pewter dark:hover:bg-slate/50 dark:hover:border-mist;
+  }
+
+  /* Input styles */
   .input {
-    @apply w-full px-3 py-2 bg-white border border-parchment-300 rounded;
-    @apply focus:outline-none focus:border-parchment-500 focus:ring-1 focus:ring-parchment-500;
+    @apply w-full px-3 py-2 bg-white border border-pewter rounded;
+    @apply focus:outline-none focus:border-slate focus:ring-1 focus:ring-slate;
     @apply transition-colors duration-200;
+    @apply dark:bg-slate dark:border-pewter dark:text-mist dark:placeholder-pewter focus:dark:border-sky-blue focus:dark:ring-sky-blue;
   }
 
-  /* Quote/Note block style for status messages */
-  .scholar-note {
+  /* Note block styles for status messages */
+  .status-note {
     @apply border-l-4 pl-4 py-3 my-4;
-    @apply bg-parchment-100/30 border-parchment-400;
+    @apply bg-mist/50 border-pewter;
+    @apply dark:bg-slate/50 dark:border-pewter;
   }
 
-  .scholar-note-success {
+  .status-note-success {
     @apply border-l-4 pl-4 py-3 my-4;
-    @apply bg-sage-50/50 border-sage-400;
+    @apply bg-sky-blue/30 border-sky-blue;
+    @apply dark:bg-sky-blue/10 dark:border-sky-blue/50;
   }
 
-  .scholar-note-info {
+  .status-note-info {
     @apply border-l-4 pl-4 py-3 my-4;
-    @apply bg-scholar-50/50 border-scholar-300;
+    @apply bg-mist/80 border-pewter;
+    @apply dark:bg-slate/80 dark:border-pewter;
   }
 
   /* Card/Section containers */
-  .parchment-card {
-    @apply bg-white border border-parchment-300 rounded-lg;
+  .content-card {
+    @apply bg-white border-2 border-mist rounded-2xl;
     @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply dark:bg-charcoal dark:border-sky-blue;
   }
 
   /* Subtle dividers */
-  .scholar-divider {
-    @apply border-parchment-300;
+  .content-divider {
+    @apply border-mist;
   }
 }
