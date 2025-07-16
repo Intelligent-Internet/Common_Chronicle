@@ -119,9 +119,9 @@ Common Chronicle is designed for a wide range of users who need to learn or rese
 This project thrives on community contributions. We welcome you to help in any way you can:
 
 -   ⭐ **Give us a star on GitHub!** It helps others discover the project.
--   🐞 **Report bugs** or suggest features by creating an issue.
+-   🐞 **Report bugs or suggest features by creating an issue.** Please use our issue templates to provide structured feedback.
 -   📖 **Improve the documentation** for users and developers.
--   🧑‍💻 **Contribute code**. Check our **[Contributing Guide](./CONTRIBUTING.md)** to get started.
+-   🧑‍💻 **Contribute code**. Check our **[Contributing Guide](./.github/CONTRIBUTING.md)** to get started.
 
 ## 🔧 Getting Started
 

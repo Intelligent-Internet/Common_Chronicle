@@ -344,6 +344,9 @@ fix(api): handle missing viewpoint_id in task creation
 docs(readme): update installation instructions
 ```
 
+## Submitting Issues
+Before creating an issue, please check if a similar one already exists. We provide several issue templates to help you structure your report. Please use the appropriate template for bug reports, feature requests, or questions to ensure we have all the necessary information.
+
 ## 🚨 Quality Assurance
 
 ### Automated Checks (Pre-commit)
