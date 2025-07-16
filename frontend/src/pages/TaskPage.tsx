@@ -33,6 +33,8 @@ function TaskPage() {
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [isQuickNavVisible, setIsQuickNavVisible] = useState(false);
   const [activeYear, setActiveYear] = useState<string | null>(null);
+  const [minRelevanceScore, setMinRelevanceScore] = useState<number>(0);
+  const [showRelevanceFilter, setShowRelevanceFilter] = useState<boolean>(false);
   const chronicleHeaderRef = useRef<HTMLDivElement>(null);
 
   const sourceFilterData = useMemo(() => {
@@ -72,13 +74,26 @@ function TaskPage() {
   }, [events]);
 
   const filteredEvents = useMemo(() => {
-    if (!selectedKeyword) {
-      return events;
+    let filtered = events;
+
+    // Apply keyword filtering
+    if (selectedKeyword) {
+      filtered = filtered.filter((event) =>
+        event.sources.some((source) => source.source_page_title === selectedKeyword)
+      );
     }
-    return events.filter((event) =>
-      event.sources.some((source) => source.source_page_title === selectedKeyword)
-    );
-  }, [events, selectedKeyword]);
+
+    // Apply relevance score filtering
+    // Only filter if minRelevanceScore is explicitly set to a value > 0
+    if (minRelevanceScore > 0) {
+      filtered = filtered.filter((event) => {
+        const score = event.relevance_score;
+        return score !== null && score !== undefined && score >= minRelevanceScore;
+      });
+    }
+
+    return filtered;
+  }, [events, selectedKeyword, minRelevanceScore]);
 
   // WebSocket related state for dynamic tasks
   const [progressMessages, setProgressMessages] = useState<WebSocketStatusMessage[]>([]);
@@ -522,6 +537,10 @@ function TaskPage() {
     }
   };
 
+  const handleToggleRelevanceFilter = () => {
+    setShowRelevanceFilter(!showRelevanceFilter);
+  };
+
   const handleExport = (format: 'json' | 'markdown') => {
     if (!task) return;
 
@@ -597,6 +616,11 @@ function TaskPage() {
                 onYearSelect={handleYearSelect}
                 isQuickNavVisible={isQuickNavVisible}
                 totalEventsCount={totalEventsCount}
+                events={events}
+                minRelevanceScore={minRelevanceScore}
+                onMinRelevanceScoreChange={setMinRelevanceScore}
+                showRelevanceFilter={showRelevanceFilter}
+                onToggleRelevanceFilter={handleToggleRelevanceFilter}
               />
             </div>
 

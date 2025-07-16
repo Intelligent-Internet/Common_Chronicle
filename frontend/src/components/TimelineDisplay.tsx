@@ -151,7 +151,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
     <div className="mt-12 max-w-6xl mx-auto px-4">
       {/* Integrated Source Filters with Ink Blot Effect */}
       {uniqueKeywords.length > 0 && (
-        <nav className="flex flex-wrap justify-center gap-3 mb-16" aria-label="Source Filters">
+        <nav className="flex flex-wrap justify-center gap-3 mb-8" aria-label="Source Filters">
           <InkBlotButton
             isActive={!selectedKeyword}
             onClick={() => onSelectedKeywordChange(null)}
@@ -458,9 +458,52 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                   )}
 
                   <ContentCard padding="p-6">
-                    <h3 className="font-sans text-xl font-semibold text-charcoal dark:text-white mb-3">
-                      {event.description}
-                    </h3>
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-sans text-xl font-semibold text-charcoal dark:text-white flex-1">
+                        {event.description}
+                      </h3>
+                      {event.relevance_score !== null && event.relevance_score !== undefined && (
+                        <div className="ml-4 flex-shrink-0">
+                          <div
+                            className={`px-3 py-1 rounded-full border ${
+                              event.relevance_score >= 0.75
+                                ? 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900/20 dark:border-green-700 dark:text-green-400'
+                                : event.relevance_score >= 0.5
+                                  ? 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-700 dark:text-yellow-400'
+                                  : 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/20 dark:border-red-700 dark:text-red-400'
+                            }`}
+                            title={`Relevance Score: ${event.relevance_score.toFixed(2)} - ${
+                              event.relevance_score >= 0.75
+                                ? 'High relevance'
+                                : event.relevance_score >= 0.5
+                                  ? 'Medium relevance'
+                                  : 'Low relevance'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <svg
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
+                                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                />
+                              </svg>
+                              <div className="flex flex-col items-center leading-tight">
+                                <span className="text-sm font-bold -mt-0.5">
+                                  {(event.relevance_score * 100).toFixed(0)}%
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     {event.main_entities && event.main_entities.length > 0 && (
                       <div className="mb-4">

@@ -330,7 +330,7 @@ class TimelineOrchestratorService:
             async with AppAsyncSessionLocal() as db:
                 # Pipeline Stage 5: Event relevance filtering and selection
                 # Filter canonical events based on relevance to the viewpoint
-                relevant_event_ids = await self._filter_events_by_relevance(
+                event_id_to_score = await self._filter_events_by_relevance(
                     all_canonical_event_ids,
                     viewpoint_text,
                     request_id,
@@ -341,7 +341,7 @@ class TimelineOrchestratorService:
                 # Pipeline Stage 6: Intelligent event merging and deduplication
                 # Merge related events using multi-stage matching algorithms
                 merged_event_groups = await self._merge_events(
-                    relevant_event_ids,
+                    list(event_id_to_score.keys()),
                     language_code,
                     db=db,
                     request_id=request_id,
@@ -353,6 +353,7 @@ class TimelineOrchestratorService:
                 final_events = await self._populate_existing_viewpoint_with_events(
                     viewpoint_id=viewpoint_id,
                     merged_event_groups=merged_event_groups,
+                    event_id_to_score=event_id_to_score,
                     request_id=request_id,
                     progress_callback=progress_callback,
                     db=db,
@@ -734,8 +735,8 @@ class TimelineOrchestratorService:
         request_id: str,
         progress_callback: ProgressCallback | None,
         db: AsyncSession,
-    ) -> list[uuid.UUID]:
-        """Filter extracted events by relevance to viewpoint text."""
+    ) -> dict[uuid.UUID, float]:
+        """Filter extracted events by relevance to viewpoint text and return event IDs with their relevance scores."""
         if progress_callback:
             await progress_callback.report(
                 f"Filtering {len(all_canonical_event_ids)} events for relevance...",
@@ -775,22 +776,24 @@ class TimelineOrchestratorService:
             event_data_list, viewpoint_text, request_id
         )
 
-        # Extract the IDs of relevant events
-        relevant_event_ids = [
-            item["original_event_id"] for item in relevant_event_data_list
-        ]
+        # Create a mapping of event IDs to their relevance scores
+        event_id_to_score = {}
+        for item in relevant_event_data_list:
+            event_id = item["original_event_id"]
+            relevance_score = item.get("relevance_score", 0.0)
+            event_id_to_score[event_id] = relevance_score
 
         logger.info(
-            f"[RequestID: {request_id}] Filtered {len(all_canonical_event_ids)} events down to {len(relevant_event_ids)} relevant events. Stats: {stats}"
+            f"[RequestID: {request_id}] Filtered {len(all_canonical_event_ids)} events down to {len(event_id_to_score)} relevant events. Stats: {stats}"
         )
         if progress_callback:
             await progress_callback.report(
-                f"Found {len(relevant_event_ids)} relevant events.",
+                f"Found {len(event_id_to_score)} relevant events.",
                 "relevance_filtering_complete",
-                {"relevant_event_count": len(relevant_event_ids)},
+                {"relevant_event_count": len(event_id_to_score)},
                 request_id,
             )
-        return relevant_event_ids
+        return event_id_to_score
 
     async def _merge_events(
         self,
@@ -969,6 +972,7 @@ class TimelineOrchestratorService:
         self,
         viewpoint_id: uuid.UUID,
         merged_event_groups: list[MergedEventGroupSchema],
+        event_id_to_score: dict[uuid.UUID, float],
         request_id: str = "",
         progress_callback: ProgressCallback | None = None,
         *,
@@ -1114,10 +1118,29 @@ class TimelineOrchestratorService:
 
             # Create viewpoint-event association for the final event
             # This establishes the connection between viewpoint and its timeline events
+
+            # Calculate relevance score for this event
+            # For non-merged events, use the original score
+            # For merged events, use the maximum score from source events
+            relevance_score = 0.0
+            if not group.is_merged:
+                # Simple event - use its original relevance score
+                relevance_score = event_id_to_score.get(
+                    final_event_for_viewpoint.id, 0.0
+                )
+            else:
+                # Merged event - use the maximum relevance score from source events
+                source_scores = [
+                    event_id_to_score.get(source_event.id, 0.0)
+                    for source_event in group.source_events
+                ]
+                relevance_score = max(source_scores) if source_scores else 0.0
+
             db.add(
                 ViewpointEventAssociation(
                     viewpoint_id=viewpoint_id,
                     event_id=final_event_for_viewpoint.id,
+                    relevance_score=relevance_score,
                 )
             )
 

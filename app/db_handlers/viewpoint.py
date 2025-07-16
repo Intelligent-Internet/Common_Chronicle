@@ -51,7 +51,7 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
         if not viewpoint:
             return None
 
-        # Format timeline events
+        # Format timeline events - always return all events with their relevance scores
         timeline_events = self._format_timeline_events(viewpoint)
 
         # Serialize progress steps
@@ -174,6 +174,7 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                     source_language=(
                         first_source.source_language if first_source else None
                     ),
+                    relevance_score=association.relevance_score,
                 )
             )
 

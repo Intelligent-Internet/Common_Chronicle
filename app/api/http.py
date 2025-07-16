@@ -163,6 +163,7 @@ async def get_task_result(
     Retrieve the complete timeline results including all generated events and entities.
 
     Access is controlled based on task ownership and public/private status.
+    Returns all events with their relevance scores for client-side filtering.
     """
     try:
         task_details = await task_db_handler.get_task_with_complete_viewpoint_details(

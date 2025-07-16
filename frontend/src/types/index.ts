@@ -118,6 +118,7 @@ export interface TimelineEvent {
   source_url?: string | null;
   source_page_title?: string | null;
   source_language?: string | null;
+  relevance_score?: number | null; // Relevance score for filtering and ranking
 }
 
 export interface LLMRequest {

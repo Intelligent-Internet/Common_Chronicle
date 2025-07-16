@@ -15,9 +15,10 @@ Key Features:
     - Viewpoint-specific event collections
     - Unique constraint enforcement
     - Efficient timeline querying
+    - Event relevance scoring for filtering
 """
 
-from sqlalchemy import Column, ForeignKey, Index, Integer, UniqueConstraint
+from sqlalchemy import Column, Float, ForeignKey, Index, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
@@ -30,7 +31,8 @@ class ViewpointEventAssociation(Base, UUIDMixin):
 
     Organizes events under specific thematic perspectives with optional narrative
     sequencing. Enables coherent timeline presentation and supports multiple
-    timeline perspectives of the same events.
+    timeline perspectives of the same events. Includes relevance scoring for
+    intelligent event filtering and user experience optimization.
     """
 
     __tablename__ = "viewpoint_event_associations"
@@ -41,6 +43,7 @@ class ViewpointEventAssociation(Base, UUIDMixin):
         ),
         Index("ix_vea_viewpoint_id", "viewpoint_id"),
         Index("ix_vea_event_id", "event_id"),
+        Index("ix_vea_relevance_score", "relevance_score"),
         {"schema": SCHEMA_NAME},
     )
 
@@ -64,6 +67,12 @@ class ViewpointEventAssociation(Base, UUIDMixin):
         comment="Optional sequence order for narrative presentation within the viewpoint",
     )
 
+    relevance_score = Column(
+        Float,
+        nullable=True,
+        comment="Relevance score between the viewpoint and event, used for filtering and ranking",
+    )
+
     viewpoint = relationship(
         "Viewpoint",
         back_populates="event_associations",
@@ -81,5 +90,6 @@ class ViewpointEventAssociation(Base, UUIDMixin):
             f"<ViewpointEventAssociation(id={self.id}, "
             f"viewpoint_id={self.viewpoint_id}, "
             f"event_id={self.event_id}, "
-            f"sequence_order={self.sequence_order})>"
+            f"sequence_order={self.sequence_order}, "
+            f"relevance_score={self.relevance_score})>"
         )

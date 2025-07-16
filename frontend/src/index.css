@@ -97,4 +97,31 @@
   .content-divider {
     @apply border-mist;
   }
+
+  /* Relevance score slider styles */
+  .slider::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 bg-slate rounded-full cursor-pointer;
+    @apply shadow-md hover:shadow-lg transition-shadow duration-200;
+    @apply dark:bg-sky-blue;
+  }
+
+  .slider::-moz-range-thumb {
+    @apply w-5 h-5 bg-slate rounded-full cursor-pointer border-0;
+    @apply shadow-md hover:shadow-lg transition-shadow duration-200;
+    @apply dark:bg-sky-blue;
+  }
+
+  .slider:focus {
+    @apply outline-none;
+  }
+
+  .slider:focus::-webkit-slider-thumb {
+    @apply ring-2 ring-slate/50 ring-offset-2;
+    @apply dark:ring-sky-blue/50;
+  }
+
+  .slider:focus::-moz-range-thumb {
+    @apply ring-2 ring-slate/50 ring-offset-2;
+    @apply dark:ring-sky-blue/50;
+  }
 }

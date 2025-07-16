@@ -514,6 +514,7 @@ class TimelineEventForAPI(BaseModel):
     source_language: str | None = None
 
     viewpoint_id: str | None = None  # Convert UUID to string for frontend compatibility
+    relevance_score: float | None = None  # Relevance score for filtering and ranking
 
     @field_validator("id", mode="before")
     @classmethod
