@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { TaskResultResponse } from '../types';
+import type { TaskResultResponse, TimelineEvent } from '../types';
+import FilterPanel from './FilterPanel';
 import {
   GlobeAltIcon,
   LockClosedIcon,
@@ -19,12 +20,12 @@ interface ChronicleHeaderProps {
   onYearSelect: (year: string) => void;
   isQuickNavVisible: boolean;
   totalEventsCount: number;
-  // Add new props for relevance filter
-  events?: Array<{ relevance_score?: number | null }>;
-  minRelevanceScore?: number;
-  onMinRelevanceScoreChange?: (score: number) => void;
-  showRelevanceFilter?: boolean;
-  onToggleRelevanceFilter?: () => void;
+  // Filter-related props
+  events: TimelineEvent[];
+  uniqueKeywords: string[];
+  keywordToTitleMap: Map<string, string>;
+  currentFilters: { selectedKeyword: string | null; minRelevanceScore: number };
+  onFiltersChange: (filters: { selectedKeyword: string | null; minRelevanceScore: number }) => void;
 }
 
 const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
@@ -37,47 +38,18 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
   onYearSelect,
   isQuickNavVisible,
   totalEventsCount,
-  events = [],
-  minRelevanceScore = 0,
-  onMinRelevanceScoreChange,
-  showRelevanceFilter = false,
-  onToggleRelevanceFilter,
+  events,
+  uniqueKeywords,
+  keywordToTitleMap,
+  currentFilters,
+  onFiltersChange,
 }) => {
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
-  // Generate relevance score options based on actual event scores
-  const relevanceScoreOptions = React.useMemo(() => {
-    if (!events || events.length === 0) {
-      return [];
-    }
-
-    const validScores = events
-      .map((event) => event.relevance_score)
-      .filter((score): score is number => score !== null && score !== undefined);
-
-    if (validScores.length === 0) {
-      return [];
-    }
-
-    // Get unique scores and sort them in descending order
-    const uniqueScores = [...new Set(validScores)].sort((a, b) => b - a);
-
-    // Generate threshold options for each unique score
-    const options = [];
-
-    for (const score of uniqueScores) {
-      const count = validScores.filter((s) => s >= score).length;
-      if (count > 0) {
-        options.push({
-          value: score,
-          label: `≥${score.toFixed(2)}`,
-          count: count,
-        });
-      }
-    }
-
-    return options;
-  }, [events]);
+  // Check if any filters are active
+  const hasActiveFilters =
+    currentFilters.selectedKeyword !== null || currentFilters.minRelevanceScore > 0;
 
   if (!task) {
     return (
@@ -200,19 +172,26 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
               </button>
             )}
 
-            {/* Filters Button - only show if relevance filter is available */}
-            {onMinRelevanceScoreChange && onToggleRelevanceFilter && (
-              <button
-                onClick={onToggleRelevanceFilter}
-                className={`btn text-sm flex items-center justify-center gap-2 ${
-                  showRelevanceFilter ? 'btn-secondary' : 'btn-secondary-outline'
-                }`}
-                title="Toggle Relevance Filter"
-              >
-                <AdjustmentsHorizontalIcon className="w-4 h-4" />
-                Filters
-              </button>
-            )}
+            {/* Filters Button */}
+            <button
+              onClick={() => setIsFilterPanelOpen(true)}
+              className={`btn text-sm flex items-center justify-center gap-2 ${
+                hasActiveFilters ? 'btn-secondary' : 'btn-secondary-outline'
+              }`}
+              title="Filters"
+            >
+              <AdjustmentsHorizontalIcon className="w-4 h-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-scholar-600 text-white rounded-full">
+                  {
+                    [currentFilters.selectedKeyword, currentFilters.minRelevanceScore > 0].filter(
+                      Boolean
+                    ).length
+                  }
+                </span>
+              )}
+            </button>
 
             <div className="relative">
               <button
@@ -271,38 +250,16 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
           </div>
         </div>
 
-        {/* Relevance Filter Panel - conditionally rendered */}
-        {showRelevanceFilter && onMinRelevanceScoreChange && (
-          <div className="mt-6 max-w-md mx-auto">
-            <div className="bg-white border border-stone-200 rounded-lg p-6 shadow-lg dark:bg-slate dark:border-mist/30">
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-sans font-semibold text-slate mb-2 dark:text-mist">
-                  Relevance Filter
-                </h3>
-                <p className="text-sm text-pewter opacity-80 dark:text-mist">
-                  Show events with relevance score ≥ {minRelevanceScore.toFixed(2)}
-                </p>
-              </div>
-              <div className="space-y-4">
-                <div className="flex justify-center gap-2 flex-wrap">
-                  {relevanceScoreOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      onClick={() => onMinRelevanceScoreChange(option.value)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                        minRelevanceScore === option.value
-                          ? 'bg-scholar-100 text-scholar-800 border border-scholar-300 dark:bg-sky-blue/20 dark:text-sky-blue dark:border-sky-blue'
-                          : 'bg-stone-100 text-stone-700 border border-stone-200 hover:bg-stone-200 dark:bg-slate/50 dark:text-mist dark:border-mist/30 dark:hover:bg-slate/70'
-                      }`}
-                    >
-                      {option.label} ({option.count})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Filter Panel */}
+        <FilterPanel
+          events={events}
+          keywordToTitleMap={keywordToTitleMap}
+          uniqueKeywords={uniqueKeywords}
+          isOpen={isFilterPanelOpen}
+          onClose={() => setIsFilterPanelOpen(false)}
+          onApplyFilters={onFiltersChange}
+          currentFilters={currentFilters}
+        />
       </section>
 
       {/* Quick Navigation Bar - shown on scroll */}

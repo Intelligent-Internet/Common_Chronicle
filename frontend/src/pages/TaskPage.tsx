@@ -29,12 +29,16 @@ function TaskPage() {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null);
   const [expandedSources, setExpandedSources] = useState<Record<string, boolean>>({});
   const [isQuickNavVisible, setIsQuickNavVisible] = useState(false);
   const [activeYear, setActiveYear] = useState<string | null>(null);
-  const [minRelevanceScore, setMinRelevanceScore] = useState<number>(0);
-  const [showRelevanceFilter, setShowRelevanceFilter] = useState<boolean>(false);
+  const [currentFilters, setCurrentFilters] = useState<{
+    selectedKeyword: string | null;
+    minRelevanceScore: number;
+  }>({
+    selectedKeyword: null,
+    minRelevanceScore: 0,
+  });
   const chronicleHeaderRef = useRef<HTMLDivElement>(null);
 
   const sourceFilterData = useMemo(() => {
@@ -77,23 +81,23 @@ function TaskPage() {
     let filtered = events;
 
     // Apply keyword filtering
-    if (selectedKeyword) {
+    if (currentFilters.selectedKeyword) {
       filtered = filtered.filter((event) =>
-        event.sources.some((source) => source.source_page_title === selectedKeyword)
+        event.sources.some((source) => source.source_page_title === currentFilters.selectedKeyword)
       );
     }
 
     // Apply relevance score filtering
     // Only filter if minRelevanceScore is explicitly set to a value > 0
-    if (minRelevanceScore > 0) {
+    if (currentFilters.minRelevanceScore > 0) {
       filtered = filtered.filter((event) => {
         const score = event.relevance_score;
-        return score !== null && score !== undefined && score >= minRelevanceScore;
+        return score !== null && score !== undefined && score >= currentFilters.minRelevanceScore;
       });
     }
 
     return filtered;
-  }, [events, selectedKeyword, minRelevanceScore]);
+  }, [events, currentFilters]);
 
   // WebSocket related state for dynamic tasks
   const [progressMessages, setProgressMessages] = useState<WebSocketStatusMessage[]>([]);
@@ -537,8 +541,11 @@ function TaskPage() {
     }
   };
 
-  const handleToggleRelevanceFilter = () => {
-    setShowRelevanceFilter(!showRelevanceFilter);
+  const handleFiltersChange = (filters: {
+    selectedKeyword: string | null;
+    minRelevanceScore: number;
+  }) => {
+    setCurrentFilters(filters);
   };
 
   const handleExport = (format: 'json' | 'markdown') => {
@@ -553,21 +560,10 @@ function TaskPage() {
     }
   };
 
-  const handleFilterByKeyword = (keyword: string | null) => {
-    setSelectedKeyword(keyword);
-  };
-
-  const getEventCountForKeyword = useCallback(
-    (keyword: string) => {
-      return sourceFilterData.counts.get(keyword) || 0;
-    },
-    [sourceFilterData.counts]
-  );
-
-  const totalEventsCount = filteredEvents.length;
+  const totalEventsCount = events.length;
 
   const hasRenderableContent =
-    totalEventsCount > 0 ||
+    filteredEvents.length > 0 ||
     loading ||
     (task && task.status !== 'completed' && task.status !== 'failed');
 
@@ -617,10 +613,10 @@ function TaskPage() {
                 isQuickNavVisible={isQuickNavVisible}
                 totalEventsCount={totalEventsCount}
                 events={events}
-                minRelevanceScore={minRelevanceScore}
-                onMinRelevanceScoreChange={setMinRelevanceScore}
-                showRelevanceFilter={showRelevanceFilter}
-                onToggleRelevanceFilter={handleToggleRelevanceFilter}
+                uniqueKeywords={sourceFilterData.keywords}
+                keywordToTitleMap={sourceFilterData.titles}
+                currentFilters={currentFilters}
+                onFiltersChange={handleFiltersChange}
               />
             </div>
 
@@ -629,12 +625,6 @@ function TaskPage() {
                 events={filteredEvents}
                 activeYear={activeYear}
                 onYearSelect={handleYearSelect}
-                uniqueKeywords={sourceFilterData.keywords}
-                keywordToTitleMap={sourceFilterData.titles}
-                getEventCountForKeyword={getEventCountForKeyword}
-                totalEventsCount={events.length}
-                selectedKeyword={selectedKeyword}
-                onSelectedKeywordChange={handleFilterByKeyword}
                 expandedSources={expandedSources}
                 onToggleShowSources={toggleShowSources}
               />

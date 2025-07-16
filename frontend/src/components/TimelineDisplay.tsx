@@ -14,13 +14,7 @@ import {
 
 interface TimelineDisplayProps {
   events: TimelineEvent[];
-  keywordToTitleMap: Map<string, string>;
   activeYear: string | null;
-  uniqueKeywords: string[];
-  selectedKeyword: string | null;
-  onSelectedKeywordChange: (keyword: string | null) => void;
-  getEventCountForKeyword: (keyword: string) => number;
-  totalEventsCount: number;
   expandedSources: Record<string, boolean>;
   onToggleShowSources: (eventId: string) => void;
   onYearSelect?: (year: string) => void;
@@ -28,13 +22,7 @@ interface TimelineDisplayProps {
 
 const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
   events,
-  keywordToTitleMap,
   activeYear,
-  uniqueKeywords,
-  selectedKeyword,
-  onSelectedKeywordChange,
-  getEventCountForKeyword,
-  totalEventsCount,
   expandedSources,
   onToggleShowSources,
   onYearSelect,
@@ -115,7 +103,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (events.length === 0 && selectedKeyword) {
+  if (events.length === 0) {
     return (
       <div className="mt-12">
         <ContentCard className="max-w-md mx-auto" padding="p-8">
@@ -137,7 +125,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
               No Matching Chronicles
             </h3>
             <p className="font-alt text-slate dark:text-mist leading-relaxed">
-              No events match the current filter. Try selecting another source.
+              No events match the current filter.
             </p>
           </div>
         </ContentCard>
@@ -149,36 +137,6 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
 
   return (
     <div className="mt-12 max-w-6xl mx-auto px-4">
-      {/* Integrated Source Filters with Ink Blot Effect */}
-      {uniqueKeywords.length > 0 && (
-        <nav className="flex flex-wrap justify-center gap-3 mb-8" aria-label="Source Filters">
-          <InkBlotButton
-            isActive={!selectedKeyword}
-            onClick={() => onSelectedKeywordChange(null)}
-            variant="default"
-            className=""
-          >
-            All Sources ({totalEventsCount})
-          </InkBlotButton>
-          {uniqueKeywords.map((keyword) => {
-            const count = getEventCountForKeyword(keyword);
-            if (count === 0 && selectedKeyword !== keyword) return null;
-            return (
-              <InkBlotButton
-                key={keyword}
-                isActive={selectedKeyword === keyword}
-                onClick={() => onSelectedKeywordChange(keyword)}
-                variant="default"
-                className=""
-                title={keywordToTitleMap.get(keyword) || keyword}
-              >
-                {keywordToTitleMap.get(keyword) || keyword} ({count})
-              </InkBlotButton>
-            );
-          })}
-        </nav>
-      )}
-
       {/* Vertical Year Navigation & Timeline Container */}
       <div className="relative flex">
         {/* Smart Vertical Year Quick Navigation */}
