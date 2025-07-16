@@ -113,7 +113,8 @@ cd Common_Chronicle
 
 # Set up Python environment
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
+# Or on Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
@@ -123,7 +124,10 @@ pip install -r requirements_dev.txt
 cp config.env.example .env
 # Edit .env with your database URL and API keys
 
-# Run database migrations
+# Initialize your local database
+# As this project doesn't ship with shared migrations, you need to create an initial one.
+# Make sure your database is created, then run:
+alembic revision --autogenerate -m "Init local database"
 alembic upgrade head
 
 # Set up pre-commit hooks

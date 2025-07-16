@@ -178,6 +178,6 @@ related_repo/
 temp*.*
 
 
-alembic/versions/
+alembic/versions/*.py
 docs/
 *copy*
