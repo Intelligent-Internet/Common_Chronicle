@@ -64,6 +64,20 @@ For each event, please extract the following information:
    - If an entity name appears in the source text, use that exact form
    - If an entity is referenced but not explicitly named in the source, use the appropriate language version based on the source text language
 
+   **SPECIAL HANDLING FOR PERSON NAMES AND ABBREVIATIONS:**
+   - When encountering person names that appear to be shortened forms, abbreviations, or incomplete names (e.g., "Li", "Zhang", "Smith"), analyze the entire text context to determine if a more complete name can be inferred
+   - Look for contextual clues such as:
+     * Full names mentioned elsewhere in the text
+     * Additional identifying information (titles, positions, affiliations)
+     * Cross-references to the same person with different name forms
+   - If a more complete name can be reasonably inferred from context, use the complete form instead of the abbreviated form
+   - Examples:
+     * If the text mentions "Li founded the company" but earlier refers to "Li Xiaolai's background", use "Li Xiaolai" instead of "Li"
+     * If the text mentions "Dr. Smith" or "Professor Smith", use the full title with the surname
+     * If the text mentions "CEO Zhang" with context suggesting "Zhang Wei", use "Zhang Wei" instead of just "Zhang"
+   - For organizations, locations, and other entities, similarly prioritize complete names over abbreviations when full forms are available in the context
+   - If no additional context is available to determine a complete name, use the form that appears in the source text, but ensure it contains sufficient identifying information (minimum: first name + last name for persons, or clear organizational/location identifiers)
+
 5.  **source_text_snippet**: Required. The original sentence or phrase from the text that describes the event, for traceability.
 
 **Special Instructions for Handling Vague Time Descriptions:**
@@ -182,6 +196,24 @@ Text: "In African mythology, the San peoples tell of ǀKaggen, stealing fire fro
   "source_text_snippet": "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
 }
 ```
+
+**EXAMPLE OF HANDLING PERSON NAME ABBREVIATIONS:**
+Text: "Li Xiaolai was a prominent figure in the early Bitcoin community in China. In 2013, Li founded the cryptocurrency venture capital Bitfund, specializing in angel investment in internet and Bitcoin-related fields."
+→ This should be EXTRACTED as:
+```json
+{
+  "event_description": "Li Xiaolai founded the cryptocurrency venture capital Bitfund.",
+  "event_date_str": "2013",
+  "enhanced_event_date_str": null,
+  "main_entities": [
+    {"name": "Li Xiaolai", "type": "person", "language": "en"},
+    {"name": "Bitfund", "type": "organization", "language": "en"},
+    {"name": "cryptocurrency", "type": "concept", "language": "en"}
+  ],
+  "source_text_snippet": "In 2013, Li founded the cryptocurrency venture capital Bitfund, specializing in angel investment in internet and Bitcoin-related fields."
+}
+```
+Note: Even though the second sentence only mentions "Li", we use "Li Xiaolai" because the full name is established in the earlier context.
 
 **EXAMPLES OF EVENTS TO EXCLUDE:**
 Text: "In British Columbia, there was an increase in the intensity and scale of wildfires after local bylaws restricted the use of controlled burns."
