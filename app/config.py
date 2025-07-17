@@ -203,6 +203,25 @@ class Settings(BaseSettings):
         default=0.45, description="Relevance threshold for event merger service"
     )
 
+    # ===== Event Merger Algorithm Configuration =====
+    event_merger_min_common_entities: int = Field(
+        default=1,
+        alias="EVENT_MERGER_MIN_COMMON_ENTITIES",
+        description="Minimum number of common entities required for LLM matching",
+    )
+
+    event_merger_llm_score_threshold: float = Field(
+        default=15.0,
+        alias="EVENT_MERGER_LLM_SCORE_THRESHOLD",
+        description="Minimum match score threshold for LLM consideration",
+    )
+
+    event_merger_rule_overlap_ratio: float = Field(
+        default=0.75,
+        alias="EVENT_MERGER_RULE_OVERLAP_RATIO",
+        description="Entity overlap ratio threshold for rule-based matching",
+    )
+
     article_filter_relevance_threshold: float = Field(
         default=0.35,
         description="Relevance threshold for filtering articles by relevance",

@@ -104,6 +104,8 @@ async def extract_keywords_from_viewpoint(
         max_keywords = 10
         strategy_description = "include comprehensive related background concepts"
 
+    max_keywords = min(10, max(max_keywords, 2))
+
     logger.info(
         f"{log_prefix}Using keyword extraction strategy: {keyword_strategy} (max_keywords: {max_keywords}, article_limit: {article_limit})"
     )

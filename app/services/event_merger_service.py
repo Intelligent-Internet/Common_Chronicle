@@ -421,12 +421,26 @@ class MergedEventGroup:
         return score
 
     def rule_based_match(self, event: RawEventInput) -> bool:
-        """High-confidence deterministic matching: identical entity sets + date compatibility."""
+        """High-confidence deterministic matching: high entity overlap + date compatibility."""
 
-        # Exact entity match - both events must have identical entity sets
-        exact_entity_match = (
-            self.representative_entities_uuids == event.processed_entities_uuids
+        # Calculate entity overlap ratio instead of requiring exact match
+        common_entities = self.representative_entities_uuids.intersection(
+            event.processed_entities_uuids
         )
+
+        # If either set is empty, no match
+        if not self.representative_entities_uuids or not event.processed_entities_uuids:
+            entity_match = False
+        else:
+            # Calculate overlap ratio based on the smaller set
+            smaller_set_size = min(
+                len(self.representative_entities_uuids),
+                len(event.processed_entities_uuids),
+            )
+            overlap_ratio = len(common_entities) / smaller_set_size
+
+            # Consider it a match if overlap ratio meets the configured threshold
+            entity_match = overlap_ratio >= settings.event_merger_rule_overlap_ratio
 
         # Date compatibility - events must have overlapping or both missing dates
         date_compatible = False
@@ -435,7 +449,7 @@ class MergedEventGroup:
         elif not self.representative_date_range and not event.date_range:
             date_compatible = True
 
-        return exact_entity_match and date_compatible
+        return entity_match and date_compatible
 
     async def llm_semantic_match(
         self,
@@ -611,8 +625,8 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             f"match_score={match_score}, common_entities={common_entities}"
         )
 
-        # Require at least 2 common entities for LLM consideration
-        if common_entities < 2:
+        # Require at least minimum common entities for LLM consideration
+        if common_entities < settings.event_merger_min_common_entities:
             stats["low_score_rejections"] += 1
             logger.debug(
                 f"[Try Add] Event {raw_event.original_id} rejected: insufficient common entities"
@@ -631,8 +645,10 @@ Ensure your JSON response is valid and contains no other text or explanations ou
             )
             return False
 
-        # Only proceed to LLM if score is promising (raised threshold from 10 to 20)
-        if match_score < 20:  # Stricter threshold for LLM consideration
+        # Only proceed to LLM if score is promising (configurable threshold)
+        if (
+            match_score < settings.event_merger_llm_score_threshold
+        ):  # Configurable threshold for LLM consideration
             stats["low_score_rejections"] += 1
             logger.debug(
                 f"[Try Add] Event {raw_event.original_id} rejected: low match score"
