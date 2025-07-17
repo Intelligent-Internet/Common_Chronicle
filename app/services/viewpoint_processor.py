@@ -69,9 +69,12 @@ async def _fetch_wiki_page_text_for_target_lang_concurrently(
 
 async def extract_keywords_from_viewpoint(
     viewpoint: str,
+    article_limit: int | None = None,
     parent_request_id: str | None = None,
 ) -> KeywordExtractionResult:
-    # LLM-based keyword extraction with language detection and translation support
+    """
+    LLM-based keyword extraction with language detection and translation support.
+    """
     log_prefix = f"[ParentReqID: {parent_request_id}] " if parent_request_id else ""
 
     if not viewpoint or not viewpoint.strip():
@@ -84,6 +87,27 @@ async def extract_keywords_from_viewpoint(
     )
     logger.debug(f"{log_prefix}Full viewpoint text: {viewpoint}")
 
+    # Determine keyword extraction strategy based on article limit
+    if article_limit is None:
+        article_limit = settings.default_article_limit
+
+    if article_limit <= 5:
+        keyword_strategy = "focused"
+        max_keywords = min(article_limit, 3)
+        strategy_description = "focus on the most core entities only"
+    elif article_limit <= 10:
+        keyword_strategy = "balanced"
+        max_keywords = min(article_limit // 2, 6)
+        strategy_description = "balance core entities with important related concepts"
+    else:
+        keyword_strategy = "comprehensive"
+        max_keywords = 10
+        strategy_description = "include comprehensive related background concepts"
+
+    logger.info(
+        f"{log_prefix}Using keyword extraction strategy: {keyword_strategy} (max_keywords: {max_keywords}, article_limit: {article_limit})"
+    )
+
     # Get LLM client
     llm_client: LLMInterface | None = get_llm_client(settings.default_llm_provider)
     if not llm_client:
@@ -93,9 +117,22 @@ async def extract_keywords_from_viewpoint(
 
     logger.debug(f"{log_prefix}Using LLM provider: {settings.default_llm_provider}")
 
+    # Build strategy-specific prompt
+    strategy_prompt = f"""
+**EXTRACTION STRATEGY**: {keyword_strategy.upper()}
+- Maximum keywords to extract: {max_keywords}
+- Strategy guidance: {strategy_description}
+- When strategy is "focused": Extract only the most essential primary subjects
+- When strategy is "balanced": Include primary subjects plus the most important related concepts
+- When strategy is "comprehensive": Include broader related encyclopedic topics
+"""
+
     try:
         messages = [
-            {"role": "system", "content": KEYWORD_EXTRACTION_SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": KEYWORD_EXTRACTION_SYSTEM_PROMPT + "\n\n" + strategy_prompt,
+            },
             {
                 "role": "user",
                 "content": f'User Query: "{viewpoint}"\nExpected JSON Output:',
@@ -103,7 +140,9 @@ async def extract_keywords_from_viewpoint(
         ]
 
         llm_call_start_time = time.monotonic()
-        logger.info(f"{log_prefix}Making request to LLM API for keyword extraction.")
+        logger.info(
+            f"{log_prefix}Making request to LLM API for keyword extraction with {keyword_strategy} strategy."
+        )
 
         chat_completion_response = await llm_client.generate_chat_completion(
             messages=messages,
@@ -148,8 +187,16 @@ async def extract_keywords_from_viewpoint(
             original_keywords = []
             english_keywords = []
 
+        # Enforce maximum keyword limit as a safety measure
+        if len(original_keywords) > max_keywords:
+            logger.info(
+                f"{log_prefix}Limiting extracted keywords from {len(original_keywords)} to {max_keywords} based on {keyword_strategy} strategy"
+            )
+            original_keywords = original_keywords[:max_keywords]
+            english_keywords = english_keywords[:max_keywords]
+
         logger.info(
-            f"{log_prefix}Successfully extracted {len(english_keywords)} keywords for detected language '{detected_language}'. "
+            f"{log_prefix}Successfully extracted {len(english_keywords)} keywords for detected language '{detected_language}' using {keyword_strategy} strategy. "
             f"Original: {original_keywords}, English: {english_keywords}"
         )
 

@@ -182,3 +182,4 @@ alembic/versions/*.py
 docs/
 *copy*
 .pre-commit-config.yaml
+logs/

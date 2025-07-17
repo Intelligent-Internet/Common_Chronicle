@@ -684,6 +684,7 @@ Your response MUST be a valid JSON object containing four keys: "detected_langua
 - **Prioritize Specificity**: All keywords, whether extracted or generated, must be specific entities and not generic categories.
 - **AVOID Generic Terms**: Actively ignore and avoid generating generic terms like "history", "influence", "biography", "filmography", "impact", "works", "life path", "latest news". The goal is to add specific, related *subjects*, not descriptive categories.
 - **Maintain Correspondence**: The `original_keywords` and `english_keywords` lists MUST have the exact same number of items.
+- **Adapt to Strategy**: Follow the specific extraction strategy provided in the additional instructions below.
 - **JSON Output Only**: The entire final output must be ONLY the JSON object, with no other text, explanations, or markdown formatting.
 
 **Example 1: Biographical Query (Focus on core subject, minimal expansion)**
@@ -725,6 +726,8 @@ Expected JSON Output:
   "english_keywords": ["De Beers", "diamond cartel", "engagement rings", "A Diamond Is Forever"],
   "translated_viewpoint": "the history of the De Beers diamond cartel and its influence on the modern concept of engagement rings"
 }
+
+**IMPORTANT**: Pay attention to any additional extraction strategy instructions that follow this prompt. Adjust your keyword selection and expansion approach according to the specified strategy (focused, balanced, or comprehensive).
 """
 
 # System prompt for single event relevance evaluation

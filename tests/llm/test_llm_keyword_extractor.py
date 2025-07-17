@@ -39,7 +39,11 @@ async def test_llm_keyword_extraction():
     print(TEST_VIEWPOINT_TEXT)
 
     # Call the service to extract keywords and detect language
-    extraction_result = await extract_keywords_from_viewpoint(TEST_VIEWPOINT_TEXT)
+    extraction_result = await extract_keywords_from_viewpoint(
+        TEST_VIEWPOINT_TEXT,
+        article_limit=10,  # Use default test value
+        parent_request_id="test_request",
+    )
 
     print("\n" + "=" * 25 + " LLM Keyword Results " + "=" * 25)
     if extraction_result:

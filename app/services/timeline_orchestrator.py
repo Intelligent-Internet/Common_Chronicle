@@ -271,7 +271,7 @@ class TimelineOrchestratorService:
             # Pipeline Stage 1: Language detection and keyword extraction
             # This stage processes text without requiring database transactions
             keyword_result = await self._extract_keywords(
-                viewpoint_text, request_id, progress_callback
+                viewpoint_text, request_id, progress_callback, task_config
             )
             language_code = keyword_result.viewpoint_language
             logger.info(f"{log_prefix}Detected language: {language_code}")
@@ -306,6 +306,7 @@ class TimelineOrchestratorService:
                 request_id,
                 progress_callback,
                 relevance_threshold=settings.event_merger_relevance_threshold,
+                article_limit=task_config.article_limit if task_config else None,
             )
             if not relevant_articles:
                 logger.warning(
@@ -393,6 +394,7 @@ class TimelineOrchestratorService:
         viewpoint_text: str,
         request_id: str,
         progress_callback: ProgressCallback | None,
+        task_config: ArticleAcquisitionConfig | None = None,
     ) -> KeywordExtractionResult:
         """Extract keywords and detect language from viewpoint text."""
         if progress_callback:
@@ -403,8 +405,13 @@ class TimelineOrchestratorService:
                 request_id,
             )
 
+        # Get article limit from task config for keyword extraction strategy
+        article_limit = (
+            task_config.article_limit if task_config else settings.default_article_limit
+        )
+
         keyword_result = await extract_keywords_from_viewpoint(
-            viewpoint_text, parent_request_id=request_id
+            viewpoint_text, article_limit=article_limit, parent_request_id=request_id
         )
 
         if not keyword_result.english_keywords:
@@ -441,8 +448,9 @@ class TimelineOrchestratorService:
         request_id: str,
         progress_callback: ProgressCallback | None,
         relevance_threshold: float = None,  # Use default from settings
+        article_limit: int | None = None,  # New parameter for limiting article count
     ) -> list[SourceArticle]:
-        """Filter articles by relevance to viewpoint using LLM scoring."""
+        """Filter articles by relevance to viewpoint and limit to specified count based on relevance ranking."""
 
         # Use default from settings if not provided
         if relevance_threshold is None:
@@ -473,7 +481,8 @@ class TimelineOrchestratorService:
             parent_request_id=request_id,
         )
 
-        relevant_articles = []
+        # Collect articles with their relevance scores
+        scored_articles = []
         total_articles = len(articles)
 
         for i, article in enumerate(articles):
@@ -481,7 +490,7 @@ class TimelineOrchestratorService:
             current_index = i + 1
 
             if score is not None and score >= relevance_threshold:
-                relevant_articles.append(article)
+                scored_articles.append((article, score))
                 # Handle None score gracefully in formatting
                 score_text = f"{score:.2f}" if score is not None else "None"
                 logger.info(
@@ -499,7 +508,7 @@ class TimelineOrchestratorService:
                             "article_title": article.title,
                             "score": score,
                             "is_relevant": True,
-                            "relevant_count": len(relevant_articles),
+                            "relevant_count": len(scored_articles),
                         },
                         request_id,
                     )
@@ -521,18 +530,31 @@ class TimelineOrchestratorService:
                             "article_title": article.title,
                             "score": score,
                             "is_relevant": False,
-                            "relevant_count": len(relevant_articles),
+                            "relevant_count": len(scored_articles),
                         },
                         request_id,
                     )
 
+        # Sort articles by relevance score in descending order (highest relevance first)
+        scored_articles.sort(key=lambda x: x[1], reverse=True)
+
+        # Apply article limit if specified
+        if article_limit and len(scored_articles) > article_limit:
+            logger.info(
+                f"[RequestID: {request_id}] Limiting articles from {len(scored_articles)} to {article_limit} based on relevance ranking"
+            )
+            scored_articles = scored_articles[:article_limit]
+
+        # Extract the articles from the scored tuples
+        relevant_articles = [article for article, score in scored_articles]
+
         logger.info(
-            f"[RequestID: {request_id}] Filtered down to {len(relevant_articles)} relevant articles from {len(articles)}."
+            f"[RequestID: {request_id}] Filtered down to {len(relevant_articles)} relevant articles from {len(articles)} total articles."
         )
 
         if progress_callback:
             await progress_callback.report(
-                f"Found {len(relevant_articles)} relevant articles after scoring.",
+                f"Found {len(relevant_articles)} relevant articles after scoring and limiting.",
                 "article_relevance_scoring_complete",
                 {
                     "relevant_article_count": len(relevant_articles),
