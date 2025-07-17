@@ -626,6 +626,7 @@ function TaskPage() {
                 activeYear={activeYear}
                 onYearSelect={handleYearSelect}
                 expandedSources={expandedSources}
+                status={task?.status}
                 onToggleShowSources={toggleShowSources}
               />
             )}

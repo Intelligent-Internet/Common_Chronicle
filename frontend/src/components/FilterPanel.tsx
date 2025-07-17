@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { TimelineEvent } from '../types';
 import InkBlotButton from './InkBlotButton';
 import ContentCard from './ContentCard';
@@ -58,18 +58,10 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     return filteredEvents;
   };
 
-  // Calculate relevance score options based on current source selection
+  // Calculate relevance score options based on ALL events (fixed options)
   const getRelevanceScoreOptions = () => {
-    let relevantEvents = events;
-
-    // Filter by source first if selected
-    if (tempSelectedKeyword) {
-      relevantEvents = relevantEvents.filter((event) =>
-        event.sources.some((source) => source.source_page_title === tempSelectedKeyword)
-      );
-    }
-
-    const validScores = relevantEvents
+    // Always use all events to calculate options, not filtered by source
+    const validScores = events
       .map((event) => event.relevance_score)
       .filter((score): score is number => score !== null && score !== undefined);
 
@@ -83,14 +75,26 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     // Generate threshold options for each unique score
     const options = [];
     for (const score of uniqueScores) {
-      const count = validScores.filter((s) => s >= score).length;
-      if (count > 0) {
-        options.push({
-          value: score,
-          label: `≥${score.toFixed(2)}`,
-          count: count,
-        });
+      // Calculate count based on current source selection (if any)
+      let relevantEvents = events;
+      if (tempSelectedKeyword) {
+        relevantEvents = relevantEvents.filter((event) =>
+          event.sources.some((source) => source.source_page_title === tempSelectedKeyword)
+        );
       }
+
+      const count = relevantEvents.filter(
+        (event) =>
+          event.relevance_score !== null &&
+          event.relevance_score !== undefined &&
+          event.relevance_score >= score
+      ).length;
+
+      options.push({
+        value: score,
+        label: `≥${score.toFixed(2)}`,
+        count: count,
+      });
     }
 
     return options;
@@ -110,11 +114,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, relevanceOptions]);
 
-  // Calculate source counts based on current relevance selection
+  // Calculate source counts based on ALL events (fixed options)
   const getSourceCounts = () => {
     const counts = new Map<string, number>();
 
-    // Count all events first
+    // Count all events that meet the current relevance score filter
     let totalCount = 0;
     for (const event of events) {
       if (
@@ -155,23 +159,45 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     setTempMinRelevanceScore(0);
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     setTempSelectedKeyword(currentFilters.selectedKeyword);
     setTempMinRelevanceScore(currentFilters.minRelevanceScore);
     onClose();
-  };
+  }, [currentFilters.selectedKeyword, currentFilters.minRelevanceScore, onClose]);
+
+  // Handle ESC key to cancel filters
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        handleCancel();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+      return () => {
+        document.removeEventListener('keydown', handleEscapeKey);
+      };
+    }
+  }, [isOpen, handleCancel]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      onClick={handleCancel}
+    >
+      <div
+        className="bg-white dark:bg-slate rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <ContentCard padding="p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl font-sans font-semibold text-slate dark:text-mist">Filters</h3>
             <button
-              onClick={onClose}
+              onClick={handleCancel}
               className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +213,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
           {/* Source Filter */}
           <div className="mb-6">
-            <h4 className="font-medium text-slate dark:text-mist mb-3">Sources</h4>
+            <h4 className="font-medium text-slate dark:text-mist mb-3">Source Articles</h4>
             <div className="flex flex-wrap gap-2">
               <InkBlotButton
                 isActive={!tempSelectedKeyword}
@@ -199,7 +225,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               </InkBlotButton>
               {uniqueKeywords.map((keyword) => {
                 const count = sourceCounts.get(keyword) || 0;
-                if (count === 0 && tempSelectedKeyword !== keyword) return null;
+
                 return (
                   <InkBlotButton
                     key={keyword}

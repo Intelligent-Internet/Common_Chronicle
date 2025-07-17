@@ -16,6 +16,7 @@ interface TimelineDisplayProps {
   events: TimelineEvent[];
   activeYear: string | null;
   expandedSources: Record<string, boolean>;
+  status?: string; // Add status prop to track task status
   onToggleShowSources: (eventId: string) => void;
   onYearSelect?: (year: string) => void;
 }
@@ -24,6 +25,7 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
   events,
   activeYear,
   expandedSources,
+  status,
   onToggleShowSources,
   onYearSelect,
 }) => {
@@ -103,7 +105,13 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Modified condition: only show "No Matching Chronicles" when task is completed or failed
   if (events.length === 0) {
+    // Don't show the message if task is still in progress
+    if (status && status !== 'failed' && status !== 'completed') {
+      return null;
+    }
+
     return (
       <div className="mt-12">
         <ContentCard className="max-w-md mx-auto" padding="p-8">

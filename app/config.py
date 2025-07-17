@@ -178,7 +178,9 @@ class Settings(BaseSettings):
 
     # ===== Article Processing Configuration =====
     default_article_limit: int = Field(
-        default=10, description="Default number of articles to process"
+        default=10,
+        alias="DEFAULT_ARTICLE_LIMIT",
+        description="Default number of articles to process",
     )
 
     # ===== Task Management Configuration =====
