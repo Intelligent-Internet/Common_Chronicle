@@ -19,6 +19,8 @@ interface TimelineDisplayProps {
   status?: string; // Add status prop to track task status
   onToggleShowSources: (eventId: string) => void;
   onYearSelect?: (year: string) => void;
+  onCreateEntityTask?: (entityId: string) => void;
+  onCreateDocumentTask?: (sourceDocumentId: string) => void;
 }
 
 const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
@@ -28,6 +30,8 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
   status,
   onToggleShowSources,
   onYearSelect,
+  onCreateEntityTask,
+  onCreateDocumentTask,
 }) => {
   // Add new state for navigation
   const [showNavigation, setShowNavigation] = React.useState(true);
@@ -479,7 +483,23 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                               key={entity.original_name}
                               className="px-2.5 py-1 text-xs font-medium text-slate bg-sky-blue/20 border border-sky-blue rounded-md flex items-center gap-1.5 dark:bg-sky-blue/10 dark:border-sky-blue/50 dark:text-mist"
                             >
-                              {entity.original_name}
+                              {entity.is_verified_existent &&
+                              entity.entity_id &&
+                              onCreateEntityTask ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onCreateEntityTask(entity.entity_id!);
+                                  }}
+                                  className="text-slate hover:text-charcoal underline hover:no-underline transition-colors duration-200 dark:text-mist dark:hover:text-white"
+                                  title="Generate timeline for this entity"
+                                >
+                                  {entity.original_name}
+                                </button>
+                              ) : (
+                                entity.original_name
+                              )}
                               <span className="text-pewter dark:text-mist">
                                 ({entity.entity_type})
                               </span>
@@ -512,28 +532,51 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                     <div className="mt-4 pt-4 border-t border-pewter/50 dark:border-mist/30">
                       {event.source_url && (
                         <div className="flex items-center gap-3 text-sm">
-                          <svg
-                            className="w-4 h-4 text-pewter flex-shrink-0 dark:text-mist"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                            ></path>
-                          </svg>
                           <a
                             href={event.source_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-slate hover:text-charcoal underline truncate font-alt dark:text-mist dark:hover:text-white"
-                            title={event.source_url}
+                            className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
+                            title={`Visit source: ${event.source_url}`}
                           >
-                            {getSourceLinkText(event.source_page_title, event.source_url)}
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                              ></path>
+                            </svg>
                           </a>
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {onCreateDocumentTask &&
+                            event.sources &&
+                            event.sources[0]?.source_document_id ? (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  const sourceDocumentId = event.sources[0].source_document_id;
+                                  if (sourceDocumentId) {
+                                    onCreateDocumentTask(sourceDocumentId);
+                                  }
+                                }}
+                                className="text-slate hover:text-charcoal underline hover:no-underline truncate font-alt dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
+                                title="Generate timeline for this document"
+                              >
+                                {getSourceLinkText(event.source_page_title, event.source_url)}
+                              </button>
+                            ) : (
+                              <span className="text-slate truncate font-alt dark:text-mist flex-1 min-w-0">
+                                {getSourceLinkText(event.source_page_title, event.source_url)}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -585,31 +628,52 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                                 {otherSources.map((source, idx) => (
                                   <div key={idx} className="text-xs font-alt">
                                     <div className="flex items-center gap-2">
-                                      <svg
-                                        className="w-3 h-3 text-pewter flex-shrink-0 dark:text-mist"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth="2"
-                                          d="M9 5l7 7-7-7"
-                                        ></path>
-                                      </svg>
                                       <a
                                         href={source.source_url || '#'}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-slate hover:text-charcoal underline truncate font-medium dark:text-mist dark:hover:text-white"
-                                        title={source.source_url || 'No URL available'}
+                                        className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
+                                        title={`Visit source: ${source.source_url || 'No URL available'}`}
                                       >
-                                        {getSourceLinkText(
-                                          source.source_page_title,
-                                          source.source_url || ''
-                                        )}
+                                        <svg
+                                          className="w-3 h-3"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M9 5l7 7-7-7"
+                                          ></path>
+                                        </svg>
                                       </a>
+                                      {onCreateDocumentTask && source.source_document_id ? (
+                                        <button
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            if (source.source_document_id) {
+                                              onCreateDocumentTask(source.source_document_id);
+                                            }
+                                          }}
+                                          className="text-slate hover:text-charcoal underline hover:no-underline truncate font-medium dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
+                                          title="Generate timeline for this document"
+                                        >
+                                          {getSourceLinkText(
+                                            source.source_page_title,
+                                            source.source_url || ''
+                                          )}
+                                        </button>
+                                      ) : (
+                                        <span className="text-slate truncate font-medium dark:text-mist flex-1 min-w-0">
+                                          {getSourceLinkText(
+                                            source.source_page_title,
+                                            source.source_url || ''
+                                          )}
+                                        </span>
+                                      )}
                                       {source.source_url &&
                                         getDataSourceLabel(source.source_url) && (
                                           <span className="text-pewter dark:text-mist">

@@ -171,7 +171,28 @@ class TaskDBHandler(BaseDBHandler[Task]):
                 "event_timestamp": timestamp_dt,
             }
 
-            return await progress_step_handler.create(progress_step_data, db=db)
+            try:
+                return await progress_step_handler.create(progress_step_data, db=db)
+            except SQLAlchemyError as db_error:
+                # Handle unique constraint violation for duplicate progress steps
+                if (
+                    "uq_viewpoint_step_message" in str(db_error)
+                    or "duplicate key" in str(db_error).lower()
+                ):
+                    logger.debug(
+                        f"Progress step already exists for task {task_id}, step '{step_name}': {message}"
+                    )
+                    # Find and return the existing progress step
+                    existing_step = await progress_step_handler.get_by_attributes(
+                        viewpoint_id=task.viewpoint_id,
+                        step_name=step_name,
+                        message=message,
+                        db=db,
+                    )
+                    return existing_step
+                else:
+                    # Re-raise other database errors
+                    raise
 
         except Exception as e:
             logger.error(

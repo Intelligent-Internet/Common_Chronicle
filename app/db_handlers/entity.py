@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from sqlalchemy import or_
@@ -18,6 +19,34 @@ logger = setup_logger(__name__)
 class EntityDBHandler(BaseDBHandler[Entity]):
     def __init__(self):
         super().__init__(Entity)
+
+    @check_local_db
+    async def get_entity_with_sources_by_id(
+        self,
+        entity_id: uuid.UUID,
+        *,
+        db: AsyncSession = None,
+    ) -> Entity | None:
+        """Find entity by ID with source documents preloaded."""
+        return await self.get_by_attributes(
+            id=entity_id,
+            options=[selectinload(Entity.source_documents)],
+            db=db,
+        )
+
+    @check_local_db
+    async def get_entity_with_sources_by_wikibase_item(
+        self,
+        wikibase_item: str,
+        *,
+        db: AsyncSession = None,
+    ) -> Entity | None:
+        """Find entity by wikibase_item with source documents preloaded."""
+        return await self.get_by_attributes(
+            wikibase_item=wikibase_item,
+            options=[selectinload(Entity.source_documents)],
+            db=db,
+        )
 
     @check_local_db
     async def get_entity_by_source_attributes(

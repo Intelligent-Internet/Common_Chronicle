@@ -6,6 +6,7 @@ import ProgressDisplay from '../components/ProgressDisplay';
 import ChronicleHeader from '../components/ChronicleHeader';
 
 import { exportEventsAsJson, exportEventsAsMarkdown } from '../utils/exportUtils';
+import { createAndOpenCanonicalTask } from '../utils/taskUtils';
 import WavyLine from '../components/WavyLine';
 
 import type {
@@ -516,6 +517,52 @@ function TaskPage() {
     setExpandedSources((prev) => ({ ...prev, [eventId]: !prev[eventId] }));
   };
 
+  const handleCreateEntityTask = useCallback(
+    async (entityId: string) => {
+      try {
+        // Inherit data source preference from current task
+        const currentDataSourcePref = task?.config?.data_source_preference || 'online_wikipedia';
+        await createAndOpenCanonicalTask('entity', entityId, {
+          config: { data_source_preference: currentDataSourcePref },
+          is_public: task?.is_public || false,
+        });
+        // Optional: Show success toast or notification
+        console.log(
+          `[TaskPage.tsx] Successfully created entity canonical task for entity: ${entityId} with data source: ${currentDataSourcePref}`
+        );
+      } catch (err) {
+        console.error('[TaskPage.tsx] Failed to create entity canonical task:', err);
+        setError(
+          `Failed to create entity timeline: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
+      }
+    },
+    [task]
+  );
+
+  const handleCreateDocumentTask = useCallback(
+    async (sourceDocumentId: string) => {
+      try {
+        // Inherit data source preference from current task
+        const currentDataSourcePref = task?.config?.data_source_preference || 'online_wikipedia';
+        await createAndOpenCanonicalTask('document', sourceDocumentId, {
+          config: { data_source_preference: currentDataSourcePref },
+          is_public: task?.is_public || false,
+        });
+        // Optional: Show success toast or notification
+        console.log(
+          `[TaskPage.tsx] Successfully created document canonical task for document: ${sourceDocumentId} with data source: ${currentDataSourcePref}`
+        );
+      } catch (err) {
+        console.error('[TaskPage.tsx] Failed to create document canonical task:', err);
+        setError(
+          `Failed to create document timeline: ${err instanceof Error ? err.message : 'Unknown error'}`
+        );
+      }
+    },
+    [task]
+  );
+
   const handleShareToggle = async (isPublic: boolean) => {
     if (!taskId || !task) return;
     setIsUpdatingShare(true);
@@ -628,6 +675,8 @@ function TaskPage() {
                 expandedSources={expandedSources}
                 status={task?.status}
                 onToggleShowSources={toggleShowSources}
+                onCreateEntityTask={handleCreateEntityTask}
+                onCreateDocumentTask={handleCreateDocumentTask}
               />
             )}
 

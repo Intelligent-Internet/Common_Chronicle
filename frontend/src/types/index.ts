@@ -96,6 +96,7 @@ export interface EventSourceInfo {
   source_url: string | null;
   // source_keyword_text: string | null;
   source_text_snippet: string | null;
+  source_document_id: string | null; // Add source document ID for document timeline creation
 }
 
 // LLMRequestForFrontend and LLMResponseForFrontend from timeline.ts
@@ -259,7 +260,10 @@ export interface UserInfo {
 
 export interface BackendTaskRecord {
   id: string;
-  topic_text: string;
+  topic_text: string | null; // Made nullable for canonical tasks
+  task_type: 'synthetic_viewpoint' | 'entity_canonical' | 'document_canonical';
+  entity_id: string | null;
+  source_document_id: string | null;
   owner: UserInfo | null;
   is_public: boolean;
   status: 'pending' | 'processing' | 'completed' | 'failed' | string;
@@ -300,7 +304,7 @@ export interface ViewpointDetailResponse {
 }
 
 export interface CreateTaskPayload {
-  topic_text: string;
+  topic_text?: string;
   config?: {
     data_source_preference?: string;
   };

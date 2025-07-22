@@ -470,6 +470,7 @@ class EventSourceInfoForAPI(BaseModel):
     source_page_title: str | None = None
     source_url: str | None = None
     source_text_snippet: str | None = None
+    source_document_id: str | None = None
 
     @field_validator(
         "original_description",
@@ -582,6 +583,32 @@ class CreateTaskRequest(BaseModel):
     )
 
 
+class CreateEntityCanonicalTaskRequest(BaseModel):
+    entity_id: uuid.UUID = Field(
+        ..., description="Entity ID to generate canonical timeline for"
+    )
+    config: dict[str, Any] | None = Field(
+        None, description="Task configuration options"
+    )
+    is_public: bool | None = Field(
+        None,
+        description="Whether to make the task public, only effective when user is logged in",
+    )
+
+
+class CreateDocumentCanonicalTaskRequest(BaseModel):
+    source_document_id: uuid.UUID = Field(
+        ..., description="Source document ID to generate canonical timeline for"
+    )
+    config: dict[str, Any] | None = Field(
+        None, description="Task configuration options"
+    )
+    is_public: bool | None = Field(
+        None,
+        description="Whether to make the task public, only effective when user is logged in",
+    )
+
+
 # New model for WebSocket status messages in API responses
 class WebSocketStatusMessageForAPI(BaseModel):
     request_id: str  # Typically the task_id when returning historical steps
@@ -624,7 +651,10 @@ class ViewpointDetailResponse(BaseModel):
 class TaskBase(BaseModel):
     # Base model for task data, containing common fields
     id: uuid.UUID
-    topic_text: str
+    task_type: str = "synthetic_viewpoint"
+    topic_text: str | None = None  # Optional for canonical tasks
+    entity_id: uuid.UUID | None = None
+    source_document_id: uuid.UUID | None = None
     owner: UserInfo | None = None
     is_public: bool
     status: str

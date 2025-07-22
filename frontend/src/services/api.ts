@@ -164,6 +164,62 @@ export const createTask = async (payload: CreateTaskPayload): Promise<BackendTas
   }
 };
 
+export const createEntityCanonicalTask = async (
+  entityId: string,
+  payload: CreateTaskPayload
+): Promise<BackendTaskRecord> => {
+  try {
+    const requestPayload = {
+      entity_id: entityId,
+      config: payload.config,
+      is_public: payload.is_public,
+    };
+    console.log(
+      '[api.ts] createEntityCanonicalTask payload to be sent to backend:',
+      requestPayload
+    );
+    const response = await api.post<BackendTaskRecord>(
+      `/tasks/from-entity/${entityId}`,
+      requestPayload
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to create entity canonical task:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.detail || 'Failed to create entity canonical task');
+    }
+    throw error;
+  }
+};
+
+export const createDocumentCanonicalTask = async (
+  sourceDocumentId: string,
+  payload: CreateTaskPayload
+): Promise<BackendTaskRecord> => {
+  try {
+    const requestPayload = {
+      source_document_id: sourceDocumentId,
+      config: payload.config,
+      is_public: payload.is_public,
+    };
+    console.log(
+      '[api.ts] createDocumentCanonicalTask payload to be sent to backend:',
+      requestPayload
+    );
+    const response = await api.post<BackendTaskRecord>(
+      `/tasks/from-document/${sourceDocumentId}`,
+      requestPayload
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to create document canonical task:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.detail || 'Failed to create document canonical task');
+    }
+    throw error;
+  }
+};
+
 export const getTasks = async (options?: {
   status?: string;
   owned_by_me?: boolean;

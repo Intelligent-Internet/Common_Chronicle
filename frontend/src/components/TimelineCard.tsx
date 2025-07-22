@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { ExtendedUserTaskRecord } from '../services/indexedDB.service';
+import { getTaskTypeDisplayName, getDataSourceDisplayNames } from '../utils/taskUtils';
 
 import ContentCard from './ContentCard';
 
@@ -28,11 +29,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
           : 'text-slate dark:text-mist',
   };
 
-  const sourceText = (() => {
-    const pref = task.dataSourcePref;
-    if (!pref || pref === 'none') return 'Source Not Specified';
-    return pref;
-  })();
+  const sourceText = getDataSourceDisplayNames(task.dataSourcePref).join(', ');
 
   const statusDisplay =
     task.status === 'completed'
@@ -84,6 +81,21 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
               </svg>
               <span className="font-medium">Source:</span>
               <span className="ml-2">{sourceText}</span>
+            </div>
+            <div className="flex items-center">
+              <svg
+                className="w-4 h-4 mr-2 text-pewter dark:text-mist"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <span className="font-medium">Type:</span>
+              <span className="ml-2">{getTaskTypeDisplayName(task.taskType)}</span>
             </div>
             <div className="flex items-center">
               <svg

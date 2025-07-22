@@ -105,6 +105,7 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                         source_page_title=getattr(source_doc, "title", None),
                         source_url=getattr(source_doc, "wikipedia_url", None),
                         source_text_snippet=contrib.source_text_snippet,
+                        source_document_id=str(source_doc.id) if source_doc else None,
                     )
                 )
 

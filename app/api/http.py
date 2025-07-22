@@ -2,7 +2,10 @@
 HTTP API Routes - Main REST API endpoints for timeline generation tasks.
 
 Handles timeline generation task management including creation, retrieval, status
-monitoring, and sharing configuration.
+monitoring, and sharing configuration. Supports multiple task types:
+- Synthetic viewpoint tasks (topic-based)
+- Entity canonical tasks (entity-based)
+- Document canonical tasks (source document-based)
 """
 
 
@@ -11,11 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db import get_app_db
-from app.db_handlers import TaskDBHandler
+from app.db_handlers import EntityDBHandler, SourceDocumentDBHandler, TaskDBHandler
 from app.dependencies.auth import get_current_user_optional
 from app.dependencies.tasks import get_owned_task, get_task_with_authorization
 from app.models import Task, User
 from app.schemas import (
+    CreateDocumentCanonicalTaskRequest,
+    CreateEntityCanonicalTaskRequest,
     CreateTaskRequest,
     TaskResponse,
     TaskResultDetailResponse,
@@ -41,7 +46,7 @@ async def create_task(
     task_db_handler: TaskDBHandler = Depends(),
 ):
     """
-    Create a new timeline generation task.
+    Create a new synthetic viewpoint timeline generation task.
 
     Anonymous users can only create public tasks. Authenticated users can create
     private tasks with configurable sharing settings.
@@ -60,6 +65,7 @@ async def create_task(
             log_piece = "anonymous/public user"
 
         task_dict = {
+            "task_type": "synthetic_viewpoint",
             "topic_text": task_data.topic_text,
             "config": task_data.config,
             "status": "pending",
@@ -67,13 +73,145 @@ async def create_task(
             "is_public": final_is_public,
         }
         task_dict = await task_db_handler.create_task(obj_dict=task_dict)
-        logger.info(f"Created new task: {task_dict.get('id')} for {log_piece}")
+        logger.info(
+            f"Created new synthetic task: {task_dict.get('id')} for {log_piece}"
+        )
         return TaskResponse.model_validate(task_dict)
 
     except Exception as e:
-        logger.error(f"Error creating task: {e}", exc_info=True)
+        logger.error(f"Error creating synthetic task: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to create task: {str(e)}"
+        ) from e
+
+
+@router.post("/tasks/from-entity/{entity_id}", response_model=TaskResponse)
+async def create_entity_canonical_task(
+    entity_id: str,
+    task_data: CreateEntityCanonicalTaskRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_app_db),
+    task_db_handler: TaskDBHandler = Depends(),
+    entity_db_handler: EntityDBHandler = Depends(),
+):
+    """
+    Create a new entity canonical timeline generation task.
+
+    Generates a timeline based on the source documents associated with a specific entity.
+    """
+    try:
+        # Validate that URL entity_id matches request body entity_id
+        if entity_id != str(task_data.entity_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Entity ID in URL path must match entity_id in request body",
+            )
+
+        # Validate entity exists
+        entity = await entity_db_handler.get(entity_id, db=db)
+        if not entity:
+            raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+
+        # Anonymous users create public tasks, authenticated users default to private
+        final_is_public: bool = True
+        if current_user:
+            final_is_public = (
+                task_data.is_public if task_data.is_public is not None else False
+            )
+            log_piece = (
+                f"registered user: {current_user.username} (ID: {current_user.id})"
+            )
+        else:
+            log_piece = "anonymous/public user"
+
+        task_dict = {
+            "task_type": "entity_canonical",
+            "entity_id": entity_id,
+            "topic_text": f"{entity.entity_name} ({entity.entity_type})",  # Set descriptive title
+            "config": task_data.config,
+            "status": "pending",
+            "owner_id": current_user.id if current_user else None,
+            "is_public": final_is_public,
+        }
+        task_dict = await task_db_handler.create_task(obj_dict=task_dict)
+        logger.info(
+            f"Created new entity canonical task: {task_dict.get('id')} for entity {entity_id} by {log_piece}"
+        )
+        return TaskResponse.model_validate(task_dict)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating entity canonical task: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create entity canonical task: {str(e)}"
+        ) from e
+
+
+@router.post("/tasks/from-document/{source_document_id}", response_model=TaskResponse)
+async def create_document_canonical_task(
+    source_document_id: str,
+    task_data: CreateDocumentCanonicalTaskRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    db: AsyncSession = Depends(get_app_db),
+    task_db_handler: TaskDBHandler = Depends(),
+    source_doc_handler: SourceDocumentDBHandler = Depends(),
+):
+    """
+    Create a new document canonical timeline generation task.
+
+    Generates a timeline based on a specific source document.
+    """
+    try:
+        # Validate that URL source_document_id matches request body source_document_id
+        if source_document_id != str(task_data.source_document_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Source document ID in URL path must match source_document_id in request body",
+            )
+
+        # Validate source document exists
+        source_document = await source_doc_handler.get(source_document_id, db=db)
+        if not source_document:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Source document {source_document_id} not found",
+            )
+
+        # Anonymous users create public tasks, authenticated users default to private
+        final_is_public: bool = True
+        if current_user:
+            final_is_public = (
+                task_data.is_public if task_data.is_public is not None else False
+            )
+            log_piece = (
+                f"registered user: {current_user.username} (ID: {current_user.id})"
+            )
+        else:
+            log_piece = "anonymous/public user"
+
+        task_dict = {
+            "task_type": "document_canonical",
+            "source_document_id": source_document_id,
+            "topic_text": f"{source_document.title} ({source_document.source_type})",  # Set descriptive title
+            "config": task_data.config,
+            "status": "pending",
+            "owner_id": current_user.id if current_user else None,
+            "is_public": final_is_public,
+        }
+        task_dict = await task_db_handler.create_task(obj_dict=task_dict)
+        logger.info(
+            f"Created new document canonical task: {task_dict.get('id')} for document {source_document_id} by {log_piece}"
+        )
+        return TaskResponse.model_validate(task_dict)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating document canonical task: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create document canonical task: {str(e)}",
         ) from e
 
 
@@ -81,6 +219,7 @@ async def create_task(
 async def get_tasks(
     status: str | None = None,
     owned_by_me: bool | None = None,
+    task_type: str | None = None,
     limit: int = 100,
     offset: int = 0,
     db: AsyncSession = Depends(get_app_db),
@@ -91,9 +230,11 @@ async def get_tasks(
     Get timeline generation tasks with filtering and pagination.
 
     Anonymous users can only see public completed tasks. Authenticated users can
-    see their own tasks plus public completed tasks.
+    see their own tasks plus public completed tasks. Supports filtering by task_type.
     """
-    logger.info(f"Fetching tasks with status='{status}', owned_by_me='{owned_by_me}'")
+    logger.info(
+        f"Fetching tasks with status='{status}', owned_by_me='{owned_by_me}', task_type='{task_type}'"
+    )
     try:
         query_dict = {
             "order_by": Task.created_at.desc(),
@@ -103,6 +244,9 @@ async def get_tasks(
         }
         if status:
             query_dict["status"] = status
+        if task_type:
+            query_dict["task_type"] = task_type
+
         # Get user's own tasks
         if owned_by_me is True:
             if not current_user:

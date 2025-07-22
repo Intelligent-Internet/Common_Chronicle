@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
 import type { TaskResultResponse, TimelineEvent } from '../types';
+import { getTaskTypeDisplayName, getDataSourceDisplayNames } from '../utils/taskUtils';
 import FilterPanel from './FilterPanel';
 import {
   GlobeAltIcon,
@@ -101,49 +101,60 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
 
       {/* Simplified Control Bar */}
       <section className="mt-12">
-        <div className="flex justify-between items-center gap-6">
-          {/* Left: Status & Sources */}
-          <div className="flex items-center flex-wrap gap-x-6 gap-y-2">
-            {/* Owner Info */}
-            {task.owner?.username && (
-              <div
-                className="flex items-baseline gap-2 text-sm text-scholar-600"
-                title={`Owned by ${task.owner.username}`}
-              >
-                <UserCircleIcon className="w-4 h-4" />
-                <span className="font-medium">{task.owner.username}</span>
+        <div className="flex justify-between items-start gap-6">
+          {/* Left: Task Info - Fixed Two-Row Layout */}
+          <div className="flex flex-col gap-3 min-w-0 flex-1">
+            {/* First Row: Core Info */}
+            <div className="flex items-center gap-6 flex-wrap">
+              {/* Owner Info */}
+              {task.owner?.username && (
+                <div
+                  className="flex items-baseline gap-2 text-sm text-scholar-600"
+                  title={`Owned by ${task.owner.username}`}
+                >
+                  <UserCircleIcon className="w-4 h-4" />
+                  <span className="font-medium">{task.owner.username}</span>
+                </div>
+              )}
+              {/* Task Type */}
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium text-scholar-600 flex-shrink-0 text-sm">Type:</span>
+                <span className="px-2.5 py-0.5 text-scholar-700 border border-parchment-300 rounded-md text-xs">
+                  {getTaskTypeDisplayName(task.task_type)}
+                </span>
               </div>
-            )}
-            {/* Status */}
-            <div className="flex items-baseline gap-2">
-              <span className="font-medium text-scholar-600 flex-shrink-0 text-sm">Status:</span>
-              <span
-                className={`px-2.5 py-0.5 rounded-md text-xs font-medium border ${
-                  status === 'completed'
-                    ? 'bg-sage-100 text-sage-800 border-sage-300'
-                    : status === 'processing' || status === 'pending'
-                      ? 'bg-parchment-100 text-parchment-800 border-parchment-400'
-                      : status === 'failed'
-                        ? 'bg-red-100 text-red-800 border-red-300'
-                        : 'bg-scholar-100 text-scholar-800 border-scholar-300'
-                }`}
-              >
-                {status}
-              </span>
+              {/* Status */}
+              <div className="flex items-baseline gap-2">
+                <span className="font-medium text-scholar-600 flex-shrink-0 text-sm">Status:</span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-md text-xs font-medium border ${
+                    status === 'completed'
+                      ? 'bg-sage-100 text-sage-800 border-sage-300'
+                      : status === 'processing' || status === 'pending'
+                        ? 'bg-parchment-100 text-parchment-800 border-parchment-400'
+                        : status === 'failed'
+                          ? 'bg-red-100 text-red-800 border-red-300'
+                          : 'bg-scholar-100 text-scholar-800 border-scholar-300'
+                  }`}
+                >
+                  {status}
+                </span>
+              </div>
             </div>
-            {/* Archive Sources */}
+
+            {/* Second Row: Data Sources */}
             {dataSourcePref && (
               <div className="flex items-baseline gap-2">
                 <span className="font-medium text-scholar-600 flex-shrink-0 text-sm">
                   Source(s):
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {dataSourcePref.split(',').map((source) => (
+                  {getDataSourceDisplayNames(dataSourcePref).map((source, index) => (
                     <span
-                      key={source.trim()}
+                      key={index}
                       className="px-2.5 py-0.5 text-scholar-700 border border-parchment-300 rounded-md text-xs"
                     >
-                      {source.trim()}
+                      {source}
                     </span>
                   ))}
                 </div>
@@ -152,7 +163,7 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
           </div>
 
           {/* Right: Operations */}
-          <div className="flex-shrink-0 flex items-center gap-2">
+          <div className="flex-shrink-0 flex items-center gap-2 mt-0.5">
             {/* Share Button - only for owners */}
             {task.owner?.id && (
               <button
@@ -233,20 +244,6 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
                 </div>
               )}
             </div>
-            <Link
-              to="/new"
-              className="btn btn-secondary-outline text-sm flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              New
-            </Link>
           </div>
         </div>
 

@@ -6,7 +6,7 @@ import type { BackendTaskRecord, TaskResultResponse } from '../types';
 import { sortEventsChronologically } from '../utils/timelineUtils';
 
 const DB_NAME = 'CommonTimelineDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const TASK_STORE_NAME = 'userTasks';
 const TASK_RESULTS_STORE_NAME = 'taskResultsCache';
 
@@ -18,6 +18,7 @@ interface CachedTaskResult {
 
 export interface ExtendedUserTaskRecord extends UserTaskRecord {
   isPublic: number; // 0 for false, 1 for true
+  taskType: 'synthetic_viewpoint' | 'entity_canonical' | 'document_canonical' | null;
 }
 
 interface TimelineDBSchema extends DBSchema {
@@ -81,6 +82,11 @@ const getDb = (): Promise<IDBPDatabase<TimelineDBSchema>> => {
             console.log(`Index 'isPublic' created on store ${TASK_STORE_NAME}.`);
           }
         }
+        if (oldVersion < 4) {
+          console.log('Running upgrade for version 4 - adding taskType field');
+          // No schema changes needed, taskType field will be added automatically
+          // when existing records are updated through normal operations
+        }
       },
     });
   }
@@ -98,6 +104,7 @@ export const cacheTask = async (taskData: UserTaskRecord): Promise<string> => {
     const recordToCache: ExtendedUserTaskRecord = {
       ...taskData,
       isPublic: 0, // Default to not public
+      taskType: null, // Task type not available for manually cached tasks
     };
     await tx.store.put(recordToCache);
     await tx.done;
@@ -299,9 +306,13 @@ export const convertBackendToUserTaskRecord = (
   isPublic: boolean
 ): ExtendedUserTaskRecord => {
   const now = new Date().toISOString();
+
+  // Generate viewpoint text from topic_text
+  const viewpointText = task.topic_text || 'Untitled Timeline';
+
   return {
     id: task.id,
-    viewpoint: task.topic_text,
+    viewpoint: viewpointText,
     // Access data source preference from the config object
     dataSourcePref: task.config?.data_source_preference || 'default',
     serverRequestId: task.id, // Using task id as a server request id surrogate
@@ -317,6 +328,7 @@ export const convertBackendToUserTaskRecord = (
     isComplete: task.status === 'completed' || task.status === 'failed',
     status: task.status,
     isPublic: isPublic ? 1 : 0,
+    taskType: task.task_type,
   };
 };
 
