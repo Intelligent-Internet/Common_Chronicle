@@ -928,7 +928,7 @@ class TimelineOrchestratorService:
 
         viewpoint_text = task.topic_text.strip()
 
-        if settings.REUSE_COMPOSITE_VIEWPOINT:
+        if settings.reuse_composite_viewpoint:
             # First, check if there's an existing completed viewpoint
             existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
                 topic=viewpoint_text,
@@ -1482,7 +1482,30 @@ class TimelineOrchestratorService:
             logger.info(
                 f"[BG Task {task.id}] Reusing existing completed viewpoint {viewpoint_id}"
             )
-            # Return empty result since viewpoint already exists
+            # FIXED: Return existing events instead of empty list
+            async with AppAsyncSessionLocal() as db:
+                viewpoint_details = (
+                    await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
+                        viewpoint_id, db=db
+                    )
+                )
+                if viewpoint_details and viewpoint_details.get("timeline_events"):
+                    existing_events = viewpoint_details["timeline_events"]
+                    logger.info(
+                        f"[BG Task {task.id}] Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events"
+                    )
+                    return TimelineGenerationResult(
+                        events=existing_events,
+                        viewpoint_id=viewpoint_id,
+                        events_count=len(existing_events),
+                        keywords_extracted=[],  # Could extract from viewpoint metadata if needed
+                        articles_processed=0,  # No articles processed since reusing
+                    )
+                else:
+                    logger.warning(
+                        f"[BG Task {task.id}] Existing viewpoint {viewpoint_id} has no events"
+                    )
+            # Return empty result since viewpoint already exists but has no events
             return TimelineGenerationResult(events=[])
 
         # Stage 8: Core timeline generation pipeline execution
@@ -1629,7 +1652,7 @@ class TimelineOrchestratorService:
 
             # Check if viewpoint already exists
             existing_viewpoint = None
-            if settings.REUSE_COMPOSITE_VIEWPOINT:
+            if settings.reuse_composite_viewpoint:
                 existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
                     topic=viewpoint_topic,
                     data_source_preference=effective_data_source,
@@ -1644,7 +1667,30 @@ class TimelineOrchestratorService:
                 task.viewpoint_id = existing_viewpoint.id
                 await db.flush()
                 await db.commit()
-                return TimelineGenerationResult(events=[])
+
+                # FIXED: Return existing events instead of empty list
+                viewpoint_details = (
+                    await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
+                        existing_viewpoint.id, db=db
+                    )
+                )
+                if viewpoint_details and viewpoint_details.get("timeline_events"):
+                    existing_events = viewpoint_details["timeline_events"]
+                    logger.info(
+                        f"{log_prefix}Reusing existing viewpoint {existing_viewpoint.id} with {len(existing_events)} events"
+                    )
+                    return TimelineGenerationResult(
+                        events=existing_events,
+                        viewpoint_id=existing_viewpoint.id,
+                        events_count=len(existing_events),
+                        keywords_extracted=[entity.entity_name],
+                        articles_processed=len(source_articles),
+                    )
+                else:
+                    logger.warning(
+                        f"{log_prefix}Existing viewpoint {existing_viewpoint.id} has no events, proceeding with new processing"
+                    )
+                    # If existing viewpoint has no events, proceed with processing
 
             # Create new viewpoint
             new_viewpoint = Viewpoint(
@@ -1856,7 +1902,7 @@ class TimelineOrchestratorService:
 
             # Check if viewpoint already exists
             existing_viewpoint = None
-            if settings.REUSE_COMPOSITE_VIEWPOINT:
+            if settings.reuse_composite_viewpoint:
                 existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
                     topic=viewpoint_topic,
                     data_source_preference=effective_data_source,
@@ -1871,7 +1917,30 @@ class TimelineOrchestratorService:
                 task.viewpoint_id = existing_viewpoint.id
                 await db.flush()
                 await db.commit()
-                return TimelineGenerationResult(events=[])
+
+                # FIXED: Return existing events instead of empty list
+                viewpoint_details = (
+                    await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
+                        existing_viewpoint.id, db=db
+                    )
+                )
+                if viewpoint_details and viewpoint_details.get("timeline_events"):
+                    existing_events = viewpoint_details["timeline_events"]
+                    logger.info(
+                        f"{log_prefix}Reusing existing viewpoint {existing_viewpoint.id} with {len(existing_events)} events"
+                    )
+                    return TimelineGenerationResult(
+                        events=existing_events,
+                        viewpoint_id=existing_viewpoint.id,
+                        events_count=len(existing_events),
+                        keywords_extracted=[source_document.title],
+                        articles_processed=1,
+                    )
+                else:
+                    logger.warning(
+                        f"{log_prefix}Existing viewpoint {existing_viewpoint.id} has no events, proceeding with new processing"
+                    )
+                    # If existing viewpoint has no events, proceed with processing
 
             # Create new viewpoint
             new_viewpoint = Viewpoint(

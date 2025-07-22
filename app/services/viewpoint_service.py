@@ -270,7 +270,7 @@ class ViewpointService:
 
         # 2. Check if already processed (and if reuse is enabled)
         if (
-            settings.REUSE_BASE_VIEWPOINT
+            settings.reuse_base_viewpoint
             and source_document.processing_status == "completed"
         ):
             event_ids = await self.viewpoint_db_handler.get_viewpoint_related_event_ids(
