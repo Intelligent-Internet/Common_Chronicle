@@ -267,6 +267,18 @@ class Settings(BaseSettings):
         description="Entity overlap ratio threshold for rule-based matching",
     )
 
+    event_merger_concurrent_window_size: int = Field(
+        default=3,
+        alias="EVENT_MERGER_CONCURRENT_WINDOW_SIZE",
+        description="Number of candidate groups to process concurrently in LLM matching",
+    )
+
+    event_merger_max_concurrent_requests: int = Field(
+        default=10,
+        alias="EVENT_MERGER_MAX_CONCURRENT_REQUESTS",
+        description="Maximum number of concurrent LLM requests across all event processing",
+    )
+
     article_filter_relevance_threshold: float = Field(
         default=0.35,
         alias="ARTICLE_FILTER_RELEVANCE_THRESHOLD",

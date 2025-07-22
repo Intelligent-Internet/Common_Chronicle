@@ -5,6 +5,7 @@ Uses multi-stage approach combining rule-based matching, semantic similarity ana
 and LLM-powered comparison to merge duplicate or related events from multiple sources.
 """
 
+import asyncio
 import hashlib
 import json
 import time
@@ -568,47 +569,39 @@ Ensure your JSON response is valid and contains no other text or explanations ou
 
         return False
 
-    async def try_add_contribution(
+    async def check_merge_eligibility(
         self,
         raw_event: RawEventInput,
-        llm_cache: LLMComparisonCache,
         stats: dict[str, int],
-    ) -> bool:
-        """Multi-stage filtering pipeline: quick exclusion → rules → scoring → LLM with strict thresholds."""
+    ) -> tuple[bool, float]:
+        """
+        Pre-LLM filtering pipeline: quick exclusion → rules → scoring.
+        Returns (is_eligible, match_score) where is_eligible indicates if LLM comparison is needed.
+        """
 
         stats["total_try_add_contribution_calls"] += 1
 
         # DEBUG: Log entity information at start
         logger.debug(
-            f"[Try Add] Attempting to add event {raw_event.original_id} to group {self.original_id}"
-        )
-        logger.debug(
-            f"[Try Add] New event {raw_event.original_id} entities: "
-            f"{raw_event.processed_entities_uuids} (count: {len(raw_event.processed_entities_uuids)})"
-        )
-        logger.debug(
-            f"[Try Add] Group {self.original_id} current entities: "
-            f"{self.representative_entities_uuids} (count: {len(self.representative_entities_uuids)})"
+            f"[Check Eligibility] Checking event {raw_event.original_id} against group {self.original_id}"
         )
 
         # Stage 1: Quick exclusion check
         if self.quick_exclude_check(raw_event):
             stats["quick_exclusions"] += 1
             logger.debug(
-                f"[Try Add] Event {raw_event.original_id} excluded by quick check"
+                f"[Check Eligibility] Event {raw_event.original_id} excluded by quick check"
             )
-            return False
+            return False, 0.0
 
         # Stage 2: Rule-based matching
         if self.rule_based_match(raw_event):
-            self.source_contributions.append(raw_event)
             stats["rule_based_merges"] += 1
             logger.debug("Rule-based merge successful")
             logger.debug(
-                f"[Try Add] Rule-based merge: added event {raw_event.original_id} to group {self.original_id}. "
-                f"Group now has {len(self.source_contributions)} contributions"
+                f"[Check Eligibility] Rule-based merge: event {raw_event.original_id} matches group {self.original_id}"
             )
-            return True
+            return True, 100.0  # High score indicates rule-based match
 
         # Stage 3: Calculate match score for LLM candidacy
         match_score = self.calculate_match_score(raw_event)
@@ -621,7 +614,7 @@ Ensure your JSON response is valid and contains no other text or explanations ou
         )
 
         logger.debug(
-            f"[Try Add] Event {raw_event.original_id} vs Group {self.original_id}: "
+            f"[Check Eligibility] Event {raw_event.original_id} vs Group {self.original_id}: "
             f"match_score={match_score}, common_entities={common_entities}"
         )
 
@@ -629,9 +622,9 @@ Ensure your JSON response is valid and contains no other text or explanations ou
         if common_entities < settings.event_merger_min_common_entities:
             stats["low_score_rejections"] += 1
             logger.debug(
-                f"[Try Add] Event {raw_event.original_id} rejected: insufficient common entities"
+                f"[Check Eligibility] Event {raw_event.original_id} rejected: insufficient common entities"
             )
-            return False
+            return False, match_score
 
         # Time window check: events should be within reasonable time range (3 years)
         if (
@@ -641,22 +634,44 @@ Ensure your JSON response is valid and contains no other text or explanations ou
         ):
             stats["low_score_rejections"] += 1
             logger.debug(
-                f"[Try Add] Event {raw_event.original_id} rejected: time window too large"
+                f"[Check Eligibility] Event {raw_event.original_id} rejected: time window too large"
             )
-            return False
+            return False, match_score
 
         # Only proceed to LLM if score is promising (configurable threshold)
-        if (
-            match_score < settings.event_merger_llm_score_threshold
-        ):  # Configurable threshold for LLM consideration
+        if match_score < settings.event_merger_llm_score_threshold:
             stats["low_score_rejections"] += 1
             logger.debug(
-                f"[Try Add] Event {raw_event.original_id} rejected: low match score"
+                f"[Check Eligibility] Event {raw_event.original_id} rejected: low match score"
             )
+            return False, match_score
+
+        # Event is eligible for LLM comparison
+        stats["llm_candidates"] += 1
+        logger.debug(
+            f"[Check Eligibility] Event {raw_event.original_id} eligible for LLM comparison (score: {match_score})"
+        )
+        return True, match_score
+
+    async def try_add_contribution(
+        self,
+        raw_event: RawEventInput,
+        llm_cache: LLMComparisonCache,
+        stats: dict[str, int],
+    ) -> bool:
+        """Legacy method for backward compatibility. Uses the new check_merge_eligibility method."""
+
+        is_eligible, match_score = await self.check_merge_eligibility(raw_event, stats)
+
+        if not is_eligible:
             return False
 
-        # Stage 4: LLM semantic matching for high-score candidates
-        stats["llm_candidates"] += 1
+        # If match_score is 100.0, it means rule-based match succeeded
+        if match_score >= 100.0:
+            self.source_contributions.append(raw_event)
+            return True
+
+        # Otherwise, perform LLM semantic matching
         if await self.llm_semantic_match(raw_event, llm_cache):
             self.source_contributions.append(raw_event)
             stats["llm_confirmed_merges"] += 1
@@ -1026,6 +1041,8 @@ class EventMergerService:
             "low_score_rejections": 0,
             "index_lookups": 0,
             "cache_hits": 0,
+            "concurrent_windows_processed": 0,
+            "concurrent_llm_calls_saved": 0,
         }
 
     def _reset_stats(self):
@@ -1038,6 +1055,8 @@ class EventMergerService:
             "low_score_rejections": 0,
             "index_lookups": 0,
             "cache_hits": 0,
+            "concurrent_windows_processed": 0,
+            "concurrent_llm_calls_saved": 0,
         }
 
     async def get_merge_instructions(
@@ -1211,6 +1230,169 @@ class EventMergerService:
 
         return output_instructions
 
+    async def _try_concurrent_merge(
+        self,
+        raw_event: RawEventInput,
+        candidate_groups: list[MergedEventGroup],
+        llm_cache: LLMComparisonCache,
+        stats: dict[str, int],
+    ) -> bool:
+        """
+        Windowed concurrent LLM matching: processes candidates in parallel windows
+        while respecting priority order and early termination optimization.
+        """
+        if not candidate_groups:
+            return False
+
+        window_size = settings.event_merger_concurrent_window_size
+        total_candidates = len(candidate_groups)
+
+        logger.debug(
+            f"[Concurrent Merge] Processing {total_candidates} candidates for event {raw_event.original_id} "
+            f"with window size {window_size}"
+        )
+
+        # Process candidates in windows
+        for window_start in range(0, total_candidates, window_size):
+            window_end = min(window_start + window_size, total_candidates)
+            window_candidates = candidate_groups[window_start:window_end]
+
+            stats["concurrent_windows_processed"] += 1
+
+            logger.debug(
+                f"[Concurrent Merge] Processing window {window_start}-{window_end-1} "
+                f"({len(window_candidates)} candidates) for event {raw_event.original_id}"
+            )
+
+            # Phase 1: Pre-filter all candidates in the window (fast, non-LLM checks)
+            eligible_candidates = []
+            rule_matched_group = None
+
+            for group in window_candidates:
+                is_eligible, match_score = await group.check_merge_eligibility(
+                    raw_event, stats
+                )
+
+                if not is_eligible:
+                    continue
+
+                # If rule-based match found, prioritize it immediately
+                if match_score >= 100.0:
+                    rule_matched_group = group
+                    logger.debug(
+                        f"[Concurrent Merge] Rule-based match found with group {group.original_id}"
+                    )
+                    break
+
+                eligible_candidates.append((group, match_score))
+
+            # If rule-based match found, use it immediately and skip LLM calls
+            if rule_matched_group:
+                rule_matched_group.source_contributions.append(raw_event)
+                # Calculate how many LLM calls we saved
+                stats["concurrent_llm_calls_saved"] += len(eligible_candidates)
+                logger.debug(
+                    f"[Concurrent Merge] Rule-based merge successful, saved {len(eligible_candidates)} LLM calls"
+                )
+                return True
+
+            if not eligible_candidates:
+                logger.debug(
+                    f"[Concurrent Merge] No eligible candidates in window {window_start}-{window_end-1}"
+                )
+                continue
+
+            # Sort eligible candidates by match score (descending)
+            eligible_candidates.sort(key=lambda x: x[1], reverse=True)
+
+            # Phase 2: Concurrent LLM semantic matching for eligible candidates
+            logger.debug(
+                f"[Concurrent Merge] Running concurrent LLM checks for {len(eligible_candidates)} candidates"
+            )
+
+            # Create concurrent LLM tasks
+            llm_tasks = []
+            for group, score in eligible_candidates:
+                task = asyncio.create_task(
+                    group.llm_semantic_match(raw_event, llm_cache),
+                    name=f"llm_match_{group.original_id}_{raw_event.original_id}",
+                )
+                llm_tasks.append((task, group, score))
+
+            # Wait for all LLM tasks to complete
+            try:
+                # Execute all tasks concurrently
+                await asyncio.gather(
+                    *[task for task, _, _ in llm_tasks], return_exceptions=True
+                )
+
+                # Process results in priority order (by original match score)
+                for task, group, score in llm_tasks:
+                    try:
+                        if task.done() and not task.exception():
+                            llm_result = task.result()
+                            if llm_result:
+                                # Found a match! Add to group and return success
+                                group.source_contributions.append(raw_event)
+                                stats["llm_confirmed_merges"] += 1
+
+                                # Calculate how many additional LLM calls we saved by early termination
+                                remaining_tasks = [
+                                    t
+                                    for t, _, _ in llm_tasks
+                                    if not t.done() or t != task
+                                ]
+                                stats["concurrent_llm_calls_saved"] += len(
+                                    remaining_tasks
+                                )
+
+                                logger.debug(
+                                    f"[Concurrent Merge] LLM match successful with group {group.original_id} "
+                                    f"(score: {score}), saved {len(remaining_tasks)} remaining LLM calls"
+                                )
+                                return True
+                        else:
+                            if task.exception():
+                                logger.warning(
+                                    f"[Concurrent Merge] LLM task failed for group {group.original_id}: {task.exception()}"
+                                )
+                    except Exception as e:
+                        logger.error(
+                            f"[Concurrent Merge] Error processing LLM result for group {group.original_id}: {e}"
+                        )
+                        continue
+
+            except Exception as e:
+                logger.error(
+                    f"[Concurrent Merge] Error in concurrent LLM execution: {e}"
+                )
+                # Fallback to sequential processing for this window
+                for task, group, _ in llm_tasks:
+                    try:
+                        if not task.done():
+                            task.cancel()
+                        if await group.llm_semantic_match(raw_event, llm_cache):
+                            group.source_contributions.append(raw_event)
+                            stats["llm_confirmed_merges"] += 1
+                            logger.debug(
+                                f"[Concurrent Merge] Fallback LLM match successful with group {group.original_id}"
+                            )
+                            return True
+                    except Exception as fallback_error:
+                        logger.error(
+                            f"[Concurrent Merge] Fallback LLM match failed: {fallback_error}"
+                        )
+                        continue
+
+            logger.debug(
+                f"[Concurrent Merge] No matches found in window {window_start}-{window_end-1}"
+            )
+
+        logger.debug(
+            f"[Concurrent Merge] No matches found across all {total_candidates} candidates for event {raw_event.original_id}"
+        )
+        return False
+
     async def _perform_merge(
         self, processed_raw_events: list[RawEventInput]
     ) -> list[MergedEventGroup]:
@@ -1252,18 +1434,20 @@ class EventMergerService:
                 ]
                 # Sort by score descending to prioritize best matches
                 scored_candidates.sort(key=lambda x: x.score, reverse=True)
-            else:
-                scored_candidates = []
 
-            # Stage 3: Sequential matching with early termination
+                # Extract just the groups for concurrent processing
+                ordered_candidate_groups = [
+                    candidate.group for candidate in scored_candidates
+                ]
+            else:
+                ordered_candidate_groups = []
+
+            # Stage 3: Concurrent windowed matching with early termination
             found_match = False
-            for candidate in scored_candidates:
-                # Try to add event to candidate group using multi-stage matching
-                if await candidate.group.try_add_contribution(
-                    raw_event, self.llm_cache, self._stats
-                ):
-                    found_match = True
-                    break  # Early termination on first successful match
+            if ordered_candidate_groups:
+                found_match = await self._try_concurrent_merge(
+                    raw_event, ordered_candidate_groups, self.llm_cache, self._stats
+                )
 
             # Stage 4: Create new group if no match found
             if not found_match:
@@ -1277,7 +1461,9 @@ class EventMergerService:
             processed_count += 1
             if processed_count % max(1, total_events_to_process // 10) == 0:
                 logger.info(
-                    f"Processed {processed_count}/{total_events_to_process} events for merging"
+                    f"Processed {processed_count}/{total_events_to_process} events for merging. "
+                    f"Concurrent windows: {self._stats['concurrent_windows_processed']}, "
+                    f"LLM calls saved: {self._stats['concurrent_llm_calls_saved']}"
                 )
 
         return merged_groups
@@ -1340,11 +1526,19 @@ class EventMergerService:
             )
         )
 
+        # Calculate efficiency metrics
+        efficiency_improvement = (
+            f"{self._stats['concurrent_llm_calls_saved']} LLM calls saved"
+            if self._stats["concurrent_llm_calls_saved"] > 0
+            else "No concurrent savings"
+        )
+
         logger.info(
-            f"Optimized EventMerger Performance Stats: {json.dumps(self._stats, indent=2)}"
+            f"Concurrent EventMerger Performance Stats: {json.dumps(self._stats, indent=2)}"
         )
         logger.info(
-            f"Merged {len(processed_raw_events)} events into {len(output_list)} groups"
+            f"Merged {len(processed_raw_events)} events into {len(output_list)} groups. "
+            f"Efficiency: {efficiency_improvement} through concurrent processing."
         )
 
         # Final progress notification using callback pattern
