@@ -337,7 +337,42 @@ export const getDisplayYear = (event: {
   return event.event_date_str || 'Unknown Date';
 };
 
-// Chronological sorting with BCE/CE boundary handling
+// Helper function to filter out events with invalid timeline positioning
+const filterValidTimelineEvents = <
+  T extends {
+    date_info: ParsedDateInfo | null;
+    event_date_str: string;
+    id: string;
+  },
+>(
+  events: T[]
+): T[] => {
+  return events.filter((event) => {
+    // 1. date_info cannot be null/undefined
+    if (!event.date_info) {
+      console.debug(`[timelineUtils] Filtering out event ${event.id}: date_info is null/undefined`);
+      return false;
+    }
+
+    // 2. precision cannot be 'unknown'
+    if (event.date_info.precision === 'unknown') {
+      console.debug(`[timelineUtils] Filtering out event ${event.id}: precision is 'unknown'`);
+      return false;
+    }
+
+    // 3. At least start_year or end_year must be present (not null)
+    if (event.date_info.start_year === null && event.date_info.end_year === null) {
+      console.debug(
+        `[timelineUtils] Filtering out event ${event.id}: both start_year and end_year are null`
+      );
+      return false;
+    }
+
+    return true;
+  });
+};
+
+// Chronological sorting with BCE/CE boundary handling and invalid event filtering
 export const sortEventsChronologically = <
   T extends {
     date_info: ParsedDateInfo | null;
@@ -347,7 +382,18 @@ export const sortEventsChronologically = <
 >(
   events: T[]
 ): T[] => {
-  return [...events].sort((a, b) => {
+  // First filter out events that cannot be positioned on timeline
+  const validEvents = filterValidTimelineEvents(events);
+
+  // Log filtering results for debugging
+  const filteredCount = events.length - validEvents.length;
+  if (filteredCount > 0) {
+    console.info(
+      `[timelineUtils] Filtered out ${filteredCount} events with invalid timeline positioning out of ${events.length} total events`
+    );
+  }
+
+  return [...validEvents].sort((a, b) => {
     const sortValueA = getChronologicalSortValue(a);
     const sortValueB = getChronologicalSortValue(b);
 
