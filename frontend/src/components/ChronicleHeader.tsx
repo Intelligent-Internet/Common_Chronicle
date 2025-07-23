@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { TaskResultResponse, TimelineEvent } from '../types';
+import type { TaskResultResponse, TimelineEvent, EventSourceInfo } from '../types';
 import { getTaskTypeDisplayName, getDataSourceDisplayNames } from '../utils/taskUtils';
 import FilterPanel from './FilterPanel';
 import {
@@ -22,6 +22,7 @@ interface ChronicleHeaderProps {
   totalEventsCount: number;
   // Filter-related props
   events: TimelineEvent[];
+  sources: Record<string, EventSourceInfo>; // Dictionary of source references
   uniqueKeywords: string[];
   keywordToTitleMap: Map<string, string>;
   currentFilters: { selectedKeyword: string | null; minRelevanceScore: number };
@@ -39,6 +40,7 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
   isQuickNavVisible,
   totalEventsCount,
   events,
+  sources,
   uniqueKeywords,
   keywordToTitleMap,
   currentFilters,
@@ -250,6 +252,7 @@ const ChronicleHeader: React.FC<ChronicleHeaderProps> = ({
         {/* Filter Panel */}
         <FilterPanel
           events={events}
+          sources={sources}
           keywordToTitleMap={keywordToTitleMap}
           uniqueKeywords={uniqueKeywords}
           isOpen={isFilterPanelOpen}

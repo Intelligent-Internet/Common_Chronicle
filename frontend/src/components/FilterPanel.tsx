@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { TimelineEvent } from '../types';
+import type { TimelineEvent, EventSourceInfo } from '../types';
 import InkBlotButton from './InkBlotButton';
 import ContentCard from './ContentCard';
 
 interface FilterPanelProps {
   events: TimelineEvent[];
+  sources: Record<string, EventSourceInfo>; // Dictionary of source references
   keywordToTitleMap: Map<string, string>;
   uniqueKeywords: string[];
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface FilterPanelProps {
 
 const FilterPanel: React.FC<FilterPanelProps> = ({
   events,
+  sources,
   keywordToTitleMap,
   uniqueKeywords,
   isOpen,
@@ -42,9 +44,24 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
 
     // Apply source filter
     if (tempSelectedKeyword) {
-      filteredEvents = filteredEvents.filter((event) =>
-        event.sources.some((source) => source.source_page_title === tempSelectedKeyword)
-      );
+      filteredEvents = filteredEvents.filter((event) => {
+        if (event.source_snippets && typeof event.source_snippets === 'object') {
+          return Object.keys(event.source_snippets).some(
+            (sourceRef) => sources[sourceRef]?.source_page_title === tempSelectedKeyword
+          );
+        } else {
+          console.warn(
+            '[FilterPanel.tsx] Event has empty or invalid source_snippets in getFilteredEvents:',
+            {
+              eventId: event.id,
+              eventDescription: event.description?.substring(0, 100) + '...',
+              sourceSnippets: event.source_snippets,
+              tempSelectedKeyword: tempSelectedKeyword,
+            }
+          );
+          return false;
+        }
+      });
     }
 
     // Apply relevance filter
@@ -78,9 +95,24 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
       // Calculate count based on current source selection (if any)
       let relevantEvents = events;
       if (tempSelectedKeyword) {
-        relevantEvents = relevantEvents.filter((event) =>
-          event.sources.some((source) => source.source_page_title === tempSelectedKeyword)
-        );
+        relevantEvents = relevantEvents.filter((event) => {
+          if (event.source_snippets && typeof event.source_snippets === 'object') {
+            return Object.keys(event.source_snippets).some(
+              (sourceRef) => sources[sourceRef]?.source_page_title === tempSelectedKeyword
+            );
+          } else {
+            console.warn(
+              '[FilterPanel.tsx] Event has empty or invalid source_snippets in relevance options:',
+              {
+                eventId: event.id,
+                eventDescription: event.description?.substring(0, 100) + '...',
+                sourceSnippets: event.source_snippets,
+                tempSelectedKeyword: tempSelectedKeyword,
+              }
+            );
+            return false;
+          }
+        });
       }
 
       const count = relevantEvents.filter(
@@ -90,11 +122,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           event.relevance_score >= score
       ).length;
 
-      options.push({
-        value: score,
-        label: `≥${score.toFixed(2)}`,
-        count: count,
-      });
+      if (count > 0) {
+        options.push({ score, count });
+      }
     }
 
     return options;
@@ -106,15 +136,15 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   useEffect(() => {
     if (isOpen && relevanceOptions.length > 0) {
       // If current tempMinRelevanceScore 不在 options 中，或为0，则默认选中最低分项
-      const found = relevanceOptions.find((opt) => opt.value === tempMinRelevanceScore);
+      const found = relevanceOptions.find((opt) => opt.score === tempMinRelevanceScore);
       if (!found) {
-        setTempMinRelevanceScore(relevanceOptions[0].value);
+        setTempMinRelevanceScore(relevanceOptions[0].score);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, relevanceOptions]);
 
-  // Calculate source counts based on ALL events (fixed options)
+  // Calculate source counts for filtering
   const getSourceCounts = () => {
     const counts = new Map<string, number>();
 
@@ -129,11 +159,24 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
         totalCount++;
         // Count unique sources for this event
         const uniqueSourcesForEvent = new Set<string>();
-        event.sources.forEach((source) => {
-          if (source.source_page_title) {
-            uniqueSourcesForEvent.add(source.source_page_title);
-          }
-        });
+        if (event.source_snippets && typeof event.source_snippets === 'object') {
+          Object.keys(event.source_snippets).forEach((sourceRef) => {
+            const source = sources[sourceRef];
+            if (source?.source_page_title) {
+              uniqueSourcesForEvent.add(source.source_page_title);
+            }
+          });
+        } else {
+          console.warn(
+            '[FilterPanel.tsx] Event has empty or invalid source_snippets in getSourceCounts:',
+            {
+              eventId: event.id,
+              eventDescription: event.description?.substring(0, 100) + '...',
+              sourceSnippets: event.source_snippets,
+              relevanceScore: event.relevance_score,
+            }
+          );
+        }
         uniqueSourcesForEvent.forEach((title) => {
           counts.set(title, (counts.get(title) || 0) + 1);
         });
@@ -249,13 +292,13 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               <div className="flex flex-wrap gap-2">
                 {relevanceOptions.map((option) => (
                   <InkBlotButton
-                    key={option.value}
-                    isActive={tempMinRelevanceScore === option.value}
-                    onClick={() => setTempMinRelevanceScore(option.value)}
+                    key={option.score}
+                    isActive={tempMinRelevanceScore === option.score}
+                    onClick={() => setTempMinRelevanceScore(option.score)}
                     variant="default"
                     className="text-sm"
                   >
-                    {option.label} ({option.count})
+                    {option.score.toFixed(2)} ({option.count})
                   </InkBlotButton>
                 ))}
               </div>

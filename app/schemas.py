@@ -203,15 +203,6 @@ class ProcessedEntityInfo(BaseModel):
         ..., description="The original entity name extracted by the LLM."
     )
     entity_type: str = Field(..., description="The entity type extracted by the LLM.")
-    status_code: int = Field(
-        ...,
-        description="The status code of the entity processing (from EntityServiceResponse).",
-    )
-    message: str | None = Field(None, description="The message from entity processing.")
-    disambiguation_options: list[str] | None = Field(
-        None,
-        description="If the entity is a disambiguation page, this contains the options.",
-    )
     is_verified_existent: bool | None = Field(
         None,
         description="True if verified to exist, False if verified not to exist, None if unknown/other error.",
@@ -463,29 +454,16 @@ class ProcessedEvent(BaseModel):
 
 # --- START: Original Pydantic models for Merged Event API Response (will be modified) ---
 class EventSourceInfoForAPI(BaseModel):
-    original_description: str
-    event_date_str: str
-    date_info: ParsedDateInfo | None = None
     source_language: str
     source_page_title: str | None = None
     source_url: str | None = None
-    source_text_snippet: str | None = None
     source_document_id: str | None = None
 
-    @field_validator(
-        "original_description",
-        "event_date_str",
-        "source_language",
-        mode="before",
-    )
+    @field_validator("source_language", mode="before")
     @classmethod
     def provide_str_defaults(cls, v: Any, info: ValidationInfo) -> str:
         """Provide default values for required string fields if input is None."""
         if v is None:
-            if info.field_name == "original_description":
-                return ""
-            if info.field_name == "event_date_str":
-                return "N/A"
             if info.field_name == "source_language":
                 return "unknown"
         return str(v)
@@ -504,15 +482,7 @@ class TimelineEventForAPI(BaseModel):
     date_info: ParsedDateInfo | None = None
 
     is_merged: bool
-    sources: list[
-        EventSourceInfoForAPI
-    ]  # Assumes EventSourceInfoForAPI is defined correctly elsewhere
-
-    # Fields from the representative source, for easier top-level access in API response
-    source_text_snippet: str | None = None
-    source_url: str | None = None
-    source_page_title: str | None = None
-    source_language: str | None = None
+    source_snippets: dict[str, str | None]  # source_ref -> snippet mapping
 
     viewpoint_id: str | None = None  # Convert UUID to string for frontend compatibility
     relevance_score: float | None = None  # Relevance score for filtering and ranking
@@ -642,6 +612,7 @@ class ViewpointInfo(BaseModel):
 class ViewpointDetailResponse(BaseModel):
     viewpoint: ViewpointInfo
     progress_steps: list[ViewpointProgressStepInfo]
+    sources: dict[str, EventSourceInfoForAPI]  # Dictionary of source references
     timeline_events: list[TimelineEventForAPI]
 
     model_config = ConfigDict(from_attributes=True)

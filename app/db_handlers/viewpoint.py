@@ -51,8 +51,8 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
         if not viewpoint:
             return None
 
-        # Format timeline events - always return all events with their relevance scores
-        timeline_events = self._format_timeline_events(viewpoint)
+        # Format timeline events with reference-based sources
+        events_data = self._format_timeline_events(viewpoint)
 
         # Serialize progress steps
         progress_steps = [step.to_dict() for step in viewpoint.progress_steps]
@@ -60,14 +60,14 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
         return {
             "viewpoint": viewpoint.to_dict(),
             "progress_steps": progress_steps,
-            "timeline_events": timeline_events,
+            "sources": events_data["sources"],
+            "timeline_events": events_data["timeline_events"],
         }
 
-    def _format_timeline_events(
-        self, viewpoint: Viewpoint
-    ) -> list[TimelineEventForAPI]:
-        """Format events from loaded Viewpoint into API models."""
-        final_event_api_objects: list[TimelineEventForAPI] = []
+    def _format_timeline_events(self, viewpoint: Viewpoint) -> dict[str, Any]:
+        """Format events from loaded Viewpoint into reference-based API structure."""
+        sources_dict = {}
+        final_event_api_objects = []
 
         logger.debug(
             f"[Format Timeline] Processing {len(viewpoint.event_associations)} event associations"
@@ -83,31 +83,31 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                 f"[Format Timeline] Event {db_event.id} has {len(db_event.entity_associations)} entity associations"
             )
 
-            # Format source contributions
-            source_contributions_for_api = []
+            # Collect source snippets for this event (source_ref -> snippet mapping)
+            source_snippets = {}
             for link in db_event.raw_event_association_links:
                 contrib = link.raw_event
                 if not contrib:
                     continue
 
-                # Convert source contribution date_info to proper format
-                parsed_contrib_date_info = self._convert_date_info_to_parsed_format(
-                    contrib.date_info, contrib.event_date_str
+                source_doc = contrib.source_document
+                source_id = (
+                    f"src_{source_doc.id}"
+                    if source_doc
+                    else f"src_unknown_{contrib.id}"
                 )
 
-                source_doc = contrib.source_document
-                source_contributions_for_api.append(
-                    EventSourceInfoForAPI(
-                        original_description=contrib.original_description,
-                        event_date_str=contrib.event_date_str,
-                        date_info=parsed_contrib_date_info,
+                # Add to sources dictionary if not already present
+                if source_id not in sources_dict:
+                    sources_dict[source_id] = EventSourceInfoForAPI(
                         source_language=getattr(source_doc, "language", "unknown"),
                         source_page_title=getattr(source_doc, "title", None),
                         source_url=getattr(source_doc, "wikipedia_url", None),
-                        source_text_snippet=contrib.source_text_snippet,
                         source_document_id=str(source_doc.id) if source_doc else None,
                     )
-                )
+
+                # Map source_ref to its snippet for this event
+                source_snippets[source_id] = contrib.source_text_snippet
 
             # Format entities
             api_main_entities = []
@@ -128,9 +128,6 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                         entity_id=str(entity.id),
                         original_name=entity.entity_name,
                         entity_type=entity.entity_type,
-                        status_code=200,
-                        message=None,
-                        disambiguation_options=None,
                         is_verified_existent=entity.existence_verified,
                     )
                 )
@@ -144,45 +141,28 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                 db_event.date_info, db_event.event_date_str
             )
 
-            first_source = (
-                source_contributions_for_api[0]
-                if source_contributions_for_api
-                else None
-            )
-
             final_event_api_objects.append(
                 TimelineEventForAPI(
                     id=db_event.id,
-                    # TODO:changed to display text
                     event_date_str=db_event.event_date_str,
                     description=db_event.description,
                     main_entities=api_main_entities,
                     date_info=api_date_info,
-                    is_merged=len(source_contributions_for_api) > 1,
-                    sources=source_contributions_for_api,
+                    is_merged=len(source_snippets) > 1,
+                    source_snippets=source_snippets,
                     viewpoint_id=viewpoint.id,
-                    source_text_snippet=(
-                        first_source.source_text_snippet
-                        if first_source
-                        else db_event.description
-                    ),
-                    source_url=(first_source.source_url if first_source else None),
-                    source_page_title=(
-                        first_source.source_page_title
-                        if first_source
-                        else "Aggregated Event"
-                    ),
-                    source_language=(
-                        first_source.source_language if first_source else None
-                    ),
                     relevance_score=association.relevance_score,
                 )
             )
 
         logger.debug(
-            f"[Format Timeline] Final result: {len(final_event_api_objects)} events formatted"
+            f"[Format Timeline] Final result: {len(final_event_api_objects)} events formatted with {len(sources_dict)} unique sources"
         )
-        return final_event_api_objects
+
+        return {
+            "sources": sources_dict,
+            "timeline_events": final_event_api_objects,
+        }
 
     def _convert_date_info_to_parsed_format(
         self, date_info_dict: dict | None, fallback_date_str: str

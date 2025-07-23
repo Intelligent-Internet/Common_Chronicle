@@ -1,4 +1,4 @@
-import type { TimelineEvent, BackendTaskRecord } from '../types';
+import type { TimelineEvent, BackendTaskRecord, EventSourceInfo } from '../types';
 import { getStartDateISO, getEndDateISO } from '../types';
 
 function triggerDownload(content: string, filename: string, mimeType: string): void {
@@ -18,7 +18,11 @@ function triggerDownload(content: string, filename: string, mimeType: string): v
   URL.revokeObjectURL(url);
 }
 
-export function exportEventsAsJson(task: BackendTaskRecord, events: TimelineEvent[]): void {
+export function exportEventsAsJson(
+  task: BackendTaskRecord,
+  events: TimelineEvent[],
+  sources: Record<string, EventSourceInfo>
+): void {
   const exportData = {
     taskInfo: {
       id: task.id,
@@ -29,6 +33,8 @@ export function exportEventsAsJson(task: BackendTaskRecord, events: TimelineEven
     },
     exportedAt: new Date().toISOString(),
     eventsCount: events.length,
+    sourcesCount: Object.keys(sources).length,
+    sources: sources,
     events: events,
   };
 
@@ -38,7 +44,11 @@ export function exportEventsAsJson(task: BackendTaskRecord, events: TimelineEven
   triggerDownload(jsonContent, filename, 'application/json');
 }
 
-export function exportEventsAsMarkdown(task: BackendTaskRecord, events: TimelineEvent[]): void {
+export function exportEventsAsMarkdown(
+  task: BackendTaskRecord,
+  events: TimelineEvent[],
+  sources: Record<string, EventSourceInfo>
+): void {
   let markdownContent = `# Timeline for: ${task.topic_text}\n\n`;
   markdownContent += `**Task ID:** ${task.id}\n`;
   markdownContent += `**Generated at:** ${new Date().toLocaleString()}\n`;
@@ -68,24 +78,24 @@ export function exportEventsAsMarkdown(task: BackendTaskRecord, events: Timeline
         }
       }
 
-      if (event.source_text_snippet) {
-        markdownContent += `**Representative Source Snippet:** ${event.source_text_snippet}\n\n`;
+      if (event.source_snippets && Object.keys(event.source_snippets).length > 0) {
+        const representativeSnippet = Object.values(event.source_snippets)[0];
+        if (representativeSnippet) {
+          markdownContent += `**Representative Source Snippet:** ${representativeSnippet}\n\n`;
+        }
       }
 
-      // Add sources if available
-      if (event.sources && event.sources.length > 0) {
+      // Add sources if available - resolve source references
+      const eventSources = Object.keys(event.source_snippets)
+        .map((ref) => sources[ref])
+        .filter(Boolean);
+      if (eventSources.length > 0) {
         markdownContent += `### Sources:\n\n`;
-        event.sources.forEach((source) => {
+        eventSources.forEach((source) => {
           if (source.source_url) {
             markdownContent += `- [${source.source_page_title || 'Source'}](${source.source_url})\n`;
           } else {
             markdownContent += `- ${source.source_page_title || 'Source'}\n`;
-          }
-          if (source.source_text_snippet) {
-            markdownContent += `  - *Snippet:* ${source.source_text_snippet}\n`;
-          }
-          if (source.original_description) {
-            markdownContent += `  - *Original Description:* ${source.original_description}\n`;
           }
         });
         markdownContent += `\n`;
@@ -96,9 +106,6 @@ export function exportEventsAsMarkdown(task: BackendTaskRecord, events: Timeline
         markdownContent += `### Related Entities:\n\n`;
         event.main_entities.forEach((entity) => {
           markdownContent += `- **${entity.original_name}** (${entity.entity_type})`;
-          if (entity.message) {
-            markdownContent += ` - ${entity.message}`;
-          }
           markdownContent += `\n`;
         });
         markdownContent += `\n`;

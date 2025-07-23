@@ -4,9 +4,6 @@ export interface ProcessedEntityInfo {
   entity_id: string | null;
   original_name: string;
   entity_type: string;
-  status_code: number;
-  message: string | null;
-  disambiguation_options: string[] | null;
   is_verified_existent?: boolean | null;
 }
 
@@ -88,14 +85,9 @@ export function getEndDateISO(dateInfo: ParsedDateInfo): string | null {
 
 export interface EventSourceInfo {
   // Renamed from EventSourceInfoForFrontend
-  original_description: string | null;
-  event_date_str: string | null;
-  date_info: ParsedDateInfo | null;
   source_language: string;
   source_page_title: string | null;
   source_url: string | null;
-  // source_keyword_text: string | null;
-  source_text_snippet: string | null;
   source_document_id: string | null; // Add source document ID for document timeline creation
 }
 
@@ -110,15 +102,11 @@ export interface TimelineEvent {
   main_entities: ProcessedEntityInfo[];
   date_info: ParsedDateInfo | null;
   is_merged: boolean;
-  sources: EventSourceInfo[]; // Array of source contributions
+  source_snippets: Record<string, string | null>; // source_ref -> snippet mapping
   viewpoint_id: string | null;
   created_at: string;
   updated_at: string;
 
-  source_text_snippet?: string | null;
-  source_url?: string | null;
-  source_page_title?: string | null;
-  source_language?: string | null;
   relevance_score?: number | null; // Relevance score for filtering and ranking
 }
 
@@ -300,6 +288,7 @@ export interface ViewpointInfo {
 export interface ViewpointDetailResponse {
   viewpoint: ViewpointInfo;
   progress_steps: ViewpointProgressStepInfo[];
+  sources: Record<string, EventSourceInfo>; // Dictionary of source references
   timeline_events: TimelineEvent[];
 }
 

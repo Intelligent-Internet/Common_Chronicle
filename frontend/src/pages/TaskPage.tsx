@@ -46,13 +46,30 @@ function TaskPage() {
     const sourceCounts = new Map<string, number>();
     const sourceTitleMap = new Map<string, string>();
 
+    // Get sources dictionary from viewpoint details
+    const sources = task?.viewpoint_details?.sources || {};
+
     events.forEach((event) => {
       const uniqueSourcesForEvent = new Set<string>();
-      event.sources.forEach((source) => {
-        if (source.source_page_title) {
-          uniqueSourcesForEvent.add(source.source_page_title);
-        }
-      });
+      // Add safety check for event.source_snippets
+      if (event.source_snippets && typeof event.source_snippets === 'object') {
+        Object.keys(event.source_snippets).forEach((sourceRef) => {
+          const source = sources[sourceRef];
+          if (source?.source_page_title) {
+            uniqueSourcesForEvent.add(source.source_page_title);
+          }
+        });
+      } else {
+        console.warn(
+          '[TaskPage.tsx] Event has empty or invalid source_snippets in sourceFilterData:',
+          {
+            eventId: event.id,
+            eventDescription: event.description?.substring(0, 100) + '...',
+            sourceSnippets: event.source_snippets,
+            eventDateStr: event.event_date_str,
+          }
+        );
+      }
       uniqueSourcesForEvent.forEach((title) => {
         sourceCounts.set(title, (sourceCounts.get(title) || 0) + 1);
         if (!sourceTitleMap.has(title)) {
@@ -76,29 +93,46 @@ function TaskPage() {
       titles: sourceTitleMap,
       keywords: uniqueSources,
     };
-  }, [events]);
+  }, [events, task?.viewpoint_details?.sources]);
 
   const filteredEvents = useMemo(() => {
     let filtered = events;
 
+    // Get sources dictionary from viewpoint details
+    const sources = task?.viewpoint_details?.sources || {};
+
     // Apply keyword filtering
     if (currentFilters.selectedKeyword) {
-      filtered = filtered.filter((event) =>
-        event.sources.some((source) => source.source_page_title === currentFilters.selectedKeyword)
-      );
-    }
-
-    // Apply relevance score filtering
-    // Only filter if minRelevanceScore is explicitly set to a value > 0
-    if (currentFilters.minRelevanceScore > 0) {
       filtered = filtered.filter((event) => {
-        const score = event.relevance_score;
-        return score !== null && score !== undefined && score >= currentFilters.minRelevanceScore;
+        if (event.source_snippets && typeof event.source_snippets === 'object') {
+          return Object.keys(event.source_snippets).some(
+            (sourceRef) => sources[sourceRef]?.source_page_title === currentFilters.selectedKeyword
+          );
+        } else {
+          console.warn(
+            '[TaskPage.tsx] Event has empty or invalid source_snippets in keyword filtering:',
+            {
+              eventId: event.id,
+              eventDescription: event.description?.substring(0, 100) + '...',
+              sourceSnippets: event.source_snippets,
+              selectedKeyword: currentFilters.selectedKeyword,
+            }
+          );
+          return false;
+        }
       });
     }
 
+    // Apply relevance score filtering
+    filtered = filtered.filter(
+      (event) =>
+        event.relevance_score !== null &&
+        event.relevance_score !== undefined &&
+        event.relevance_score >= currentFilters.minRelevanceScore
+    );
+
     return filtered;
-  }, [events, currentFilters]);
+  }, [events, currentFilters, task?.viewpoint_details?.sources]);
 
   // WebSocket related state for dynamic tasks
   const [progressMessages, setProgressMessages] = useState<WebSocketStatusMessage[]>([]);
@@ -599,11 +633,12 @@ function TaskPage() {
     if (!task) return;
 
     const eventsToExport = filteredEvents;
+    const sources = task.viewpoint_details?.sources || {};
 
     if (format === 'json') {
-      exportEventsAsJson(task, eventsToExport);
+      exportEventsAsJson(task, eventsToExport, sources);
     } else if (format === 'markdown') {
-      exportEventsAsMarkdown(task, eventsToExport);
+      exportEventsAsMarkdown(task, eventsToExport, sources);
     }
   };
 
@@ -660,6 +695,7 @@ function TaskPage() {
                 isQuickNavVisible={isQuickNavVisible}
                 totalEventsCount={totalEventsCount}
                 events={events}
+                sources={task?.viewpoint_details?.sources || {}}
                 uniqueKeywords={sourceFilterData.keywords}
                 keywordToTitleMap={sourceFilterData.titles}
                 currentFilters={currentFilters}
@@ -670,6 +706,7 @@ function TaskPage() {
             {hasRenderableContent && (
               <TimelineDisplay
                 events={filteredEvents}
+                sources={task?.viewpoint_details?.sources || {}}
                 activeYear={activeYear}
                 onYearSelect={handleYearSelect}
                 expandedSources={expandedSources}

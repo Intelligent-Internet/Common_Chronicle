@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import type { TimelineEvent } from '../types';
+import type { TimelineEvent, EventSourceInfo } from '../types';
 import ContentCard from './ContentCard';
 import InkBlotButton from './InkBlotButton';
 import VerticalWavyLine from './VerticalWavyLine';
@@ -14,6 +14,7 @@ import {
 
 interface TimelineDisplayProps {
   events: TimelineEvent[];
+  sources: Record<string, EventSourceInfo>; // Dictionary of source references
   activeYear: string | null;
   expandedSources: Record<string, boolean>;
   status?: string; // Add status prop to track task status
@@ -25,6 +26,7 @@ interface TimelineDisplayProps {
 
 const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
   events,
+  sources,
   activeYear,
   expandedSources,
   status,
@@ -522,78 +524,111 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                       </div>
                     )}
 
-                    {event.source_text_snippet && (
-                      <blockquote className="border-l-4 border-pewter pl-4 text-sm text-slate italic my-4 font-alt dark:text-mist dark:border-mist">
-                        {event.source_text_snippet}
-                      </blockquote>
-                    )}
+                    {event.source_snippets &&
+                      Object.keys(event.source_snippets).length > 0 &&
+                      (() => {
+                        // Get representative source (first one)
+                        const sourceRefs = Object.keys(event.source_snippets);
+                        const representativeRef = sourceRefs[0];
+                        const representativeSnippet = event.source_snippets[representativeRef];
+
+                        return (
+                          <blockquote className="border-l-4 border-pewter pl-4 text-sm text-slate italic my-4 font-alt dark:text-mist dark:border-mist">
+                            {representativeSnippet}
+                          </blockquote>
+                        );
+                      })()}
 
                     {/* --- Source Information --- */}
                     <div className="mt-4 pt-4 border-t border-pewter/50 dark:border-mist/30">
-                      {event.source_url && (
-                        <div className="flex items-center gap-3 text-sm">
-                          <a
-                            href={event.source_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
-                            title={`Visit source: ${event.source_url}`}
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth="2"
-                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                              ></path>
-                            </svg>
-                          </a>
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {onCreateDocumentTask &&
-                            event.sources &&
-                            event.sources[0]?.source_document_id ? (
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  const sourceDocumentId = event.sources[0].source_document_id;
-                                  if (sourceDocumentId) {
-                                    onCreateDocumentTask(sourceDocumentId);
-                                  }
-                                }}
-                                className="text-slate hover:text-charcoal underline hover:no-underline truncate font-alt dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
-                                title="Generate timeline for this document"
+                      {event.source_snippets &&
+                        Object.keys(event.source_snippets).length > 0 &&
+                        (() => {
+                          const sourceRefs = Object.keys(event.source_snippets);
+                          const representativeRef = sourceRefs[0];
+                          const representativeSource = sources[representativeRef];
+
+                          return representativeSource?.source_url ? (
+                            <div className="flex items-center gap-3 text-sm">
+                              <a
+                                href={representativeSource.source_url || ''}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
+                                title={`Visit source: ${representativeSource.source_url || ''}`}
                               >
-                                {getSourceLinkText(event.source_page_title, event.source_url)}
-                              </button>
-                            ) : (
-                              <span className="text-slate truncate font-alt dark:text-mist flex-1 min-w-0">
-                                {getSourceLinkText(event.source_page_title, event.source_url)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                                  ></path>
+                                </svg>
+                              </a>
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                {onCreateDocumentTask &&
+                                representativeSource?.source_document_id ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      const sourceDocumentId =
+                                        representativeSource.source_document_id;
+                                      if (sourceDocumentId) {
+                                        onCreateDocumentTask(sourceDocumentId);
+                                      }
+                                    }}
+                                    className="text-slate hover:text-charcoal underline hover:no-underline truncate font-alt dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
+                                    title="Generate timeline for this document"
+                                  >
+                                    {getSourceLinkText(
+                                      representativeSource.source_page_title,
+                                      representativeSource.source_url
+                                    )}
+                                  </button>
+                                ) : (
+                                  <span className="text-slate truncate font-alt dark:text-mist flex-1 min-w-0">
+                                    {getSourceLinkText(
+                                      representativeSource.source_page_title,
+                                      representativeSource.source_url
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : null;
+                        })()}
 
                       {(() => {
-                        const allSources = event.sources || [];
+                        // Get all source references and resolve to actual source objects
+                        if (!event.source_snippets || typeof event.source_snippets !== 'object') {
+                          console.warn(
+                            '[TimelineDisplay.tsx] Event has empty or invalid source_snippets in source display:',
+                            {
+                              eventId: event.id,
+                              eventDescription: event.description?.substring(0, 100) + '...',
+                              sourceSnippets: event.source_snippets,
+                              eventDateStr: event.event_date_str,
+                            }
+                          );
+                          return null;
+                        }
+                        const sourceRefs = Object.keys(event.source_snippets);
+                        const representativeRef = sourceRefs[0];
+                        const allSources = sourceRefs.map((ref) => sources[ref]).filter(Boolean);
 
-                        // Find the index of the source that is already displayed as the representative one.
-                        const representativeSourceIndex = allSources.findIndex(
-                          (s) =>
-                            s.source_url === event.source_url &&
-                            s.source_text_snippet === event.source_text_snippet
-                        );
-
+                        // Representative source is displayed above
                         // "Other sources" are all sources EXCLUDING the representative one.
-                        const otherSources = allSources.filter(
-                          (_, index) => index !== representativeSourceIndex
-                        );
+                        const otherSources = allSources.filter((_, index) => {
+                          const sourceRef = sourceRefs[index];
+                          return sourceRef !== representativeRef;
+                        });
 
                         if (otherSources.length === 0) {
                           return null;
@@ -625,69 +660,79 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
 
                             {expandedSources[event.id] && (
                               <div className="mt-3 space-y-3 pl-4 border-l-2 border-pewter/50 dark:border-mist/30">
-                                {otherSources.map((source, idx) => (
-                                  <div key={idx} className="text-xs font-alt">
-                                    <div className="flex items-center gap-2">
-                                      <a
-                                        href={source.source_url || '#'}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
-                                        title={`Visit source: ${source.source_url || 'No URL available'}`}
-                                      >
-                                        <svg
-                                          className="w-3 h-3"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
+                                {otherSources.map((source, idx) => {
+                                  // Find the corresponding source ref for this source
+                                  const sourceRef = sourceRefs.find(
+                                    (ref) => sources[ref] === source
+                                  );
+                                  const sourceSnippet = sourceRef
+                                    ? event.source_snippets[sourceRef]
+                                    : null;
+
+                                  return (
+                                    <div key={idx} className="text-xs font-alt">
+                                      <div className="flex items-center gap-2">
+                                        <a
+                                          href={source.source_url || '#'}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
+                                          title={`Visit source: ${source.source_url || 'No URL available'}`}
                                         >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="2"
-                                            d="M9 5l7 7-7-7"
-                                          ></path>
-                                        </svg>
-                                      </a>
-                                      {onCreateDocumentTask && source.source_document_id ? (
-                                        <button
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            if (source.source_document_id) {
-                                              onCreateDocumentTask(source.source_document_id);
-                                            }
-                                          }}
-                                          className="text-slate hover:text-charcoal underline hover:no-underline truncate font-medium dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
-                                          title="Generate timeline for this document"
-                                        >
-                                          {getSourceLinkText(
-                                            source.source_page_title,
-                                            source.source_url || ''
-                                          )}
-                                        </button>
-                                      ) : (
-                                        <span className="text-slate truncate font-medium dark:text-mist flex-1 min-w-0">
-                                          {getSourceLinkText(
-                                            source.source_page_title,
-                                            source.source_url || ''
-                                          )}
-                                        </span>
-                                      )}
-                                      {source.source_url &&
-                                        getDataSourceLabel(source.source_url) && (
-                                          <span className="text-pewter dark:text-mist">
-                                            ({getDataSourceLabel(source.source_url)})
+                                          <svg
+                                            className="w-3 h-3"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                          >
+                                            <path
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                              strokeWidth="2"
+                                              d="M9 5l7 7-7-7"
+                                            ></path>
+                                          </svg>
+                                        </a>
+                                        {onCreateDocumentTask && source.source_document_id ? (
+                                          <button
+                                            onClick={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              if (source.source_document_id) {
+                                                onCreateDocumentTask(source.source_document_id);
+                                              }
+                                            }}
+                                            className="text-slate hover:text-charcoal underline hover:no-underline truncate font-medium dark:text-mist dark:hover:text-white flex-1 min-w-0 text-left"
+                                            title="Generate timeline for this document"
+                                          >
+                                            {getSourceLinkText(
+                                              source.source_page_title,
+                                              source.source_url || ''
+                                            )}
+                                          </button>
+                                        ) : (
+                                          <span className="text-slate truncate font-medium dark:text-mist flex-1 min-w-0">
+                                            {getSourceLinkText(
+                                              source.source_page_title,
+                                              source.source_url || ''
+                                            )}
                                           </span>
                                         )}
+                                        {source.source_url &&
+                                          getDataSourceLabel(source.source_url) && (
+                                            <span className="text-pewter dark:text-mist">
+                                              ({getDataSourceLabel(source.source_url)})
+                                            </span>
+                                          )}
+                                      </div>
+                                      {sourceSnippet && (
+                                        <blockquote className="border-l-2 border-pewter pl-3 ml-1.5 mt-2 py-1 text-slate italic dark:text-mist dark:border-mist">
+                                          "{sourceSnippet}"
+                                        </blockquote>
+                                      )}
                                     </div>
-                                    {source.source_text_snippet && (
-                                      <blockquote className="border-l-2 border-pewter pl-3 ml-1.5 mt-2 py-1 text-slate italic dark:text-mist dark:border-mist">
-                                        "{source.source_text_snippet}"
-                                      </blockquote>
-                                    )}
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             )}
                           </>
