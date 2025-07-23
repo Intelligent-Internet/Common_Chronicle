@@ -279,6 +279,43 @@ class Settings(BaseSettings):
         description="Maximum number of concurrent LLM requests across all event processing",
     )
 
+    # ===== Event Merger Embedding Configuration =====
+    event_merger_use_embedding: bool = Field(
+        default=True,
+        alias="EVENT_MERGER_USE_EMBEDDING",
+        description="Enable embedding-based event merging for better performance",
+    )
+
+    event_merger_embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        alias="EVENT_MERGER_EMBEDDING_MODEL",
+        description="SentenceTransformer model name for event embedding",
+    )
+
+    event_merger_embedding_similarity_threshold: float = Field(
+        default=0.80,
+        alias="EVENT_MERGER_EMBEDDING_SIMILARITY_THRESHOLD",
+        description="Cosine similarity threshold for embedding-based merging",
+    )
+
+    event_merger_embedding_cache_size: int = Field(
+        default=10000,
+        alias="EVENT_MERGER_EMBEDDING_CACHE_SIZE",
+        description="Maximum number of embeddings to cache in memory",
+    )
+
+    event_merger_hybrid_mode: bool = Field(
+        default=True,
+        alias="EVENT_MERGER_HYBRID_MODE",
+        description="Use hybrid mode: embedding for bulk + LLM for uncertain cases",
+    )
+
+    event_merger_hybrid_llm_threshold: float = Field(
+        default=0.90,
+        alias="EVENT_MERGER_HYBRID_LLM_THRESHOLD",
+        description="High similarity threshold for skipping LLM in hybrid mode",
+    )
+
     article_filter_relevance_threshold: float = Field(
         default=0.35,
         alias="ARTICLE_FILTER_RELEVANCE_THRESHOLD",

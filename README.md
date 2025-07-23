@@ -72,6 +72,8 @@ To showcase the breadth of topics Common Chronicle can handle, we have curated s
 -   **Source Transparency**: Every event is linked back to its original source.
 -   **Export & Share**: Easily share interactive web timelines with a public link, or export your results as clean JSON or Markdown for further analysis, integration, or content creation.
 -   **Global Perspective**: Built to find and present relevant sources from multiple languages.
+-   **High Performance & Cost Efficiency**: Intelligent embedding-based event processing delivers 10x+ speed improvements while maintaining accuracy and significantly reducing API costs.
+
 
 ## 🤖 The Role of AI
 

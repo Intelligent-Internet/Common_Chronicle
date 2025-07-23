@@ -1066,6 +1066,28 @@ class EventMergerService:
         request_id: str | None = None,
     ) -> list[MergedEventGroupOutput]:
         """Main entry point: converts DB events → applies merging pipeline → returns structured results."""
+
+        # Check if embedding-based merging is enabled
+        if settings.event_merger_use_embedding:
+            logger.info("Using embedding-based event merging for improved performance")
+            try:
+                from app.services.embedding_event_merger import EmbeddingEventMerger
+
+                embedding_merger = EmbeddingEventMerger(user_lang=self.user_lang)
+                return await embedding_merger.get_merge_instructions(
+                    events, progress_callback, request_id
+                )
+            except ImportError as e:
+                logger.warning(
+                    f"Embedding dependencies not available, falling back to LLM-based merging: {e}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"Embedding-based merging failed, falling back to LLM-based merging: {e}"
+                )
+
+        # Fallback to original LLM-based approach
+        logger.info("Using original LLM-based event merging")
         self._reset_stats()
         start_time = time.time()
 

@@ -16,6 +16,10 @@ google-genai==1.16.1
 sentence_transformers==4.1.0
 transformers==4.51.3
 
+# -- Machine Learning & Scientific Computing --
+numpy>=1.21.0
+scikit-learn>=1.0.0
+
 # -- HTTP Clients & Web Scraping --
 requests
 beautifulsoup4
