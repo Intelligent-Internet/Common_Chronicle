@@ -65,9 +65,18 @@ repos:
   # Frontend checks (for React/TypeScript)
   - repo: local
     hooks:
+      # Prettier formatting - runs before ESLint
+      - id: prettier
+        name: prettier
+        entry: powershell -c "cd frontend; npx prettier --write src/"
+        language: system
+        files: ^frontend/.*\.(js|jsx|ts|tsx|json|css|scss|md)$
+        pass_filenames: false
+
+      # ESLint - runs after Prettier
       - id: eslint
         name: eslint
-        entry: powershell -c "cd frontend; npm run lint"
+        entry: powershell -c "cd frontend; npm run lint -- --fix"
         language: system
         files: ^frontend/.*\.(js|jsx|ts|tsx)$
         pass_filenames: false

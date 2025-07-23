@@ -64,12 +64,14 @@ src/
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-org/Common_Chronicle.git
    cd Common_Chronicle/frontend
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    # or
@@ -79,6 +81,7 @@ src/
 3. **Set up environment variables**
 
    Create a `.env` file in the frontend directory (optional - has intelligent defaults):
+
    ```env
    # For explicit API URL (optional)
    VITE_API_BASE_URL=http://localhost:8080
@@ -90,6 +93,7 @@ src/
 ### Development
 
 1. **Start the development server**
+
    ```bash
    npm run dev
    # or
@@ -113,24 +117,28 @@ Built files will be in the `dist/` directory.
 ## 🎯 Key Features
 
 ### 📝 Timeline Creation
+
 - **Research Question Input**: Natural language research questions
 - **Data Source Selection**: Multiple historical data sources
 - **Real-time Progress**: Live updates during AI processing
 - **WebSocket Integration**: Real-time task status updates
 
 ### 🔍 Timeline Browsing
+
 - **Public Archives**: Browse community-generated timelines
 - **My Chronicles**: Personal timeline management
 - **Search & Filter**: Find specific historical topics
 - **Export Options**: Download timelines in various formats
 
 ### 🔐 User Management
+
 - **Authentication**: Login/register system
 - **Session Management**: Persistent login state
 - **User Preferences**: Personalized experience
 - **Task Ownership**: Private and public timeline options
 
 ### 📱 Responsive Design
+
 - **Mobile-First**: Optimized for all screen sizes
 - **Accessibility**: Screen reader friendly
 - **Performance**: Optimized loading and rendering
@@ -139,11 +147,13 @@ Built files will be in the `dist/` directory.
 ## 🎨 UI Design System
 
 ### Theme
+
 - **Color Scheme**: Parchment and scholar colors for historical feel
 - **Typography**: Serif fonts for headers, sans-serif for body text
 - **Visual Effects**: Ink blot animations, wavy lines, paper textures
 
 ### Components
+
 - **InkBlotButton**: Animated buttons with ink spreading effect
 - **ParchmentPaper**: Paper-textured containers
 - **WavyLine**: Decorative separator elements
@@ -186,19 +196,21 @@ The frontend communicates with the backend through:
 ### API Configuration
 
 The app intelligently detects the environment and builds URLs accordingly:
+
 - **Domain Access**: `[domain]` → `https://[domain]/api` (no port)
 - **IP Access**: `192.168.1.100` → `http://192.168.1.100:8080/api` (with port)
 - **Local Development**: `localhost` → `http://localhost:8080/api` (with port)
 
-
 ## 💾 Data Management
 
 ### Local Storage
+
 - **IndexedDB**: Caches completed timelines for offline viewing
 - **Session Storage**: Temporary UI state
 - **LocalStorage**: Authentication tokens and user preferences
 
 ### State Management
+
 - **React Context**: Global authentication and user state
 - **Component State**: Local UI state and form handling
 - **Stale-While-Revalidate**: Optimistic updates with background refresh
