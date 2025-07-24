@@ -1,34 +1,23 @@
 ---
 name: "🐛 Bug Report"
-about: "Create a report to help us improve"
-title: "[BUG] <A brief summary of the bug>"
-labels: ["bug", "triage"]
+about: "Something isn't working as expected"
+title: ""
+labels: ["bug"]
 assignees: ''
 ---
 
-### Describe the bug
-A clear and concise description of what the bug is.
+**What went wrong?**
 
-### Steps to Reproduce
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+<!-- Describe what happened -->
 
-### Expected behavior
-A clear and concise description of what you expected to happen.
+**What did you expect?**
 
-### Actual behavior
-A clear and concise description of what actually happened.
+<!-- Describe what you thought should happen -->
 
-### Screenshots
-If applicable, add screenshots to help explain your problem.
+**How can we reproduce it? (optional)**
 
-### Environment (please complete the following information)
-- **OS**: [e.g. Windows 10, Ubuntu 20.04]
-- **Your Project Version**: [e.g. v1.2.3]
-- **Node.js Version (if applicable)**: [e.g. 14.17.0]
+<!-- Steps to reproduce the issue -->
 
-### Additional context
-Add any other context about the problem here.
+**Additional info (optional)**
+
+<!-- Screenshots, error messages, or anything else that might help -->

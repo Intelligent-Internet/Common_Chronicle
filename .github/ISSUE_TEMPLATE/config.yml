@@ -1,8 +1,8 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
-  - name: "📝 Read our Contributing Guide"
-    url: "https://github.com/Intelligent-Internet/Common_Chronicle/blob/main/.github/CONTRIBUTING.md"
-    about: "Please review the guide before creating an issue to understand our processes."
-  - name: "📖 Check the Project Documentation"
+  - name: "📖 Check the README first"
     url: "https://github.com/Intelligent-Internet/Common_Chronicle/blob/main/README.md"
-    about: "Your question might already be answered in the main README file."
+    about: "Your question might already be answered there"
+  - name: "📝 Contributing Guide"
+    url: "https://github.com/Intelligent-Internet/Common_Chronicle/blob/main/.github/CONTRIBUTING.md"
+    about: "Learn how to contribute to this project"

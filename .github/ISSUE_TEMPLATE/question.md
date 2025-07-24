@@ -1,16 +1,15 @@
 ---
-name: "❓ Question"
-about: "Ask a question about the project"
-title: "[Q] <Your question>"
+name: "❓ Ask a Question"
+about: "Ask any question about this project"
+title: ""
 labels: ["question"]
 assignees: ''
 ---
 
-### What is your question?
-Please provide a clear and concise description of your question.
+**What's your question?**
 
-### What have you tried?
-Let us know what you have already tried to find an answer.
+<!-- Just describe what you want to know. We're here to help! -->
 
-### Additional context
-Add any other context or screenshots about your question here.
+**Additional details (optional)**
+
+<!-- Any extra context that might be helpful -->

@@ -1,19 +1,19 @@
 ---
 name: "✨ Feature Request"
-about: "Suggest an idea for this project"
-title: "[FEAT] <A brief summary of the feature>"
-labels: ["enhancement", "needs-scoping"]
+about: "Suggest a new idea for this project"
+title: ""
+labels: ["enhancement"]
 assignees: ''
 ---
 
-### Is your feature request related to a problem? Please describe.
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+**What would you like to see?**
 
-### Describe the solution you'd like
-A clear and concise description of what you want to happen.
+<!-- Describe your idea -->
 
-### Describe alternatives you've considered
-A clear and concise description of any alternative solutions or features you've considered.
+**Why would this be useful?**
 
-### Additional context
-Add any other context or screenshots about the feature request here.
+<!-- Tell us how this would help you or others -->
+
+**Additional thoughts (optional)**
+
+<!-- Any other details about your suggestion -->
