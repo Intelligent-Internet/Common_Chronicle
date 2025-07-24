@@ -373,7 +373,7 @@ class TimelineOrchestratorService:
         self,
         viewpoint_text: str,
         request_id: str,
-        progress_callback: ProgressCallback | None,
+        progress_callback: ProgressCallback | None = None,
         task_config: ArticleAcquisitionConfig | None = None,
     ) -> KeywordExtractionResult:
         """Extract keywords and detect language from viewpoint text."""
@@ -426,7 +426,7 @@ class TimelineOrchestratorService:
         articles: list[SourceArticle],
         viewpoint_text: str,
         request_id: str,
-        progress_callback: ProgressCallback | None,
+        progress_callback: ProgressCallback | None = None,
         relevance_threshold: float = None,  # Use default from settings
         article_limit: int | None = None,  # New parameter for limiting article count
     ) -> list[SourceArticle]:
@@ -552,7 +552,7 @@ class TimelineOrchestratorService:
         language_code: str,
         data_source_preference: str,
         request_id: str,
-        progress_callback: ProgressCallback | None,
+        progress_callback: ProgressCallback | None = None,
         task_config: ArticleAcquisitionConfig | None = None,
     ) -> list[SourceArticle]:
         """Acquire articles from various sources based on extracted keywords."""
@@ -616,7 +616,7 @@ class TimelineOrchestratorService:
         articles: list[SourceArticle],
         data_source_preference: str,
         request_id: str,
-        progress_callback: ProgressCallback | None,
+        progress_callback: ProgressCallback | None = None,
         *,
         db: AsyncSession = None,
     ) -> list[uuid.UUID]:
@@ -803,7 +803,7 @@ class TimelineOrchestratorService:
         language_code: str,
         db: AsyncSession,
         request_id: str,
-        progress_callback: ProgressCallback | None,
+        progress_callback: ProgressCallback | None = None,
     ) -> list[MergedEventGroupSchema]:
         """Merge related events using intelligent deduplication."""
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""
@@ -1190,14 +1190,6 @@ class TimelineOrchestratorService:
     ) -> list[TimelineEventForAPI]:
         """
         Public entry point to get canonical events for a given entity ID.
-
-        Args:
-            entity_id: The UUID of the entity
-            request_id: Optional request ID for logging
-            db: Optional database session
-
-        Returns:
-            List of timeline events extracted from the entity's source documents
         """
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""
         logger.info(f"{log_prefix}Fetching canonical events for entity_id: {entity_id}")
@@ -1219,14 +1211,6 @@ class TimelineOrchestratorService:
     ) -> list[TimelineEventForAPI]:
         """
         Public entry point to get canonical events for a given entity wikibase_item.
-
-        Args:
-            wikibase_item: The Wikidata identifier (e.g., 'Q517')
-            request_id: Optional request ID for logging
-            db: Optional database session
-
-        Returns:
-            List of timeline events extracted from the entity's source documents
         """
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""
         logger.info(
@@ -1255,14 +1239,6 @@ class TimelineOrchestratorService:
     ) -> list[TimelineEventForAPI]:
         """
         Public entry point to get canonical events from a single source document.
-
-        Args:
-            source_document_id: The UUID of the source document
-            request_id: Optional request ID for logging
-            db: Optional database session
-
-        Returns:
-            List of timeline events extracted from the source document
         """
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""
         logger.info(
@@ -1357,14 +1333,6 @@ class TimelineOrchestratorService:
     ) -> list[TimelineEventForAPI]:
         """
         Core logic to extract canonical events from an entity's source documents.
-
-        Args:
-            entity: The Entity ORM object with source_documents preloaded
-            request_id: Optional request ID for logging
-            db: Database session
-
-        Returns:
-            List of timeline events extracted from all the entity's source documents
         """
         assert db is not None, "Database session is required"
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""

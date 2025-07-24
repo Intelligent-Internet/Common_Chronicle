@@ -43,7 +43,6 @@ class DataAcquisitionStrategy(ABC):
     async def get_articles(
         self,
         query_data: dict[str, Any],
-        # config: Optional[Dict[str, Any]] = None # Strategy-specific config if needed later
     ) -> list[SourceArticle]:
         # Abstract method: fetch articles based on query data (keywords, language, etc.)
         """
@@ -620,9 +619,7 @@ class OnlineWikinewsStrategy(DataAcquisitionStrategy):
         lang: str,
         http_client: httpx.AsyncClient,  # Passed but not directly used by get_wikinews_page_text
         parent_request_id: str | None = None,
-    ) -> list[
-        SourceArticle
-    ]:  # Changed return type from Optional[SourceArticle] to List[SourceArticle]
+    ) -> list[SourceArticle]:
         log_prefix = f"[ParentReqID: {parent_request_id}] " if parent_request_id else ""
         logger.info(
             f"{log_prefix}Fetching Wikinews articles for keyword: '{keyword}' (lang: {lang})"

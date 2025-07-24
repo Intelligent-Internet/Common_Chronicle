@@ -8,7 +8,6 @@ connection issues including Windows-specific errors.
 
 import asyncio
 import errno  # Added for errno constants
-import logging
 from functools import wraps
 
 from sqlalchemy.exc import DBAPIError, OperationalError
@@ -24,7 +23,9 @@ except ImportError:
     ASYNC_PG_DEFINED = False
     asyncpg = None  # To satisfy linters if it's used conditionally
 
-logger = logging.getLogger(__name__)
+from app.utils.logger import setup_logger
+
+logger = setup_logger("retry_utils")
 
 
 def is_retryable_db_error(e: Exception) -> bool:

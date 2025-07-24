@@ -93,7 +93,8 @@ else:
             logger.debug("Dataset DB engine and session maker configured.")
         except Exception as e:
             logger.error(
-                f"Failed to create dataset_engine or DatasetAsyncSessionLocal: {e}"
+                f"Failed to create dataset_engine or DatasetAsyncSessionLocal: {e}",
+                exc_info=True,
             )
             dataset_engine = None
             DatasetAsyncSessionLocal = None

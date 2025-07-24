@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,8 +8,9 @@ from app.db_handlers.base import BaseDBHandler, check_local_db
 from app.db_handlers.entity import EntityDBHandler
 from app.models.source_document import SourceDocument
 from app.services.entity_service import AsyncEntityService
+from app.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger("source_document_db_handler")
 
 
 class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):

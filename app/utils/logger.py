@@ -18,14 +18,11 @@ from pathlib import Path
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 
-# Generate a timestamp string for the current run
-RUN_DATE = datetime.datetime.now().strftime("%Y-%m-%d")
-RUN_TIMESTAMP = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-LOG_FILE_BASENAME = "timeline_app"
-LOG_FILE = LOG_DIR / RUN_DATE / f"{LOG_FILE_BASENAME}_{RUN_TIMESTAMP}.log"
+# Global variables to ensure all loggers use the same log file
+_GLOBAL_LOG_FILE = None
+_GLOBAL_RUN_DATE = None
 
-if not LOG_FILE.parent.exists():
-    LOG_FILE.parent.mkdir(parents=True)
+LOG_FILE_BASENAME = "timeline_app"
 
 # Enhanced log format with more context
 LOG_FORMAT = (
@@ -39,6 +36,26 @@ DEFAULT_LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_LOG_SIZE_MB = 10  # Maximum size per log file in MB
 MAX_LOG_SIZE_BYTES = MAX_LOG_SIZE_MB * 1024 * 1024
 MAX_BACKUP_COUNT = 10  # Maximum number of backup files per day
+
+
+def _get_global_log_file() -> Path:
+    """Get or create the global log file path. Ensures all loggers use the same file."""
+    global _GLOBAL_LOG_FILE, _GLOBAL_RUN_DATE
+
+    if _GLOBAL_LOG_FILE is None:
+        # Calculate timestamp only once when first needed
+        now = datetime.datetime.now()
+        _GLOBAL_RUN_DATE = now.strftime("%Y-%m-%d")
+        run_timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
+
+        # Create date-based directory
+        date_dir = LOG_DIR / _GLOBAL_RUN_DATE
+        date_dir.mkdir(exist_ok=True)
+
+        # Set the global log file path
+        _GLOBAL_LOG_FILE = date_dir / f"{LOG_FILE_BASENAME}_{run_timestamp}.log"
+
+    return _GLOBAL_LOG_FILE
 
 
 class SafeRotatingFileHandler(RotatingFileHandler):
@@ -80,41 +97,24 @@ class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
 
 class CombinedRotatingFileHandler(logging.Handler):
     """
-    Combined handler that rotates logs based on both size and time.
-    Uses size-based rotation as primary mechanism with time-based daily organization.
+    Combined handler that rotates logs based on size and uses a global log file.
+    Simplified version that ensures all handlers use the same log file.
     """
 
-    def __init__(
-        self, base_filename, max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT
-    ):
+    def __init__(self, max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT):
         super().__init__()
-        self.base_filename = base_filename
         self.max_bytes = max_bytes
         self.backup_count = backup_count
         self.current_handler = None
-        self.current_date = None
-        self.current_log_file = None
         self._setup_current_handler()
 
     def _setup_current_handler(self):
-        """Set up the current rotating file handler."""
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        """Set up the current rotating file handler using the global log file."""
+        global_log_file = _get_global_log_file()
 
-        # Create date-based directory
-        date_dir = LOG_DIR / current_date
-        date_dir.mkdir(exist_ok=True)
-
-        # Only create a new log file if the date has changed or this is the first setup
-        if self.current_date != current_date or self.current_log_file is None:
-            current_timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            self.current_log_file = (
-                date_dir / f"{LOG_FILE_BASENAME}_{current_timestamp}.log"
-            )
-            self.current_date = current_date
-
-        # Create size-based rotating handler for current date
+        # Create size-based rotating handler
         self.current_handler = SafeRotatingFileHandler(
-            self.current_log_file,
+            global_log_file,
             maxBytes=self.max_bytes,
             backupCount=self.backup_count,
             encoding="utf-8",
@@ -125,12 +125,7 @@ class CombinedRotatingFileHandler(logging.Handler):
             self.current_handler.setFormatter(self.formatter)
 
     def emit(self, record):
-        """Emit a record, rotating if necessary."""
-        # Check if we need to create a new handler for a new day
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        if self.current_date != current_date:
-            self._setup_current_handler()
-
+        """Emit a record."""
         if self.current_handler:
             self.current_handler.emit(record)
 
@@ -180,9 +175,9 @@ def setup_logger(name: str, level: str = None) -> logging.Logger:
     console_formatter = logging.Formatter(CONSOLE_FORMAT, DATE_FORMAT)
     console_handler.setFormatter(console_formatter)
 
-    # Combined file handler with size and time-based rotation
+    # Combined file handler with size-based rotation using global log file
     file_handler = CombinedRotatingFileHandler(
-        LOG_FILE, max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT
+        max_bytes=MAX_LOG_SIZE_BYTES, backup_count=MAX_BACKUP_COUNT
     )
     file_handler.setLevel(log_level)
     file_formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
@@ -212,7 +207,7 @@ def set_module_log_level(module_name: str, level: str):
 
 def get_current_log_file() -> Path:
     """Return the current log file path."""
-    return LOG_FILE
+    return _get_global_log_file()
 
 
 def list_log_files() -> list[Path]:

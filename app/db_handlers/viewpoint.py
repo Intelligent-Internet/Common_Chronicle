@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import uuid
 from typing import Any
 
@@ -16,8 +15,9 @@ from app.models.raw_event import RawEvent
 from app.models.viewpoint import Viewpoint
 from app.models.viewpoint_event_association import ViewpointEventAssociation
 from app.schemas import EventSourceInfoForAPI, ProcessedEntityInfo, TimelineEventForAPI
+from app.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger("viewpoint_db_handler")
 
 
 class ViewpointDBHandler(BaseDBHandler[Viewpoint]):

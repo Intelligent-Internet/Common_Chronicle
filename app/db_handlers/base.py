@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from functools import wraps
 from typing import Any, Generic, TypeVar
@@ -22,8 +21,10 @@ from app.models.raw_event import RawEvent
 from app.models.user import User
 from app.models.viewpoint_event_association import ViewpointEventAssociation
 from app.models.viewpoint_progress_step import ViewpointProgressStep
+from app.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger("db_handlers")
+
 
 # Define generic types for SQLAlchemy models and Pydantic schemas
 ModelType = TypeVar("ModelType", bound=Base)

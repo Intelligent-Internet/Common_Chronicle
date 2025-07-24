@@ -1,5 +1,4 @@
 import calendar
-import logging
 import uuid
 from datetime import date, datetime, time
 from typing import Any, Literal
@@ -17,6 +16,9 @@ from pydantic import (
 
 from app.config import settings
 from app.models import Event
+from app.utils.logger import setup_logger
+
+logger = setup_logger("schemas")
 
 
 class KeywordExtractionResult(BaseModel):
@@ -252,7 +254,6 @@ class DateRangeInfo(BaseModel):
     def validate_date_order(self) -> "DateRangeInfo":
         """Ensure start_date is not after end_date, swap if necessary."""
         if self.start_date > self.end_date:
-            logger = logging.getLogger(__name__)
             logger.warning(
                 f"DateRangeInfo: start_date {self.start_date} is after end_date {self.end_date}. "
                 f"Swapping them. Original details: {self.original_details}, original_text: {self.original_text}"
@@ -292,7 +293,6 @@ class DateRangeInfo(BaseModel):
                 dt_to_convert = datetime.combine(self.start_date, time.min)
                 return dt_to_convert.timestamp()
             except OSError as e:
-                logger = logging.getLogger(__name__)
                 logger.warning(
                     f"Could not convert date {self.start_date} to timestamp due to OSError: {e}. "
                     f"This usually means the date is outside the system's valid range (e.g., pre-1970 on Windows)."
@@ -301,7 +301,6 @@ class DateRangeInfo(BaseModel):
             except (
                 ValueError
             ) as e:  # Python's date/datetime objects might raise ValueError for truly out-of-range dates (e.g. year 0)
-                logger = logging.getLogger(__name__)
                 logger.warning(
                     f"Could not convert date {self.start_date} to timestamp due to ValueError: {e}."
                 )
@@ -315,7 +314,6 @@ class DateRangeInfo(BaseModel):
             "end_date_iso": self.end_date.isoformat() if self.end_date else None,
             "display_text": self.original_text,
             "precision": self.precision,
-            # "original_details": self.original_details # Optional: can be verbose
         }
 
     def __repr__(self) -> str:
@@ -356,7 +354,6 @@ class ParsedDateInfo(BaseModel):
         """
         Converts this ParsedDateInfo into a computable DateRangeInfo object.
         """
-        logger = logging.getLogger(__name__)
 
         if self.start_year is None:
             logger.debug(
@@ -623,7 +620,7 @@ class TaskBase(BaseModel):
     # Base model for task data, containing common fields
     id: uuid.UUID
     task_type: str = "synthetic_viewpoint"
-    topic_text: str | None = None  # Optional for canonical tasks
+    topic_text: str | None = None
     entity_id: uuid.UUID | None = None
     source_document_id: uuid.UUID | None = None
     owner: UserInfo | None = None

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -23,8 +22,9 @@ from app.models import Event, Viewpoint, ViewpointEventAssociation
 # If not, you might need to adjust the bound of ModelType
 from app.models.task import Task
 from app.models.viewpoint_progress_step import ViewpointProgressStep
+from app.utils.logger import setup_logger
 
-logger = logging.getLogger(__name__)
+logger = setup_logger("task_db_handler")
 
 
 class TaskDBHandler(BaseDBHandler[Task]):
