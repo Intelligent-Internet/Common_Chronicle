@@ -287,9 +287,9 @@ class Settings(BaseSettings):
     )
 
     event_merger_embedding_model: str = Field(
-        default="all-MiniLM-L6-v2",
+        default="Snowflake/snowflake-arctic-embed-m-v2.0",
         alias="EVENT_MERGER_EMBEDDING_MODEL",
-        description="SentenceTransformer model name for event embedding",
+        description="SentenceTransformer model name for event embedding (768 dimensions)",
     )
 
     event_merger_embedding_similarity_threshold: float = Field(
@@ -314,6 +314,13 @@ class Settings(BaseSettings):
         default=0.90,
         alias="EVENT_MERGER_HYBRID_LLM_THRESHOLD",
         description="High similarity threshold for skipping LLM in hybrid mode",
+    )
+
+    # ===== Embedding Model Trust Configuration =====
+    trust_remote_code_for_embeddings: bool = Field(
+        default=True,
+        alias="TRUST_REMOTE_CODE_FOR_EMBEDDINGS",
+        description="Whether to trust remote code when loading embedding models (required for Snowflake model)",
     )
 
     article_filter_relevance_threshold: float = Field(

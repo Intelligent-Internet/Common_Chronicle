@@ -213,7 +213,7 @@ class TaskDBHandler(BaseDBHandler[Task]):
             # Get the task to find its associated viewpoint
             task = await self.get(task_id, db=db)
             if not task or not task.viewpoint_id:
-                logger.warning(
+                logger.info(
                     f"Cannot get progress steps: Task {task_id} not found or has no associated viewpoint"
                 )
                 return []

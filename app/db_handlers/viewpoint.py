@@ -83,12 +83,25 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                 f"[Format Timeline] Event {db_event.id} has {len(db_event.entity_associations)} entity associations"
             )
 
+            # DEBUG: Add debug logging for raw_event_association_links
+            logger.debug(
+                f"[Format Timeline] Event {db_event.id} has {len(db_event.raw_event_association_links)} raw_event_association_links"
+            )
+
             # Collect source snippets for this event (source_ref -> snippet mapping)
             source_snippets = {}
             for link in db_event.raw_event_association_links:
                 contrib = link.raw_event
                 if not contrib:
+                    logger.debug(
+                        f"[Format Timeline] Event {db_event.id} has link with no raw_event"
+                    )
                     continue
+
+                logger.debug(
+                    f"[Format Timeline] Event {db_event.id} processing raw_event {contrib.id}, "
+                    f"source_text_snippet length: {len(contrib.source_text_snippet) if contrib.source_text_snippet else 0}"
+                )
 
                 source_doc = contrib.source_document
                 source_id = (
@@ -106,8 +119,21 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                         source_document_id=str(source_doc.id) if source_doc else None,
                     )
 
-                # Map source_ref to its snippet for this event
-                source_snippets[source_id] = contrib.source_text_snippet
+                # FIXED: Only add non-empty source snippets to avoid empty values in API response
+                if contrib.source_text_snippet and contrib.source_text_snippet.strip():
+                    source_snippets[source_id] = contrib.source_text_snippet
+                    logger.debug(
+                        f"[Format Timeline] Event {db_event.id} added source_snippet for {source_id}: "
+                        f"'{contrib.source_text_snippet[:100]}...'"
+                    )
+                else:
+                    logger.debug(
+                        f"[Format Timeline] Event {db_event.id} skipping empty source_snippet for {source_id}"
+                    )
+
+            logger.debug(
+                f"[Format Timeline] Event {db_event.id} final source_snippets count: {len(source_snippets)}"
+            )
 
             # Format entities
             api_main_entities = []

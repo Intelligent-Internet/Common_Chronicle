@@ -67,7 +67,7 @@ class Event(Base, UUIDMixin, TimestampMixin):
 
     description_vector = Column(
         Vector(768),
-        nullable=True,
+        nullable=False,
         comment="Embedding vector for semantic similarity search and event clustering",
     )
 

@@ -34,6 +34,7 @@ from app.models import (
 )
 from app.schemas import (
     ArticleAcquisitionConfig,
+    CanonicalEventData,
     KeywordExtractionResult,
     MergedEventGroupOutput,
     MergedEventGroupSchema,
@@ -43,7 +44,8 @@ from app.schemas import (
     TimelineGenerationResult,
 )
 from app.services.article_acquisition import ArticleAcquisitionService
-from app.services.event_merger_service import EventMergerService
+from app.services.embedding_event_merger import EmbeddingEventMerger
+from app.services.embedding_service import embedding_service
 from app.services.event_relevance_service import EventRelevanceService
 from app.services.llm_extractor import (
     parse_date_string_with_llm,
@@ -824,12 +826,8 @@ class TimelineOrchestratorService:
             f"{log_prefix}Loaded {len(events_from_db)} events with their details for merging"
         )
 
-        # 2. Call EventMergerService
-        # We need to adapt EventMergerService to accept a list of Event objects
-        # and return a structure describing how to merge them.
-        merger_service = EventMergerService(user_lang=language_code)
-        # `merge_instructions` is a list containing clustering and new descriptions.
-        # This now returns a list of Pydantic models directly.
+        # 2. Call EmbeddingEventMerger
+        merger_service = EmbeddingEventMerger(user_lang=language_code)
         merge_instructions: list[
             MergedEventGroupOutput
         ] = await merger_service.get_merge_instructions(
@@ -910,6 +908,152 @@ class TimelineOrchestratorService:
                 request_id,
             )
         return merged_event_groups
+
+    def _create_event_text_representation_for_merged_event(
+        self, description: str, event_date_str: str, source_events: list[Event]
+    ) -> str:
+        """
+        Create comprehensive text representation for merged event embedding computation.
+
+        This method combines the merged event description, date, and entity information
+        into a single text that captures the semantic essence of the merged event.
+        """
+        parts = []
+
+        # Add event description
+        if description:
+            parts.append(description)
+
+        # Add date information
+        if event_date_str:
+            parts.append(f"Date: {event_date_str}")
+
+        # Collect entities from source events
+        all_entities = set()
+        for source_event in source_events:
+            for entity_assoc in source_event.entity_associations:
+                if hasattr(entity_assoc, "entity") and entity_assoc.entity:
+                    entity_name = getattr(entity_assoc.entity, "entity_name", "")
+                    entity_type = getattr(entity_assoc.entity, "entity_type", "")
+                    if entity_name:
+                        entity_text = entity_name
+                        if entity_type:
+                            entity_text += f" ({entity_type})"
+                        all_entities.add(entity_text)
+
+        if all_entities:
+            parts.append(f"Entities: {', '.join(sorted(all_entities))}")
+
+        # Add context from source events (limited to avoid overwhelming the embedding)
+        source_snippets = []
+        for source_event in source_events[:3]:  # Limit to first 3 source events
+            for raw_event_link in source_event.raw_event_association_links:
+                if (
+                    raw_event_link.raw_event
+                    and raw_event_link.raw_event.source_text_snippet
+                ):
+                    snippet = raw_event_link.raw_event.source_text_snippet[
+                        :100
+                    ]  # Limit length
+                    source_snippets.append(snippet)
+                    break  # Only take first snippet per source event
+
+        if source_snippets:
+            parts.append(f"Context: {' | '.join(source_snippets)}")
+
+        return " | ".join(parts)
+
+    async def _compute_embedding_for_merged_event(
+        self, description: str, event_date_str: str, source_events: list[Event]
+    ) -> list[float]:
+        """
+        Compute embedding vector for merged events using unified embedding service.
+
+        Uses normalized data representation to ensure consistency with other parts of the system.
+
+        Args:
+            description: Merged event description
+            event_date_str: Event date string
+            source_events: List of source events
+
+        Returns:
+            list[float]: 768-dimensional embedding vector suitable for pgvector storage
+        """
+        # Use normalized data structure
+        entities_list = []
+        for source_event in source_events:
+            if (
+                hasattr(source_event, "entity_associations")
+                and source_event.entity_associations
+            ):
+                for assoc in source_event.entity_associations:
+                    if hasattr(assoc, "entity") and assoc.entity:
+                        entity_name = getattr(assoc.entity, "entity_name", "")
+                        entity_type = getattr(assoc.entity, "entity_type", "")
+                        if entity_name.strip():
+                            entities_list.append(
+                                {
+                                    "name": entity_name.strip(),
+                                    "type": entity_type.strip() if entity_type else "",
+                                }
+                            )
+
+        # Deduplicate entities
+        seen_entities = set()
+        unique_entities = []
+        for entity in entities_list:
+            entity_key = (entity["name"], entity["type"])
+            if entity_key not in seen_entities:
+                seen_entities.add(entity_key)
+                unique_entities.append(entity)
+
+        # Get source text snippet (from the first source event)
+        source_snippet = None
+        if source_events:
+            first_event = source_events[0]
+            if (
+                hasattr(first_event, "raw_event_association_links")
+                and first_event.raw_event_association_links
+            ):
+                first_raw_event = first_event.raw_event_association_links[0].raw_event
+                if first_raw_event and hasattr(first_raw_event, "source_text_snippet"):
+                    source_snippet = first_raw_event.source_text_snippet
+
+        # Create normalized data
+        canonical_data = CanonicalEventData(
+            description=description or "",
+            event_date_str=event_date_str or "",
+            entities=unique_entities,
+            source_snippet=source_snippet,
+        )
+
+        try:
+            # Use normalized text representation
+            event_text = canonical_data.to_embedding_text()
+            logger.debug(f"Computing embedding for merged event: {event_text[:100]}...")
+
+            # Use unified embedding service
+            embedding = embedding_service.encode(
+                event_text,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                add_query_prefix=True,  # Add "query: " prefix for Snowflake model
+            )
+
+            # Convert to list for pgvector storage
+            embedding_list = embedding.tolist()
+            logger.debug(
+                f"Successfully computed embedding with {len(embedding_list)} dimensions"
+            )
+
+            return embedding_list
+
+        except Exception as e:
+            logger.error(
+                f"Failed to compute embedding for merged event: {e}", exc_info=True
+            )
+            # Return zero vector as fallback (768 dimensions for Snowflake model)
+            return [0.0] * 768
 
     @check_local_db
     async def _ensure_viewpoint_exists_for_task(
@@ -1071,6 +1215,14 @@ class TimelineOrchestratorService:
                                     f"{log_prefix}Could not determine event_date_str for merged event, using 'Unknown'"
                                 )
 
+                    # Compute embedding vector for the merged event based on its actual description
+                    # For short event descriptions, semantic accuracy is more important than marginal performance gains
+                    description_vector = await self._compute_embedding_for_merged_event(
+                        group.description,
+                        event_date_str_for_new_event,
+                        group.source_events,
+                    )
+
                     new_merged_event = Event(
                         description=group.description,
                         event_date_str=event_date_str_for_new_event,
@@ -1079,6 +1231,7 @@ class TimelineOrchestratorService:
                             if isinstance(group.date_info, ParsedDateInfo)
                             else group.date_info
                         ),
+                        description_vector=description_vector,  # Add the computed embedding
                     )
 
                 db.add(new_merged_event)

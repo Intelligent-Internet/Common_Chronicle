@@ -15,6 +15,7 @@ openai
 google-genai==1.16.1
 sentence_transformers==4.1.0
 transformers==4.51.3
+xformers==0.0.31
 
 # -- Machine Learning & Scientific Computing --
 numpy>=1.21.0

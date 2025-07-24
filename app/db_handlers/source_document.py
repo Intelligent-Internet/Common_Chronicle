@@ -52,7 +52,7 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
                 return source_document
 
         # 2. If not found, create it.
-        logger.warning(
+        logger.info(
             f"{log_prefix}No source document found for article '{title}'({language}). Creating new one."
         )
 
@@ -86,7 +86,7 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
             )
 
             if is_wikipedia_source:
-                logger.warning(
+                logger.info(
                     f"{log_prefix}No entity found for '{title}'. Using EntityService to create entity with proper wikibase_item."
                 )
 

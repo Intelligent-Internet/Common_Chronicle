@@ -554,6 +554,49 @@ async def extract_timeline_events_from_text(
 
         logger.info(f"Step 1: LLM extracted {len(parsed_raw_events_json)} raw events.")
 
+        # --- Step 1.5: Data Quality Check ---
+        logger.info("Step 1.5: Filtering events with missing required fields.")
+
+        # Filter out events with missing required fields
+        valid_events = []
+        skipped_count = 0
+
+        for i, event_data in enumerate(parsed_raw_events_json):
+            # Check for required fields
+            if not event_data.get("event_date_str"):
+                logger.debug(
+                    f"Skipping event {i} (missing event_date_str): "
+                    f"description={event_data.get('event_description', 'N/A')[:50]}..."
+                )
+                skipped_count += 1
+                continue
+
+            if not event_data.get("event_description"):
+                logger.debug(
+                    f"Skipping event {i} (missing event_description): "
+                    f"date_str={event_data.get('event_date_str', 'N/A')}"
+                )
+                skipped_count += 1
+                continue
+
+            valid_events.append(event_data)
+
+        if skipped_count > 0:
+            logger.warning(
+                f"Filtered out {skipped_count} events with missing required fields."
+            )
+
+        # Update the events list to use only valid events
+        parsed_raw_events_json = valid_events
+
+        if not parsed_raw_events_json:
+            logger.warning("No valid events remaining after data quality check.")
+            return []
+
+        logger.info(
+            f"Step 1.5: {len(parsed_raw_events_json)} valid events remaining after quality check."
+        )
+
         # --- Step 2: Batch Parse Date for All Events ---
         logger.info("Step 2: Batch parsing date strings for all extracted events.")
 
@@ -565,6 +608,24 @@ async def extract_timeline_events_from_text(
         for i, event_data in enumerate(parsed_raw_events_json):
             try:
                 logger.debug(f"Raw event data: {event_data}")
+
+                # Data normalization - ensure optional fields have default values
+                # (Required fields are already validated in Step 1.5)
+                if not isinstance(event_data.get("main_entities"), list):
+                    logger.debug(f"Setting empty main_entities list for event {i}")
+                    event_data["main_entities"] = []
+
+                # FIXED: Don't set empty string for source_text_snippet if it's missing from LLM
+                # Let RawLLMEvent validation handle this - it's a required field
+                if not event_data.get("source_text_snippet"):
+                    logger.warning(
+                        f"Event {i} missing source_text_snippet from LLM response. "
+                        f"This should not happen as it's a required field in the prompt. "
+                        f"Event description: {event_data.get('event_description', 'N/A')[:100]}..."
+                    )
+                    # Skip this event if it doesn't have source_text_snippet
+                    continue
+
                 raw_event = RawLLMEvent(**event_data)
                 event_id = f"event_{i}"
 

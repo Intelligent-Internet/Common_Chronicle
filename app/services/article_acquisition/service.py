@@ -11,12 +11,9 @@ of new acquisition strategies and flexible configuration options.
 """
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any
 
 import httpx
-
-if TYPE_CHECKING:
-    from app.services.process_callback import ProgressCallback
 
 from app.config import settings
 from app.schemas import SourceArticle
@@ -30,6 +27,7 @@ from app.services.article_acquisition.strategies import (
     OnlineWikinewsStrategy,
     OnlineWikipediaStrategy,
 )
+from app.services.process_callback import ProgressCallback
 from app.utils.logger import setup_logger
 
 logger = setup_logger("article_acquisition_service")
@@ -63,14 +61,16 @@ class ArticleAcquisitionService:
                 if semantic_search_component
                 else SemanticSearchComponent()
             )
-            if default_ssc.model:
+            if default_ssc.is_ready():
                 self.strategies["dataset_wikipedia_en"] = DatasetWikipediaEnStrategy(
                     semantic_search_component=default_ssc
                 )
-                logger.info("Initialized DatasetWikipediaEnStrategy with loaded model.")
+                logger.info(
+                    "Initialized DatasetWikipediaEnStrategy with unified embedding service."
+                )
             else:
                 logger.error(
-                    "Failed to initialize SemanticSearchComponent for DatasetWikipediaEnStrategy due to model load failure."
+                    "Failed to initialize SemanticSearchComponent for DatasetWikipediaEnStrategy due to embedding service not ready."
                 )
 
             # Initialize OnlineWikipediaStrategy (formerly OnlineWikiStrategy)
@@ -109,16 +109,16 @@ class ArticleAcquisitionService:
         ):
             if (
                 not self.strategies["dataset_wikipedia_en"].component
-                or not self.strategies["dataset_wikipedia_en"].component.model
+                or not self.strategies["dataset_wikipedia_en"].component.is_ready()
             ):
                 logger.warning(
-                    "DatasetWikipediaEnStrategy is configured but its SemanticSearchComponent model failed to load. It may not yield results."
+                    "DatasetWikipediaEnStrategy is configured but its SemanticSearchComponent embedding service is not ready. It may not yield results."
                 )
 
     async def acquire_articles(
         self,
         query_data: dict[str, Any],
-        progress_callback: Optional["ProgressCallback"] = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> list[SourceArticle]:
         """
         Acquires articles using strategies determined by data_source_preference in query_data.

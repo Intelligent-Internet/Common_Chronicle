@@ -12,12 +12,9 @@ import time
 from collections import defaultdict
 from datetime import UTC, datetime
 from datetime import time as dt_time
-from typing import TYPE_CHECKING, Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from app.services.process_callback import ProgressCallback
 
 from app.config import settings
 from app.models import Event
@@ -31,6 +28,7 @@ from app.schemas import (
     SourceInfoForMerger,
 )
 from app.services.llm_service import get_llm_client
+from app.services.process_callback import ProgressCallback
 from app.utils.logger import setup_logger
 
 logger = setup_logger("event_merger", level="DEBUG")
@@ -1062,7 +1060,7 @@ class EventMergerService:
     async def get_merge_instructions(
         self,
         events: list[Event],
-        progress_callback: Optional["ProgressCallback"] = None,
+        progress_callback: ProgressCallback | None = None,
         request_id: str | None = None,
     ) -> list[MergedEventGroupOutput]:
         """Main entry point: converts DB events → applies merging pipeline → returns structured results."""
@@ -1083,7 +1081,8 @@ class EventMergerService:
                 )
             except Exception as e:
                 logger.error(
-                    f"Embedding-based merging failed, falling back to LLM-based merging: {e}"
+                    f"Embedding-based merging failed, falling back to LLM-based merging: {e}",
+                    exc_info=True,
                 )
 
         # Fallback to original LLM-based approach
@@ -1493,7 +1492,7 @@ class EventMergerService:
     async def merge_events(
         self,
         raw_event_inputs: list[dict[str, Any]],
-        progress_callback: Optional["ProgressCallback"] = None,
+        progress_callback: ProgressCallback | None = None,
         request_id: str | None = None,
     ) -> list[dict[str, Any]]:
         """Dictionary-based interface: validates inputs → applies merging → returns dict results."""

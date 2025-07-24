@@ -91,7 +91,7 @@ async def get_wiki_page_info(
             page_data = pages[0]
 
             if page_data.get("missing"):
-                logger.warning(
+                logger.info(
                     f"Page '{initial_title}' (lang: {lang}) is marked as missing by Wikipedia API."
                 )
                 return WikiPageInfoResponse(

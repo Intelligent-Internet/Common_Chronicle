@@ -6,6 +6,8 @@ This service integrates with the existing EventMergerService architecture while
 providing significant performance improvements through embedding-based similarity.
 """
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import time
@@ -22,6 +24,7 @@ from datetime import UTC
 from app.config import settings
 from app.models import Event
 from app.schemas import (
+    CanonicalEventData,
     EventDataForMerger,
     MergedEventGroupOutput,
     ParsedDateInfo,
@@ -29,6 +32,7 @@ from app.schemas import (
     SourceContributionInfo,
     SourceInfoForMerger,
 )
+from app.services.embedding_service import embedding_service
 from app.services.event_merger_service import LLMComparisonCache, RawEventInput
 from app.utils.logger import setup_logger
 
@@ -88,9 +92,6 @@ class EmbeddingEventMerger:
         )
         self.llm_cache = LLMComparisonCache()
 
-        # Lazy initialization of embedding model
-        self._embedding_model = None
-
         # Performance statistics
         self._stats = {
             "total_events": 0,
@@ -106,55 +107,17 @@ class EmbeddingEventMerger:
         }
 
         logger.info(
-            f"Initialized EmbeddingEventMerger with hybrid_mode={settings.event_merger_hybrid_mode}"
+            f"Initialized EmbeddingEventMerger with unified embedding service, hybrid_mode={settings.event_merger_hybrid_mode}"
         )
 
-    @property
-    def embedding_model(self):
-        """Lazy initialization of SentenceTransformer model"""
-        if self._embedding_model is None:
-            try:
-                from sentence_transformers import SentenceTransformer
+    # === Data Conversion Layer ===
 
-                logger.info(
-                    f"Loading embedding model: {settings.event_merger_embedding_model}"
-                )
-                self._embedding_model = SentenceTransformer(
-                    settings.event_merger_embedding_model
-                )
-                logger.info("Embedding model loaded successfully")
-            except ImportError:
-                logger.error(
-                    "sentence_transformers not installed. Please install: pip install sentence_transformers"
-                )
-                raise
-            except Exception as e:
-                logger.error(f"Failed to load embedding model: {e}")
-                raise
-        return self._embedding_model
+    def _convert_raw_to_canonical(self, raw_event: RawEventInput) -> CanonicalEventData:
+        entities_list = []
 
-    def _create_event_text_representation(self, raw_event: RawEventInput) -> str:
-        """
-        Create a comprehensive text representation of an event for embedding.
-
-        This combines description, date, and entity information into a single
-        text that captures the semantic meaning of the event.
-        """
-        parts = []
-
-        # Add event description
-        if raw_event.event_data.description:
-            parts.append(raw_event.event_data.description)
-
-        # Add date information
-        if raw_event.event_data.event_date_str:
-            parts.append(f"Date: {raw_event.event_data.event_date_str}")
-
-        # Add entity information
         if raw_event.event_data.main_entities:
-            entity_parts = []
             for entity in raw_event.event_data.main_entities:
-                entity_text = (
+                name = (
                     entity.get("original_name", "")
                     if isinstance(entity, dict)
                     else getattr(entity, "original_name", "")
@@ -164,30 +127,108 @@ class EmbeddingEventMerger:
                     if isinstance(entity, dict)
                     else getattr(entity, "entity_type", "")
                 )
-                if entity_type:
-                    entity_text += f" ({entity_type})"
-                if entity_text.strip():
-                    entity_parts.append(entity_text.strip())
 
-            if entity_parts:
-                parts.append(f"Entities: {', '.join(entity_parts)}")
+                if name.strip():
+                    entities_list.append(
+                        {
+                            "name": name.strip(),
+                            "type": entity_type.strip() if entity_type else "",
+                        }
+                    )
 
-        # Add source context if available
-        if raw_event.event_data.source_text_snippet:
-            # Limit snippet length to avoid overwhelming the embedding
-            snippet = raw_event.event_data.source_text_snippet[:200]
-            parts.append(f"Context: {snippet}")
+        return CanonicalEventData(
+            description=raw_event.event_data.description or "",
+            event_date_str=raw_event.event_data.event_date_str or "",
+            entities=entities_list,
+            source_snippet=raw_event.event_data.source_text_snippet,
+        )
 
-        return " | ".join(parts)
+    def _convert_db_event_to_canonical(self, event: Event) -> CanonicalEventData:
+        entities_list = []
 
-    def _get_event_embedding(self, raw_event: RawEventInput) -> np.ndarray:
-        """
-        Get or compute embedding for an event with caching
-        """
-        # Create cache key based on event content
-        event_text = self._create_event_text_representation(raw_event)
+        if hasattr(event, "entity_associations") and event.entity_associations:
+            for assoc in event.entity_associations:
+                if hasattr(assoc, "entity") and assoc.entity:
+                    entity_name = getattr(assoc.entity, "entity_name", "")
+                    entity_type = getattr(assoc.entity, "entity_type", "")
+
+                    if entity_name.strip():
+                        entities_list.append(
+                            {
+                                "name": entity_name.strip(),
+                                "type": entity_type.strip() if entity_type else "",
+                            }
+                        )
+
+        source_snippet = None
+        if (
+            hasattr(event, "raw_event_association_links")
+            and event.raw_event_association_links
+        ):
+            first_raw_event = event.raw_event_association_links[0].raw_event
+            if first_raw_event and hasattr(first_raw_event, "source_text_snippet"):
+                source_snippet = first_raw_event.source_text_snippet
+
+        return CanonicalEventData(
+            description=event.description or "",
+            event_date_str=event.event_date_str or "",
+            entities=entities_list,
+            source_snippet=source_snippet,
+        )
+
+    def _convert_event_to_raw_event_input(self, event: Event) -> RawEventInput:
+        date_info_model = None
+        if event.date_info and isinstance(event.date_info, dict):
+            try:
+                date_info_model = ParsedDateInfo(**event.date_info)
+            except Exception as e:
+                logger.warning(f"Failed to parse date_info for event {event.id}: {e}")
+
+        source_snippet = None
+        if (
+            hasattr(event, "raw_event_association_links")
+            and event.raw_event_association_links
+        ):
+            first_raw_event = event.raw_event_association_links[0].raw_event
+            if first_raw_event and hasattr(first_raw_event, "source_text_snippet"):
+                source_snippet = first_raw_event.source_text_snippet
+
+        main_entities_list = []
+        if hasattr(event, "entity_associations") and event.entity_associations:
+            for assoc in event.entity_associations:
+                entity_dict = {"entity_id": str(assoc.entity_id)}
+                if hasattr(assoc, "entity") and assoc.entity:
+                    entity_obj = assoc.entity
+                    entity_dict.update(
+                        {
+                            "original_name": getattr(entity_obj, "entity_name", None),
+                            "entity_type": getattr(entity_obj, "entity_type", None),
+                        }
+                    )
+                main_entities_list.append(entity_dict)
+
+        event_data = EventDataForMerger(
+            id=str(event.id),
+            description=event.description,
+            event_date_str=event.event_date_str,
+            date_info=date_info_model,
+            main_entities=main_entities_list,
+            source_text_snippet=source_snippet,
+        )
+
+        source_info = SourceInfoForMerger(
+            language="en",
+        )
+
+        return RawEventInput(event_data=event_data, source_info=source_info)
+
+    # === Core Embedding Layer===
+
+    def _compute_embedding_from_canonical(
+        self, canonical_data: CanonicalEventData
+    ) -> np.ndarray:
+        event_text = canonical_data.to_embedding_text()
         cache_key = hashlib.sha256(event_text.encode("utf-8")).hexdigest()
-
         # Try cache first
         cached_embedding = self.embedding_cache.get(cache_key)
         if cached_embedding is not None:
@@ -199,52 +240,114 @@ class EmbeddingEventMerger:
         self._stats["embedding_computations"] += 1
 
         try:
-            embedding = self.embedding_model.encode(event_text, convert_to_numpy=True)
+            embedding = embedding_service.encode(
+                event_text,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                add_query_prefix=True,
+            )
 
             # Store in cache
             self.embedding_cache.set(cache_key, embedding)
 
-            logger.debug(
-                f"Computed embedding for event {raw_event.original_id}: {event_text[:100]}..."
-            )
+            logger.debug(f"Computed embedding for text: {event_text[:100]}...")
             return embedding
 
         except Exception as e:
-            logger.error(
-                f"Failed to compute embedding for event {raw_event.original_id}: {e}"
-            )
-            # Return zero vector as fallback
-            return np.zeros(384)  # all-MiniLM-L6-v2 has 384 dimensions
+            logger.error(f"Failed to compute embedding: {e}", exc_info=True)
+            return np.zeros(768)
 
-    def _compute_similarity_matrix(self, raw_events: list[RawEventInput]) -> np.ndarray:
-        """
-        Compute pairwise cosine similarity matrix for all events
-        """
-        logger.info(f"Computing embeddings for {len(raw_events)} events...")
+    def get_embedding_for_raw_event(self, raw_event: RawEventInput) -> np.ndarray:
+        canonical_data = self._convert_raw_to_canonical(raw_event)
+        return self._compute_embedding_from_canonical(canonical_data)
 
-        # Compute all embeddings
+    def _get_embedding_for_db_event(self, event: Event) -> np.ndarray:
+        """
+        [Internal method] Get embedding for database Event (service stage two).
+
+        All Events in the database must contain a valid description_vector field.
+
+        Args:
+            event: Database event object
+
+        Returns:
+            np.ndarray: 768-dimensional embedding vector
+
+        Raises:
+            ValueError: If Event is missing or contains invalid description_vector
+        """
+        # Events in database must contain description_vector
+        if (
+            not hasattr(event, "description_vector")
+            or event.description_vector is None
+            or len(event.description_vector) == 0
+            or len(event.description_vector) != 768
+        ):
+            raise ValueError(f"Event {event.id} missing or invalid description_vector")
+
+        # Use vector directly from database
+        try:
+            embedding = np.array(event.description_vector, dtype=np.float32)
+
+            # Validate vector validity
+            if embedding.shape != (768,) or np.isnan(embedding).any():
+                raise ValueError(
+                    f"Event {event.id} has invalid description_vector data"
+                )
+
+            self._stats["embedding_cache_hits"] += 1  # Count as cache hit
+            logger.debug(f"Retrieved embedding from database for event {event.id}")
+            return embedding
+
+        except Exception as e:
+            raise ValueError(
+                f"Failed to load description_vector for event {event.id}: {e}"
+            ) from e
+
+    def _compute_similarity_matrix(self, events: list[Event]) -> np.ndarray:
+        """
+        Compute event similarity matrix.
+
+        Directly uses description_vector from database to compute similarity matrix.
+
+        Args:
+            events: List of event objects
+
+        Returns:
+            np.ndarray: Similarity matrix
+        """
+        logger.info(f"Computing similarity matrix for {len(events)} events")
+
+        # Get embedding vectors for all events
         embeddings = []
-        for raw_event in raw_events:
-            embedding = self._get_event_embedding(raw_event)
+        for event in events:
+            embedding = self._get_embedding_for_db_event(event)
             embeddings.append(embedding)
 
         # Convert to matrix for efficient computation
         embeddings_matrix = np.vstack(embeddings)
 
         # Compute cosine similarity matrix
-        logger.info("Computing similarity matrix...")
+        logger.info("Computing cosine similarity matrix...")
         self._stats["similarity_computations"] += 1
         similarity_matrix = cosine_similarity(embeddings_matrix)
 
         return similarity_matrix
 
     def _find_embedding_groups(
-        self, raw_events: list[RawEventInput], similarity_matrix: np.ndarray
+        self, events: list[Event], similarity_matrix: np.ndarray
     ) -> list[list[int]]:
         """
-        Find groups of events that should be merged based on embedding similarity
+        Find event groups that should be merged based on embedding similarity.
+
+        Args:
+            events: List of event objects
+            similarity_matrix: Similarity matrix
+
+        Returns:
+            list[list[int]]: List of event group indices
         """
-        n_events = len(raw_events)
+        n_events = len(events)
         visited = [False] * n_events
         groups = []
         threshold = settings.event_merger_embedding_similarity_threshold
@@ -257,13 +360,13 @@ class EmbeddingEventMerger:
             current_group = [i]
             visited[i] = True
 
-            # Find all events similar to this one
+            # Find all events similar to this event
             for j in range(i + 1, n_events):
                 if not visited[j] and similarity_matrix[i][j] >= threshold:
                     current_group.append(j)
                     visited[j] = True
                     logger.debug(
-                        f"Grouped events {raw_events[i].original_id} and {raw_events[j].original_id} "
+                        f"Grouped events {events[i].id} and {events[j].id} "
                         f"(similarity: {similarity_matrix[i][j]:.3f})"
                     )
 
@@ -275,12 +378,19 @@ class EmbeddingEventMerger:
         return groups
 
     async def _hybrid_llm_verification(
-        self, raw_events: list[RawEventInput], similarity_matrix: np.ndarray
+        self, events: list[Event], similarity_matrix: np.ndarray
     ) -> list[list[int]]:
         """
-        Hybrid approach: Use embedding for bulk grouping + LLM for uncertain cases
+        Hybrid approach: Use embeddings for batch grouping + LLM for uncertain cases.
+
+        Args:
+            events: List of event objects
+            similarity_matrix: Similarity matrix
+
+        Returns:
+            list[list[int]]: List of event group indices
         """
-        n_events = len(raw_events)
+        n_events = len(events)
         visited = [False] * n_events
         groups = []
         uncertain_pairs = []
@@ -288,7 +398,7 @@ class EmbeddingEventMerger:
         embedding_threshold = settings.event_merger_embedding_similarity_threshold
         llm_threshold = settings.event_merger_hybrid_llm_threshold
 
-        # Phase 1: Group by high-confidence embedding similarity
+        # Stage 1: Group based on high-confidence embedding similarity
         for i in range(n_events):
             if visited[i]:
                 continue
@@ -310,54 +420,65 @@ class EmbeddingEventMerger:
                         f"High-confidence merge: {similarity:.3f} >= {llm_threshold}"
                     )
                 elif similarity >= embedding_threshold:
-                    # Uncertain - needs LLM verification
+                    # Uncertain - requires LLM verification
                     uncertain_pairs.append((i, j, similarity))
                     logger.debug(f"Uncertain pair for LLM: {similarity:.3f}")
 
             groups.append(current_group)
 
-        # Phase 2: LLM verification for uncertain pairs
+        # Stage 2: LLM verification for uncertain pairs
         if uncertain_pairs:
             self._stats["hybrid_uncertain_pairs"] = len(uncertain_pairs)
             logger.info(
                 f"Using LLM verification for {len(uncertain_pairs)} uncertain pairs"
             )
 
-            # Process uncertain pairs with LLM
+            # Use LLM to process uncertain pairs
             llm_verified_pairs = await self._verify_pairs_with_llm(
-                raw_events, uncertain_pairs
+                events, uncertain_pairs
             )
 
-            # Merge groups based on LLM verification
+            # Merge groups based on LLM verification results
             groups = self._merge_groups_with_llm_results(groups, llm_verified_pairs)
 
         return groups
 
     async def _verify_pairs_with_llm(
         self,
-        raw_events: list[RawEventInput],
+        events: list[Event],
         uncertain_pairs: list[tuple[int, int, float]],
     ) -> list[tuple[int, int, bool]]:
         """
-        Use LLM to verify uncertain event pairs
+        Use LLM to verify uncertain event pairs.
+
+        Args:
+            events: List of event objects
+            uncertain_pairs: List of uncertain pairs (idx1, idx2, similarity)
+
+        Returns:
+            list[tuple[int, int, bool]]: LLM verification results (idx1, idx2, should_merge)
         """
         from app.services.event_merger_service import MergedEventGroup
 
         llm_results = []
 
-        # Create concurrent LLM tasks (limited by concurrent window size)
+        # 创建并发LLM任务（受并发窗口大小限制）
         window_size = settings.event_merger_concurrent_window_size
 
         for i in range(0, len(uncertain_pairs), window_size):
             window_pairs = uncertain_pairs[i : i + window_size]
 
-            # Create LLM verification tasks for this window
+            # 为此窗口创建LLM验证任务
             tasks = []
             for idx1, idx2, similarity in window_pairs:
-                # Create temporary groups for LLM comparison
-                group1 = MergedEventGroup(raw_events[idx1])
+                # 将Event转换为RawEventInput以兼容现有的MergedEventGroup
+                raw_event1 = self._convert_event_to_raw_event_input(events[idx1])
+                raw_event2 = self._convert_event_to_raw_event_input(events[idx2])
+
+                # 创建临时组进行LLM比较
+                group1 = MergedEventGroup(raw_event1)
                 task = asyncio.create_task(
-                    group1.llm_semantic_match(raw_events[idx2], self.llm_cache)
+                    group1.llm_semantic_match(raw_event2, self.llm_cache)
                 )
                 tasks.append((task, idx1, idx2, similarity))
 
@@ -390,12 +511,15 @@ class EmbeddingEventMerger:
                             llm_results.append((idx1, idx2, False))
                     except Exception as e:
                         logger.error(
-                            f"Error processing LLM result for events {idx1}, {idx2}: {e}"
+                            f"Error processing LLM result for events {idx1}, {idx2}: {e}",
+                            exc_info=True,
                         )
                         llm_results.append((idx1, idx2, False))
 
             except Exception as e:
-                logger.error(f"Error in concurrent LLM verification: {e}")
+                logger.error(
+                    f"Error in concurrent LLM verification: {e}", exc_info=True
+                )
                 # Fallback: assume no matches for this window
                 for _, idx1, idx2, _ in tasks:
                     llm_results.append((idx1, idx2, False))
@@ -438,23 +562,31 @@ class EmbeddingEventMerger:
 
     def _select_representative_event(
         self,
-        group_events: list[RawEventInput],
+        group_events: list[Event],
         group_indices: list[int],
         similarity_matrix: np.ndarray,
-    ) -> RawEventInput:
+    ) -> Event:
         """
-        Select the most representative event from a group
+        Select the most representative event from the group.
+
+        Args:
+            group_events: List of events in the group
+            group_indices: List of event indices in the group
+            similarity_matrix: Similarity matrix
+
+        Returns:
+            Event: The most representative event
         """
         if len(group_events) == 1:
             return group_events[0]
 
-        # Find event with highest average similarity to others in the group
+        # Find the event with highest average similarity to other events in the group
         best_event = group_events[0]
-        best_avg_similarity = 0
+        best_score = 0
 
         for i, event in enumerate(group_events):
             if len(group_indices) > 1:
-                # Calculate average similarity to other events in the group
+                # Calculate average similarity with other events in the group
                 similarities = [
                     similarity_matrix[group_indices[i]][group_indices[j]]
                     for j in range(len(group_indices))
@@ -464,92 +596,121 @@ class EmbeddingEventMerger:
             else:
                 avg_similarity = 1.0
 
-            # Also consider other factors like language preference and description length
+            # Consider other factors like description completeness
             score = avg_similarity
 
-            # Language preference bonus
-            if self.user_lang and event.source_info.language == self.user_lang:
-                score += 0.1
-
             # Description completeness bonus
-            if event.event_data.description:
-                score += min(len(event.event_data.description) / 1000, 0.1)
+            if event.description:
+                score += min(len(event.description) / 1000, 0.1)
 
-            if score > best_avg_similarity:
-                best_avg_similarity = score
+            # Bonus for more entity associations
+            if hasattr(event, "entity_associations") and event.entity_associations:
+                score += min(len(event.entity_associations) / 10, 0.05)
+
+            if score > best_score:
+                best_score = score
                 best_event = event
 
         return best_event
 
     def _create_merged_group_output(
-        self, group_events: list[RawEventInput], representative_event: RawEventInput
+        self, group_events: list[Event], representative_event: Event
     ) -> MergedEventGroupOutput:
         """
-        Create the output format for a merged group
+        Create output format for merged group.
+
+        Args:
+            group_events: List of events in the group
+            representative_event: Representative event
+
+        Returns:
+            MergedEventGroupOutput: Merged group output object
         """
-        # Create representative event info
+        # Create entity information for representative event
         main_entities_for_output = []
-        if representative_event.event_data.main_entities_processed:
-            main_entities_for_output = (
-                representative_event.event_data.main_entities_processed
-            )
-        else:
-            main_entities_for_output = [
-                {
-                    "entity_id": entity.get("entity_id")
-                    if isinstance(entity, dict)
-                    else getattr(entity, "entity_id", None),
-                    "original_name": entity.get("original_name")
-                    if isinstance(entity, dict)
-                    else getattr(entity, "original_name", None),
-                    "entity_type": entity.get("entity_type")
-                    if isinstance(entity, dict)
-                    else getattr(entity, "entity_type", None),
-                }
-                for entity in representative_event.event_data.main_entities
-            ]
-
-        # Create timestamp from date info
-        timestamp_for_db = None
         if (
-            hasattr(representative_event, "date_range")
-            and representative_event.date_range
-            and representative_event.date_range.start_date
+            hasattr(representative_event, "entity_associations")
+            and representative_event.entity_associations
         ):
-            from datetime import datetime
-            from datetime import time as dt_time
+            for assoc in representative_event.entity_associations:
+                if hasattr(assoc, "entity") and assoc.entity:
+                    main_entities_for_output.append(
+                        {
+                            "entity_id": str(assoc.entity_id),
+                            "original_name": getattr(assoc.entity, "entity_name", None),
+                            "entity_type": getattr(assoc.entity, "entity_type", None),
+                        }
+                    )
 
-            timestamp_for_db = datetime.combine(
-                representative_event.date_range.start_date,
-                dt_time.min,
-                tzinfo=UTC,
-            )
+        # Create timestamp from date information
+        timestamp_for_db = None
+        if representative_event.date_info and isinstance(
+            representative_event.date_info, dict
+        ):
+            try:
+                date_info_obj = ParsedDateInfo(**representative_event.date_info)
+                date_range = date_info_obj.to_date_range()
+                if date_range and date_range.start_date:
+                    from datetime import datetime
+                    from datetime import time as dt_time
+
+                    timestamp_for_db = datetime.combine(
+                        date_range.start_date,
+                        dt_time.min,
+                        tzinfo=UTC,
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to create timestamp from date_info: {e}")
+
+        # Get source text snippet and URL information
+        source_text_snippet = None
+        source_url = None
+        source_page_title = None
+        source_language = None
+
+        if (
+            hasattr(representative_event, "raw_event_association_links")
+            and representative_event.raw_event_association_links
+        ):
+            first_raw_event = representative_event.raw_event_association_links[
+                0
+            ].raw_event
+            if first_raw_event:
+                source_text_snippet = getattr(
+                    first_raw_event, "source_text_snippet", None
+                )
+                source_url = getattr(first_raw_event, "page_url", None)
+                source_page_title = getattr(first_raw_event, "page_title", None)
+                source_language = getattr(first_raw_event, "language", None)
 
         representative_event_info = RepresentativeEventInfo(
-            event_date_str=representative_event.event_data.event_date_str,
-            description=representative_event.event_data.description,
+            event_date_str=representative_event.event_date_str,
+            description=representative_event.description,
             main_entities=main_entities_for_output,
-            date_info=representative_event.event_data.date_info,
+            date_info=representative_event.date_info,
             timestamp=timestamp_for_db,
-            source_text_snippet=representative_event.event_data.source_text_snippet,
-            source_url=representative_event.source_info.page_url,
-            source_page_title=representative_event.source_info.page_title,
-            source_language=representative_event.source_info.language,
+            source_text_snippet=source_text_snippet,
+            source_url=source_url,
+            source_page_title=source_page_title,
+            source_language=source_language,
         )
 
-        # Create source contributions
-        source_contributions = [
-            SourceContributionInfo(
-                event_data=event.event_data,
-                source_info=event.source_info,
+        # Create source contribution information
+        source_contributions = []
+        for event in group_events:
+            # Convert Event to format required by SourceContributionInfo
+            raw_event_input = self._convert_event_to_raw_event_input(event)
+            source_contributions.append(
+                SourceContributionInfo(
+                    event_data=raw_event_input.event_data,
+                    source_info=raw_event_input.source_info,
+                )
             )
-            for event in group_events
-        ]
 
         return MergedEventGroupOutput(
             representative_event=representative_event_info,
             source_contributions=source_contributions,
-            original_id=representative_event.original_id,
+            original_id=str(representative_event.id),  # Use Event's ID
         )
 
     def _reset_stats(self):
@@ -557,14 +718,26 @@ class EmbeddingEventMerger:
         for key in self._stats:
             self._stats[key] = 0
 
+    # === Batch Merging Layer ===
+
     async def get_merge_instructions(
         self,
         events: list[Event],
-        progress_callback: "ProgressCallback" | None = None,
+        progress_callback: ProgressCallback | None = None,
         request_id: str = None,
     ) -> list[MergedEventGroupOutput]:
         """
-        Main entry point: High-performance embedding-based event merging
+        [Public interface] Main entry point for stage two batch merging.
+
+        High-performance embedding-based event merging that directly processes Event object lists.
+
+        Args:
+            events: List of event objects
+            progress_callback: Progress callback function
+            request_id: Request ID
+
+        Returns:
+            list[MergedEventGroupOutput]: List of merged event groups
         """
         self._reset_stats()
         start_time = time.time()
@@ -584,67 +757,6 @@ class EmbeddingEventMerger:
                 request_id,
             )
 
-        # Convert DB events to RawEventInput format (reuse existing logic)
-        processed_raw_events = []
-        for event in events:
-            # Reuse the conversion logic from the original EventMergerService
-            if event.date_info and isinstance(event.date_info, dict):
-                try:
-                    date_info_model = ParsedDateInfo(**event.date_info)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to parse date_info for event {event.id}: {e}"
-                    )
-                    date_info_model = None
-            else:
-                date_info_model = None
-
-            # Get source text snippet
-            primary_raw_event = event.raw_events[0] if event.raw_events else None
-            snippet = (
-                primary_raw_event.source_text_snippet if primary_raw_event else None
-            )
-
-            # Convert entity associations
-            main_entities_list = []
-            for assoc in event.entity_associations:
-                entity_dict = {"entity_id": str(assoc.entity_id)}
-                if hasattr(assoc, "entity") and assoc.entity:
-                    entity_obj = assoc.entity
-                    entity_dict.update(
-                        {
-                            "original_name": getattr(entity_obj, "entity_name", None),
-                            "entity_type": getattr(entity_obj, "entity_type", None),
-                        }
-                    )
-                main_entities_list.append(entity_dict)
-
-            event_data_for_merger = EventDataForMerger(
-                id=str(event.id),
-                description=event.description,
-                event_date_str=event.event_date_str,
-                date_info=date_info_model,
-                main_entities=main_entities_list,
-                source_text_snippet=snippet,
-            )
-
-            source_info_for_merger = SourceInfoForMerger(
-                language=getattr(primary_raw_event, "language", None)
-                if primary_raw_event
-                else None,
-            )
-
-            processed_raw_events.append(
-                RawEventInput(
-                    event_data=event_data_for_merger,
-                    source_info=source_info_for_merger,
-                )
-            )
-
-        logger.info(
-            f"Converted {len(processed_raw_events)} DB events to RawEventInput objects"
-        )
-
         # Compute similarity matrix
         if progress_callback:
             await progress_callback.report(
@@ -654,23 +766,19 @@ class EmbeddingEventMerger:
                 request_id,
             )
 
-        similarity_matrix = self._compute_similarity_matrix(processed_raw_events)
+        # Directly use description_vector from database to compute similarity matrix
+        logger.info("Computing similarity matrix using database embeddings")
+        similarity_matrix = self._compute_similarity_matrix(events)
 
-        # Find groups based on approach
+        # Find groups based on method
         if settings.event_merger_hybrid_mode:
             logger.info("Using hybrid embedding + LLM approach")
-            groups = await self._hybrid_llm_verification(
-                processed_raw_events, similarity_matrix
-            )
+            groups = await self._hybrid_llm_verification(events, similarity_matrix)
         else:
             logger.info("Using pure embedding approach")
-            groups = self._find_embedding_groups(
-                processed_raw_events, similarity_matrix
-            )
+            groups = self._find_embedding_groups(events, similarity_matrix)
 
-        logger.info(
-            f"Found {len(groups)} groups from {len(processed_raw_events)} events"
-        )
+        logger.info(f"Found {len(groups)} groups from {len(events)} events")
 
         # Create output format
         if progress_callback:
@@ -683,7 +791,8 @@ class EmbeddingEventMerger:
 
         result_groups = []
         for group_indices in groups:
-            group_events = [processed_raw_events[i] for i in group_indices]
+            # Use Event objects directly
+            group_events = [events[i] for i in group_indices]
             representative_event = self._select_representative_event(
                 group_events, group_indices, similarity_matrix
             )

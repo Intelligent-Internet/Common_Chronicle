@@ -7,10 +7,12 @@ Viewpoints represent coherent timeline perspectives that organize related events
 around specific topics or themes.
 """
 
+from __future__ import annotations
+
 import hashlib
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,9 +37,9 @@ from app.models import (
     Viewpoint,
     ViewpointEventAssociation,
 )
-from app.models.event import Event
 from app.models.source_document import SourceDocument
 from app.schemas import ProcessedEntityInfo, ProcessedEvent, SourceArticle
+from app.services.canonical_event_service import CanonicalEventService
 from app.services.entity_service import AsyncEntityService
 from app.services.llm_extractor import (
     extract_events_from_chunks,
@@ -61,6 +63,7 @@ class ViewpointService:
         self.viewpoint_event_assoc_handler = BaseDBHandler(ViewpointEventAssociation)
         self.entity_db_handler = EntityDBHandler()
         self.entity_service = AsyncEntityService()
+        self.canonical_event_service = CanonicalEventService()
 
     async def _atomic_create_viewpoint_data(
         self,
@@ -123,7 +126,7 @@ class ViewpointService:
             f"out of {len(raw_events_data_with_entities)} original events"
         )
 
-        # 3. Prepare all RawEvent and Event objects to be created in memory
+        # 3. Prepare all RawEvent objects and use CanonicalEventService for semantic deduplication
         staged_data = []
         for event_data in deduplicated_events:
             # a. Calculate deduplication signature (recalculate to ensure consistency)
@@ -157,68 +160,83 @@ class ViewpointService:
                     source_text_snippet=event_data.get("source_text_snippet"),
                 )
 
-            # c. Prepare corresponding "base" Event
-            event_obj = Event(
-                description=event_data["description"],
-                event_date_str=event_data["event_date_str"],
-                date_info=event_data.get("date_info"),
-            )
-
             staged_data.append(
                 {
                     "raw_event_obj": raw_event_obj,
-                    "event_obj": event_obj,
                     "linked_entities": event_data.get("linked_entities", []),
                     "is_existing_raw_event": existing_raw_event is not None,
                 }
             )
 
-        # 4. Add only new RawEvents and all Events to session
+        # 4. Add only new RawEvents to session and flush to get IDs
         new_raw_events = [
             item["raw_event_obj"]
             for item in staged_data
             if not item["is_existing_raw_event"]
         ]
-        all_events = [item["event_obj"] for item in staged_data]
 
         if new_raw_events:
             db.add_all(new_raw_events)
             logger.debug(
                 f"{log_prefix}Adding {len(new_raw_events)} new RawEvent objects to session"
             )
+            await db.flush()  # Flush to get RawEvent IDs
 
-        db.add_all(all_events)
-        logger.debug(f"{log_prefix}Adding {len(all_events)} Event objects to session")
-
-        # 5. Flush to get IDs of all new objects (but transaction not yet committed)
-        await db.flush()
-
-        # After flushing, the event objects now have IDs.
-        event_ids = [
-            item["event_obj"].id
-            for item in staged_data
-            if item["event_obj"].id is not None
-        ]
-
-        # 6. Prepare all "association" objects in memory
-        all_associations = []
-        unique_event_entity_pairs = set()  # Track unique (event_id, entity_id) pairs
-
+        # 5. Use CanonicalEventService to create or merge Events with semantic deduplication
+        logger.info(
+            f"{log_prefix}Starting semantic deduplication for {len(staged_data)} raw events"
+        )
+        canonical_events = []
         for item in staged_data:
             raw_event = item["raw_event_obj"]
+            try:
+                # Use CanonicalEventService to create or find existing Event
+                canonical_event = (
+                    await self.canonical_event_service.create_or_merge_event(
+                        db, raw_event, item["linked_entities"]
+                    )
+                )
+                canonical_events.append(
+                    {
+                        "event_obj": canonical_event,
+                        "linked_entities": item["linked_entities"],
+                    }
+                )
+                logger.debug(
+                    f"{log_prefix}Processed RawEvent {raw_event.id} -> Event {canonical_event.id}"
+                )
+            except Exception as e:
+                logger.error(
+                    f"{log_prefix}Error processing RawEvent {raw_event.id}: {e}"
+                )
+                continue
+
+        logger.info(
+            f"{log_prefix}Semantic deduplication completed: {len(staged_data)} raw events -> {len(canonical_events)} canonical events"
+        )
+
+        # Get unique event IDs (some Events may be reused due to semantic similarity)
+        event_ids = list({item["event_obj"].id for item in canonical_events})
+
+        # 6. Prepare Viewpoint-Event associations and Entity associations
+        all_associations = []
+        unique_viewpoint_event_pairs = set()
+        unique_event_entity_pairs = set()
+
+        for item in canonical_events:
             event = item["event_obj"]
 
-            # a. Viewpoint <-> Event
-            all_associations.append(
-                ViewpointEventAssociation(
-                    viewpoint_id=new_viewpoint.id, event_id=event.id
+            # a. Viewpoint <-> Event (avoid duplicates for reused Events)
+            vp_event_pair = (new_viewpoint.id, event.id)
+            if vp_event_pair not in unique_viewpoint_event_pairs:
+                all_associations.append(
+                    ViewpointEventAssociation(
+                        viewpoint_id=new_viewpoint.id, event_id=event.id
+                    )
                 )
-            )
-            # b. Event <-> RawEvent
-            all_associations.append(
-                EventRawEventAssociation(event_id=event.id, raw_event_id=raw_event.id)
-            )
-            # c. Event <-> Entity
+                unique_viewpoint_event_pairs.add(vp_event_pair)
+
+            # b. Event <-> Entity (avoid duplicates for reused Events)
             for entity_dict in item["linked_entities"]:
                 entity_id = entity_dict.get("entity_id")
                 if entity_id:
@@ -236,15 +254,22 @@ class ViewpointService:
                         )
 
         # 7. Batch add all association objects to session
-        db.add_all(all_associations)
+        if all_associations:
+            db.add_all(all_associations)
+            logger.debug(
+                f"{log_prefix}Adding {len(all_associations)} association objects to session"
+            )
 
         # 8. Update Viewpoint status to "completed" and add to commit
         new_viewpoint.status = "completed"
         db.add(new_viewpoint)
 
-        logger.info(f"{log_prefix}All objects and associations staged for commit.")
+        logger.info(
+            f"{log_prefix}All objects and associations staged for commit. "
+            f"Viewpoint {new_viewpoint.id} with {len(event_ids)} unique canonical events."
+        )
 
-        # Return created Viewpoint object and list of new Event IDs
+        # Return created Viewpoint object and list of canonical Event IDs
         return new_viewpoint, event_ids
 
     @check_local_db
@@ -253,7 +278,7 @@ class ViewpointService:
         article: SourceArticle,
         data_source_preference: str,
         request_id: str | None = None,
-        progress_callback: Optional["ProgressCallback"] = None,
+        progress_callback: ProgressCallback | None = None,
         db: AsyncSession = None,
     ) -> list[str]:
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""

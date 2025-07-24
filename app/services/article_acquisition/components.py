@@ -11,18 +11,17 @@ semantic search using sentence transformers, with optimized database queries
 and efficient embedding generation.
 """
 
-import asyncio
 import re
 from typing import Any
 
 import torch
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
-from transformers import AutoConfig, AutoModel, AutoTokenizer
 
 from app.config import settings
 from app.db import DatasetAsyncSessionLocal
 from app.schemas import SourceArticle
+from app.services.embedding_service import embedding_service
 from app.utils.logger import setup_logger
 
 logger = setup_logger("article_acquisition_components")
@@ -55,66 +54,25 @@ def escape_paradedb_query(query_text: str) -> str:
 
 
 class SemanticSearchComponent:
-    """Component for performing semantic search using a local sentence transformer model."""
+    """Component for performing semantic search using the unified embedding service."""
 
     def __init__(
         self,
         model_name: str = DEFAULT_SEMANTIC_SEARCH_MODEL,
         device: str | None = None,
     ):
+        # Use unified embedding service instead of loading own model
+        logger.info("SemanticSearchComponent using unified embedding service")
         self.model_name = model_name
-        self.tokenizer = None
-        self.model = None
-        # Determine device: CUDA if available, else CPU. Allow override.
         self.device = (
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
-        logger.info(f"SemanticSearchComponent will use device: {self.device}")
 
-        try:
-            logger.info(f"Attempting to load tokenizer: '{model_name}'")
-            self.tokenizer = AutoTokenizer.from_pretrained(
-                model_name, trust_remote_code=True
-            )
-            logger.info("Successfully loaded tokenizer.")
-
-            logger.info(f"Attempting to load model config for: '{model_name}'")
-            config_obj = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
-
-            # Explicitly try to disable any xformers-like attention if the config allows
-            if hasattr(config_obj, "use_memory_efficient_attention"):
-                config_obj.use_memory_efficient_attention = False
-                logger.info("Set config_obj.use_memory_efficient_attention = False")
-            # Other potential flags can be checked and set here if known for the model
-            # Forcing 'eager' through attn_implementation parameter is generally preferred if supported.
-
-            logger.info(
-                f"Loading model '{model_name}' on {self.device} with attn_implementation='eager'"
-            )
-            self.model = AutoModel.from_pretrained(
-                model_name,
-                config=config_obj,  # Pass the modified config
-                trust_remote_code=True,
-                attn_implementation="eager",  # Request standard attention
-            ).to(self.device)
-            self.model.eval()  # Set to evaluation mode
-            logger.info(
-                f"Successfully loaded model '{model_name}' to device '{self.device}'."
-            )
-
-        except ImportError as ie:
-            logger.error(
-                f"ImportError during model loading: {ie}. This might be related to missing dependencies for the model '{model_name}'."
-            )
-            self.model = None
-            self.tokenizer = None
-        except Exception as e:
-            logger.error(
-                f"Error loading Sentence Transformer model '{model_name}': {e}",
-                exc_info=True,
-            )
-            self.model = None  # Ensure model is None if loading failed
-            self.tokenizer = None
+        # Check if unified service is ready
+        if embedding_service.is_ready():
+            logger.info("Unified embedding service is ready for semantic search")
+        else:
+            logger.warning("Unified embedding service is not ready")
 
     async def search_articles_by_title_only_bm25(
         self, query_text: str, article_limit: int
@@ -158,72 +116,14 @@ class SemanticSearchComponent:
     async def get_embedding(
         self, text_content: str
     ) -> str | None:  # Returns string for pgvector
-        """Generates a normalized embedding string for the given text content using the Snowflake model."""
-        if not self.model or not self.tokenizer:
-            logger.error(
-                "Semantic search model or tokenizer is not loaded. Cannot generate embedding."
-            )
-            return None
-
+        """Generates a normalized embedding string for the given text content using the unified embedding service."""
         try:
-            # Add query prefix
-            prefixed_text = f"{SNOWFLAKE_QUERY_PREFIX}{text_content}"
-            normalized_text = prefixed_text.replace("\n", " ")
-
-            logger.debug(
-                f"Text for Snowflake embedding (with prefix): '{normalized_text[:200]}...'"
-            )
-
-            # Define the encoding and normalization process to be run in executor
-            def encode_and_normalize_sync(text_to_encode):
-                inputs = self.tokenizer(
-                    text_to_encode,
-                    padding=True,
-                    truncation=True,
-                    return_tensors="pt",
-                    max_length=512,
-                ).to(self.device)
-                with torch.no_grad():
-                    # Common way to get sentence embedding: mean pooling of last hidden states or CLS token
-                    # Snowflake model card might specify preferred pooling. Using CLS token [:, 0]
-                    # Reference: server.py uses outputs[0][:, 0]
-                    # AutoModel output is typically BaseModelOutputWithPooling or similar.
-                    # The first element of the tuple output_hidden_states[0] is the last_hidden_state.
-                    hidden_states = self.model(**inputs).last_hidden_state
-                    # Mean pool the token embeddings
-                    embeddings_numpy = (
-                        torch.mean(hidden_states, dim=1).squeeze().cpu().numpy()
-                    )
-                    # Alternate: CLS token (if appropriate for this model, usually for BERT-like archs)
-                    # embeddings_numpy = hidden_states[:, 0].squeeze().cpu().numpy()
-
-                # L2 Normalization (as in server.py, but on numpy array for simplicity here)
-                # Convert to torch tensor for normalize function if needed, then back to numpy/list
-                embeddings_tensor = torch.from_numpy(embeddings_numpy).unsqueeze(
-                    0
-                )  # Add batch dim if needed by normalize
-                normalized_embeddings_tensor = torch.nn.functional.normalize(
-                    embeddings_tensor, p=2, dim=1
-                ).squeeze()
-                normalized_embeddings_list = normalized_embeddings_tensor.cpu().tolist()
-
-                logger.debug(
-                    f"Original numpy embedding shape: {embeddings_numpy.shape}"
-                )
-                logger.debug(
-                    f"Normalized list embedding dimension: {len(normalized_embeddings_list)}"
-                )
-                return "[" + ",".join(map(str, normalized_embeddings_list)) + "]"
-
-            loop = asyncio.get_event_loop()
-            query_embedding_str = await loop.run_in_executor(
-                None, encode_and_normalize_sync, normalized_text
-            )
-
-            return query_embedding_str
+            # Use unified embedding service
+            return embedding_service.get_embedding_for_pgvector(text_content)
         except Exception as e:
             logger.error(
-                f"Error generating Snowflake embedding for text: {e}", exc_info=True
+                f"Error generating embedding for text using unified service: {e}",
+                exc_info=True,
             )
             return None
 
@@ -233,8 +133,8 @@ class SemanticSearchComponent:
         """
         Searches for articles in the local Wikipedia dataset semantically similar to the query_text.
         """
-        if not self.model:
-            logger.error("Semantic search model not loaded. Cannot perform search.")
+        if not embedding_service.is_ready():
+            logger.error("Unified embedding service not ready. Cannot perform search.")
             return []
 
         # query_embedding_str will now be the string from get_embedding
@@ -409,7 +309,6 @@ class SemanticSearchComponent:
 
         except Exception as e:
             logger.error(f"Database error during semantic search: {e}", exc_info=True)
-            # Optionally, re-raise or handle specific DB exceptions if needed
 
         return articles_data
 
@@ -472,7 +371,7 @@ class SemanticSearchComponent:
 
     def is_ready(self) -> bool:
         """Check if the component is ready to be used."""
-        return self.model is not None and self.tokenizer is not None
+        return embedding_service.is_ready()
 
 
 # Example Usage (for testing, not part of the component itself)

@@ -1,5 +1,6 @@
 import calendar
 import uuid
+from dataclasses import dataclass, field
 from datetime import date, datetime, time
 from typing import Any, Literal
 from uuid import UUID
@@ -19,6 +20,64 @@ from app.models import Event
 from app.utils.logger import setup_logger
 
 logger = setup_logger("schemas")
+
+
+@dataclass
+class CanonicalEventData:
+    """
+    Canonical data representation for events, used for unified embedding computation.
+    Ensures that event data from different sources can produce consistent embedding vectors.
+    """
+
+    description: str
+    event_date_str: str
+    entities: list[dict] = field(
+        default_factory=list
+    )  # [{"name": "Apple", "type": "ORG"}]
+    source_snippet: str | None = None
+
+    def to_embedding_text(self) -> str:
+        """
+        Generate standardized text representation for embedding computation.
+
+        This is the only authoritative method in the system for converting event data
+        into the text format required for embedding computation.
+        Ensures all events (regardless of source) use the same text representation rules.
+
+        Returns:
+            str: Standardized text representation for embedding computation
+        """
+        parts = []
+
+        # Add event description (core content)
+        if self.description:
+            parts.append(self.description)
+
+        # Add date information
+        if self.event_date_str:
+            parts.append(f"Date: {self.event_date_str}")
+
+        # Add entity information
+        if self.entities:
+            entity_parts = []
+            for entity in self.entities:
+                name = entity.get("name", "").strip()
+                entity_type = entity.get("type", "").strip()
+                if name:
+                    if entity_type:
+                        entity_parts.append(f"{name} ({entity_type})")
+                    else:
+                        entity_parts.append(name)
+
+            if entity_parts:
+                parts.append(f"Entities: {', '.join(entity_parts)}")
+
+        # Add source text snippet (limit length to avoid excessive length)
+        if self.source_snippet:
+            snippet = self.source_snippet[:200]  # Limit length
+            parts.append(f"Context: {snippet}")
+
+        return " | ".join(parts)
 
 
 class KeywordExtractionResult(BaseModel):
