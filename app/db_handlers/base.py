@@ -7,7 +7,7 @@ from typing import Any, Generic, TypeVar
 
 from asyncpg.exceptions import ConnectionDoesNotExistError
 from sqlalchemy import select
-from sqlalchemy.exc import DBAPIError, SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import tuple_
@@ -104,6 +104,11 @@ class BaseDBHandler(Generic[ModelType]):
             await db.commit()
             await db.refresh(db_obj)
             return db_obj
+        except IntegrityError as e:
+            await db.rollback()
+            logger.warning(f"IntegrityError creating {self.model.__name__}: {e}")
+            # Re-raise IntegrityError so calling code can handle it specifically
+            raise
         except SQLAlchemyError as e:
             await db.rollback()
             logger.error(f"Error creating {self.model.__name__}: {e}", exc_info=True)

@@ -107,14 +107,26 @@ async def get_wiki_page_info(
             if is_disambiguation and extract:
                 disambiguation_options = extract_disambiguation_options(extract)
 
+            # Normalize URL to curid format if pageid is available
+            original_fullurl = page_data.get("fullurl", "")
+            pageid = page_data.get("pageid")
+            normalized_url = original_fullurl
+
+            if pageid and lang:
+                normalized_url = f"https://{lang}.wikipedia.org/wiki?curid={pageid}"
+                if normalized_url != original_fullurl:
+                    logger.debug(
+                        f"Normalized Wikipedia URL for '{initial_title}': '{original_fullurl}' -> '{normalized_url}'"
+                    )
+
             return WikiPageInfoResponse(
                 exists=True,
                 is_redirect=(page_data.get("title") != initial_title),
                 title=page_data.get("title", initial_title),
-                fullurl=page_data.get("fullurl", ""),
+                fullurl=normalized_url,  # Use normalized URL
                 pagelanguage=page_data.get("pagelanguage", ""),
                 touched=page_data.get("touched", ""),
-                pageid=page_data.get("pageid", ""),
+                pageid=pageid,
                 wikibase_item=page_data.get("pageprops", {}).get("wikibase_item"),
                 is_disambiguation=is_disambiguation,
                 disambiguation_options=disambiguation_options,

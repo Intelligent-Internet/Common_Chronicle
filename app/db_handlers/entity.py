@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -252,9 +253,24 @@ class EntityDBHandler(BaseDBHandler[Entity]):
             processed_keys_in_batch.add(doc_key)
 
         if source_docs_to_create:
-            db.add_all(source_docs_to_create)
+            try:
+                db.add_all(source_docs_to_create)
+                await db.flush()
+            except IntegrityError as e:
+                logger.warning(
+                    f"IntegrityError when batch creating source documents. "
+                    f"This may be due to concurrent operations. Error: {e}"
+                )
+                # Roll back the failed batch and continue
+                # The source documents that caused conflicts likely already exist
+                await db.rollback()
 
-        await db.flush()
+                # Re-establish the session state for entities that were successfully created
+                for entity in (
+                    new_entities.values() if "new_entities" in locals() else []
+                ):
+                    db.add(entity)
+                await db.flush()
 
         return results
 

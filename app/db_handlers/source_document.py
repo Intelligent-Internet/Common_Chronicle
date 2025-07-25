@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db_handlers.base import BaseDBHandler, check_local_db
@@ -29,25 +30,32 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
         title = article_data.get("title", "").strip()
         language = article_data.get("language", "").strip()
         source_type = article_data.get("source_name", "").strip()
+        source_url = article_data.get("source_url", "")
 
-        # 1. Build query to find existing source document
-        query_data = {}
-        if article_data.get("source_name"):
-            query_data["source_type"] = article_data["source_name"]
-        if title:
-            query_data["title"] = title
-        if article_data.get("source_url"):
-            query_data["wikipedia_url"] = article_data["source_url"]
-        if language:
-            query_data["language"] = language
-        if source_type:
-            query_data["source_type"] = source_type
+        # 1. Query for existing source document using the unique constraint
+        # URLs are now normalized at the data acquisition layer, so we can use them directly
+        source_document = None
 
-        if query_data:
-            source_document = await self.get_by_attributes(db=db, **query_data)
+        # For Wikipedia sources, query by URL and source_type (the unique constraint)
+        if source_url and source_type:
+            source_document = await self.get_by_attributes(
+                wikipedia_url=source_url, source_type=source_type, db=db
+            )
+
             if source_document:
                 logger.info(
-                    f"{log_prefix}Found existing source document {source_document.id} for article '{title}'"
+                    f"{log_prefix}Found existing source document {source_document.id} by URL '{source_url}'"
+                )
+                return source_document
+
+        # Additional fallback query by title and language
+        if not source_document and title and language:
+            source_document = await self.get_by_attributes(
+                title=title, language=language, source_type=source_type, db=db
+            )
+            if source_document:
+                logger.info(
+                    f"{log_prefix}Found existing source document {source_document.id} by title/language '{title}'/'{language}'"
                 )
                 return source_document
 
@@ -69,7 +77,7 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
             entity_id = entity.id
             logger.info(f"{log_prefix}Found existing entity {entity_id} for '{title}'.")
 
-            # Add check for existing source document by entity_id
+            # Check for existing source document by entity_id
             existing_sd_by_entity = await self.get_by_attributes(
                 db=db, entity_id=entity_id
             )
@@ -79,13 +87,13 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
                 )
                 return existing_sd_by_entity
         else:
-            source_url = article_data.get("source_url", "").lower()
-            is_wikipedia_source = (
-                "wikipedia.org" in source_url
-                or "wikipedia" in article_data.get("source_name", "").lower()
+            # Check if this is a Wikipedia source that should create entities
+            is_wikipedia_source_flag = (
+                "wikipedia.org" in source_url.lower()
+                or "wikipedia" in source_type.lower()
             )
 
-            if is_wikipedia_source:
+            if is_wikipedia_source_flag:
                 logger.info(
                     f"{log_prefix}No entity found for '{title}'. Using EntityService to create entity with proper wikibase_item."
                 )
@@ -93,12 +101,12 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
                 # Use EntityService to properly create entity with wikibase_item
                 entity_service = AsyncEntityService()
                 entity_requests = [(title, "UNKNOWN", language)]
-                source_type = article_data.get("source_name", "online_wikipedia")
+                source_type_for_entity = source_type or "online_wikipedia"
 
                 try:
                     entity_responses = (
                         await entity_service.batch_get_or_create_entities(
-                            entity_requests, source_type, db=db
+                            entity_requests, source_type_for_entity, db=db
                         )
                     )
 
@@ -124,22 +132,73 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
                     f"{log_prefix}Not creating entity for non-wikipedia source '{title}'."
                 )
 
-        # 2b. Create the source document
+        # 2b. Final check before creation - race condition protection
+        if source_url and source_type:
+            final_check = await self.get_by_attributes(
+                wikipedia_url=source_url, source_type=source_type, db=db
+            )
+            if final_check:
+                logger.info(
+                    f"{log_prefix}Document created by another process during entity creation: {final_check.id}"
+                )
+                return final_check
+
+        # 2c. Create the source document
         text_content = article_data.get("text_content")
         create_data = {
             "processing_status": "pending",
             "source_type": source_type,
             "title": title,
-            "wikipedia_url": article_data.get("source_url"),
+            "wikipedia_url": source_url,
             "language": language,
             "wiki_pageid": article_data.get("source_identifier"),
             "extract": text_content[:500] if text_content else None,
             "entity_id": entity_id,
         }
 
-        new_source_document = await self.create(create_data, db=db)
-        logger.info(
-            f"{log_prefix}Created new source document {new_source_document.id} for article '{title}'."
-        )
+        try:
+            new_source_document = await self.create(create_data, db=db)
+            logger.info(
+                f"{log_prefix}Created new source document {new_source_document.id} for article '{title}'."
+            )
+            return new_source_document
+        except IntegrityError as e:
+            # Handle the case where another process created the same document concurrently
+            logger.warning(
+                f"{log_prefix}IntegrityError when creating source document for '{title}'. "
+                f"Attempting to fetch existing document. Error: {e}"
+            )
 
-        return new_source_document
+            # Rollback the current transaction to clean state
+            await db.rollback()
+
+            # Try multiple query strategies to find the existing document
+            existing_doc = None
+
+            # Strategy 1: Query by unique constraint (URL + source_type)
+            if source_url and source_type:
+                existing_doc = await self.get_by_attributes(
+                    wikipedia_url=source_url, source_type=source_type, db=db
+                )
+
+            # Strategy 2: Query by title + language + source_type
+            if not existing_doc and title and language:
+                existing_doc = await self.get_by_attributes(
+                    title=title, language=language, source_type=source_type, db=db
+                )
+
+            # Strategy 3: Query by entity_id if we have one
+            if not existing_doc and entity_id:
+                existing_doc = await self.get_by_attributes(entity_id=entity_id, db=db)
+
+            if existing_doc:
+                logger.info(
+                    f"{log_prefix}Found existing source document {existing_doc.id} after IntegrityError"
+                )
+                return existing_doc
+
+            # If we still can't find it, re-raise the error
+            logger.error(
+                f"{log_prefix}Could not resolve IntegrityError for source document '{title}'. Re-raising."
+            )
+            raise
