@@ -14,6 +14,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -219,7 +220,8 @@ class ViewpointService:
         event_ids = list({item["event_obj"].id for item in canonical_events})
 
         # 6. Prepare Viewpoint-Event associations and Entity associations
-        all_associations = []
+        viewpoint_event_associations_to_create = []
+        event_entity_associations_to_create = []
         unique_viewpoint_event_pairs = set()
         unique_event_entity_pairs = set()
 
@@ -229,10 +231,8 @@ class ViewpointService:
             # a. Viewpoint <-> Event (avoid duplicates for reused Events)
             vp_event_pair = (new_viewpoint.id, event.id)
             if vp_event_pair not in unique_viewpoint_event_pairs:
-                all_associations.append(
-                    ViewpointEventAssociation(
-                        viewpoint_id=new_viewpoint.id, event_id=event.id
-                    )
+                viewpoint_event_associations_to_create.append(
+                    {"viewpoint_id": new_viewpoint.id, "event_id": event.id}
                 )
                 unique_viewpoint_event_pairs.add(vp_event_pair)
 
@@ -242,10 +242,8 @@ class ViewpointService:
                 if entity_id:
                     pair = (event.id, entity_id)
                     if pair not in unique_event_entity_pairs:
-                        all_associations.append(
-                            EventEntityAssociation(
-                                event_id=event.id, entity_id=entity_id
-                            )
+                        event_entity_associations_to_create.append(
+                            {"event_id": event.id, "entity_id": entity_id}
                         )
                         unique_event_entity_pairs.add(pair)
                     else:
@@ -253,11 +251,27 @@ class ViewpointService:
                             f"{log_prefix}Skipping duplicate entity association: event_id={event.id}, entity_id={entity_id}"
                         )
 
-        # 7. Batch add all association objects to session
-        if all_associations:
-            db.add_all(all_associations)
+        # 7. Batch insert all association objects using ON CONFLICT DO NOTHING
+        if viewpoint_event_associations_to_create:
+            stmt = pg_insert(ViewpointEventAssociation).values(
+                viewpoint_event_associations_to_create
+            )
+            stmt = stmt.on_conflict_do_nothing(
+                index_elements=["viewpoint_id", "event_id"]
+            )
+            await db.execute(stmt)
             logger.debug(
-                f"{log_prefix}Adding {len(all_associations)} association objects to session"
+                f"{log_prefix}Bulk inserted {len(viewpoint_event_associations_to_create)} viewpoint-event associations with ON CONFLICT"
+            )
+
+        if event_entity_associations_to_create:
+            stmt = pg_insert(EventEntityAssociation).values(
+                event_entity_associations_to_create
+            )
+            stmt = stmt.on_conflict_do_nothing(index_elements=["event_id", "entity_id"])
+            await db.execute(stmt)
+            logger.debug(
+                f"{log_prefix}Bulk inserted {len(event_entity_associations_to_create)} event-entity associations with ON CONFLICT"
             )
 
         # 8. Update Viewpoint status to "completed" and add to commit

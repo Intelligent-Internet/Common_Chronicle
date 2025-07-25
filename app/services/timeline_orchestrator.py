@@ -24,7 +24,6 @@ from app.db_handlers import (
     check_local_db,
 )
 from app.models import (
-    Entity,
     Event,
     EventEntityAssociation,
     EventRawEventAssociation,
@@ -128,28 +127,89 @@ class TimelineOrchestratorService:
 
             if task.task_type == "synthetic_viewpoint":
                 # Traditional synthetic viewpoint processing
-                generation_result = await self._run_synthetic_viewpoint_task(
+                generation_result = await self._run_generic_timeline_task(
                     task=task,
                     task_config=task_config,
                     progress_callback=progress_callback,
                     request_id=request_id,
+                    # Use default processing pipeline (no overrides)
                 )
             elif task.task_type == "entity_canonical":
                 # Entity canonical processing
-                generation_result = await self._run_entity_canonical_task(
-                    task=task,
-                    task_config=task_config,
-                    progress_callback=progress_callback,
-                    request_id=request_id,
+                if progress_callback:
+                    await progress_callback.report(
+                        f"Starting entity canonical processing for entity {task.entity_id}",
+                        "entity_canonical_start",
+                        {"entity_id": str(task.entity_id)},
+                        request_id,
+                    )
+
+                # Prepare entity source articles
+                (
+                    source_articles,
+                    entity_name,
+                    effective_data_source,
+                ) = await self._prepare_entity_source_articles(
+                    task.entity_id, request_id, f"[BG Task {task.id}] "
                 )
+
+                if not source_articles:
+                    generation_result = TimelineGenerationResult(events=[])
+                else:
+                    # Use generic pipeline with entity-specific configurations
+                    generation_result = await self._run_generic_timeline_task(
+                        task=task,
+                        task_config=task_config,
+                        progress_callback=progress_callback,
+                        request_id=request_id,
+                        # Entity-specific parameters
+                        skip_keyword_extraction=True,
+                        skip_article_acquisition=True,
+                        skip_relevance_filtering=True,  # All events from entity documents are relevant
+                        viewpoint_topic_override=f"Entity Timeline: {entity_name}",
+                        effective_data_source_override=effective_data_source,
+                        source_articles=source_articles,
+                        keywords_extracted_override=[entity_name],
+                        articles_processed_override=len(source_articles),
+                    )
             elif task.task_type == "document_canonical":
                 # Document canonical processing
-                generation_result = await self._run_document_canonical_task(
-                    task=task,
-                    task_config=task_config,
-                    progress_callback=progress_callback,
-                    request_id=request_id,
+                if progress_callback:
+                    await progress_callback.report(
+                        f"Starting document canonical processing for document {task.source_document_id}",
+                        "document_canonical_start",
+                        {"source_document_id": str(task.source_document_id)},
+                        request_id,
+                    )
+
+                # Prepare document source article
+                (
+                    source_article,
+                    document_title,
+                    effective_data_source,
+                ) = await self._prepare_document_source_article(
+                    task.source_document_id, request_id, f"[BG Task {task.id}] "
                 )
+
+                if not source_article:
+                    generation_result = TimelineGenerationResult(events=[])
+                else:
+                    # Use generic pipeline with document-specific configurations
+                    generation_result = await self._run_generic_timeline_task(
+                        task=task,
+                        task_config=task_config,
+                        progress_callback=progress_callback,
+                        request_id=request_id,
+                        # Document-specific parameters
+                        skip_keyword_extraction=True,
+                        skip_article_acquisition=True,
+                        skip_relevance_filtering=True,  # All events from document are relevant
+                        viewpoint_topic_override=f"Document Timeline: {document_title}",
+                        effective_data_source_override=effective_data_source,
+                        source_articles=[source_article],
+                        keywords_extracted_override=[document_title],
+                        articles_processed_override=1,
+                    )
             else:
                 raise ValueError(f"Unsupported task type: {task.task_type}")
 
@@ -909,60 +969,6 @@ class TimelineOrchestratorService:
             )
         return merged_event_groups
 
-    def _create_event_text_representation_for_merged_event(
-        self, description: str, event_date_str: str, source_events: list[Event]
-    ) -> str:
-        """
-        Create comprehensive text representation for merged event embedding computation.
-
-        This method combines the merged event description, date, and entity information
-        into a single text that captures the semantic essence of the merged event.
-        """
-        parts = []
-
-        # Add event description
-        if description:
-            parts.append(description)
-
-        # Add date information
-        if event_date_str:
-            parts.append(f"Date: {event_date_str}")
-
-        # Collect entities from source events
-        all_entities = set()
-        for source_event in source_events:
-            for entity_assoc in source_event.entity_associations:
-                if hasattr(entity_assoc, "entity") and entity_assoc.entity:
-                    entity_name = getattr(entity_assoc.entity, "entity_name", "")
-                    entity_type = getattr(entity_assoc.entity, "entity_type", "")
-                    if entity_name:
-                        entity_text = entity_name
-                        if entity_type:
-                            entity_text += f" ({entity_type})"
-                        all_entities.add(entity_text)
-
-        if all_entities:
-            parts.append(f"Entities: {', '.join(sorted(all_entities))}")
-
-        # Add context from source events (limited to avoid overwhelming the embedding)
-        source_snippets = []
-        for source_event in source_events[:3]:  # Limit to first 3 source events
-            for raw_event_link in source_event.raw_event_association_links:
-                if (
-                    raw_event_link.raw_event
-                    and raw_event_link.raw_event.source_text_snippet
-                ):
-                    snippet = raw_event_link.raw_event.source_text_snippet[
-                        :100
-                    ]  # Limit length
-                    source_snippets.append(snippet)
-                    break  # Only take first snippet per source event
-
-        if source_snippets:
-            parts.append(f"Context: {' | '.join(source_snippets)}")
-
-        return " | ".join(parts)
-
     async def _compute_embedding_for_merged_event(
         self, description: str, event_date_str: str, source_events: list[Event]
     ) -> list[float]:
@@ -1063,6 +1069,7 @@ class TimelineOrchestratorService:
         request_id: str,
         *,
         db: AsyncSession = None,
+        viewpoint_text_override: str | None = None,
     ) -> tuple[uuid.UUID | None, bool]:
         """Ensure viewpoint exists for task, reusing completed viewpoints when possible."""
         # Re-attach the detached task object to the current session
@@ -1070,7 +1077,7 @@ class TimelineOrchestratorService:
         # Use merge to handle cases where the object might be from another session.
         task = await db.merge(task)
 
-        viewpoint_text = task.topic_text.strip()
+        viewpoint_text = viewpoint_text_override or task.topic_text.strip()
 
         if settings.reuse_composite_viewpoint:
             # First, check if there's an existing completed viewpoint
@@ -1331,279 +1338,56 @@ class TimelineOrchestratorService:
         )
         return final_events_for_api
 
-    # ============================================================================
-    # NEW METHODS: Entity and Source Document Entry Points
-    # ============================================================================
-
-    async def get_canonical_events_for_entity_by_id(
-        self,
-        entity_id: uuid.UUID,
-        request_id: str | None = None,
-        db: AsyncSession = None,
-    ) -> list[TimelineEventForAPI]:
-        """
-        Public entry point to get canonical events for a given entity ID.
-        """
-        log_prefix = f"[RequestID: {request_id}] " if request_id else ""
-        logger.info(f"{log_prefix}Fetching canonical events for entity_id: {entity_id}")
-
-        # Step 1: Fetch the Entity object using its ID
-        entity = await self.entity_handler.get_entity_with_sources_by_id(
-            entity_id, db=db
-        )
-
-        if not entity:
-            logger.warning(f"{log_prefix}Entity with ID {entity_id} not found.")
-            return []
-
-        # Step 2: Call the core private method with the entity object
-        return await self._get_canonical_events_for_entity(entity, request_id, db=db)
-
-    async def get_canonical_events_for_entity_by_wikibase_item(
-        self, wikibase_item: str, request_id: str | None = None, db: AsyncSession = None
-    ) -> list[TimelineEventForAPI]:
-        """
-        Public entry point to get canonical events for a given entity wikibase_item.
-        """
-        log_prefix = f"[RequestID: {request_id}] " if request_id else ""
-        logger.info(
-            f"{log_prefix}Fetching canonical events for wikibase_item: {wikibase_item}"
-        )
-
-        # Step 1: Fetch the Entity object using its wikibase_item
-        entity = await self.entity_handler.get_entity_with_sources_by_wikibase_item(
-            wikibase_item, db=db
-        )
-
-        if not entity:
-            logger.warning(
-                f"{log_prefix}Entity with wikibase_item {wikibase_item} not found."
-            )
-            return []
-
-        # Step 2: Call the core private method with the entity object
-        return await self._get_canonical_events_for_entity(entity, request_id, db=db)
-
-    async def get_canonical_events_from_source_document(
-        self,
-        source_document_id: uuid.UUID,
-        request_id: str | None = None,
-        db: AsyncSession = None,
-    ) -> list[TimelineEventForAPI]:
-        """
-        Public entry point to get canonical events from a single source document.
-        """
-        log_prefix = f"[RequestID: {request_id}] " if request_id else ""
-        logger.info(
-            f"{log_prefix}Fetching canonical events for source_document_id: {source_document_id}"
-        )
-
-        # Import SourceDocumentDBHandler locally to avoid circular imports
-        from app.db_handlers import SourceDocumentDBHandler
-
-        source_doc_handler = SourceDocumentDBHandler()
-
-        # Fetch the source document
-        source_document = await source_doc_handler.get(source_document_id, db=db)
-
-        if not source_document:
-            logger.warning(
-                f"{log_prefix}Source document with ID {source_document_id} not found."
-            )
-            return []
-
-        # Convert SourceDocument ORM object to SourceArticle Pydantic model
-        source_article = SourceArticle(
-            source_name=source_document.source_type or "unknown",
-            source_url=source_document.wikipedia_url,
-            source_identifier=source_document.wiki_pageid or str(source_document.id),
-            title=source_document.title,
-            text_content=source_document.extract or "",
-            language=source_document.language,
-            metadata={
-                "wikibase_item": source_document.wikibase_item,
-                "source_document_version": source_document.source_document_version,
-                "source_document_timestamp": source_document.source_document_timestamp.isoformat()
-                if source_document.source_document_timestamp
-                else None,
-            },
-        )
-
-        # Process the single source article
-        all_event_ids = await self._get_canonical_events(
-            articles=[source_article],
-            data_source_preference="source_document",
-            request_id=request_id,
-            progress_callback=None,
-            db=db,
-        )
-
-        if not all_event_ids:
-            logger.info(
-                f"{log_prefix}No events extracted from source document {source_document_id}"
-            )
-            return []
-
-        # Fetch and convert events to API format
-        events = await self.event_handler.get_events_by_ids(list(all_event_ids), db=db)
-
-        # Convert to TimelineEventForAPI format
-        api_events = []
-        for event in events:
-            try:
-                # Create a basic TimelineEventForAPI object
-                api_event = TimelineEventForAPI(
-                    id=str(event.id),
-                    event_date_str=event.event_date_str,
-                    description=event.description,
-                    main_entities=[],  # Would need to populate from associations
-                    date_info=ParsedDateInfo(**event.date_info)
-                    if event.date_info
-                    else None,
-                    is_merged=False,  # Single source events are not merged
-                    sources=[],  # Would need to populate from raw event associations
-                    relevance_score=None,  # No relevance scoring for direct extraction
-                )
-                api_events.append(api_event)
-            except Exception as e:
-                logger.warning(
-                    f"{log_prefix}Failed to convert event {event.id} to API format: {e}"
-                )
-                continue
-
-        logger.info(
-            f"{log_prefix}Successfully extracted {len(api_events)} events from source document {source_document_id}"
-        )
-        return api_events
-
-    @check_local_db
-    async def _get_canonical_events_for_entity(
-        self,
-        entity: "Entity",
-        request_id: str | None = None,
-        *,
-        db: AsyncSession = None,
-    ) -> list[TimelineEventForAPI]:
-        """
-        Core logic to extract canonical events from an entity's source documents.
-        """
-        assert db is not None, "Database session is required"
-        log_prefix = f"[RequestID: {request_id}] " if request_id else ""
-
-        source_documents = entity.source_documents
-        if not source_documents:
-            logger.info(
-                f"{log_prefix}Entity '{entity.entity_name}' has no source documents to process."
-            )
-            return []
-
-        logger.info(
-            f"{log_prefix}Found {len(source_documents)} source documents for entity '{entity.entity_name}'."
-        )
-
-        # Convert SourceDocument ORM objects to SourceArticle Pydantic models
-        source_articles = []
-        for doc in source_documents:
-            source_article = SourceArticle(
-                source_name=doc.source_type or "unknown",
-                source_url=doc.wikipedia_url,
-                source_identifier=doc.wiki_pageid or str(doc.id),
-                title=doc.title,
-                text_content=doc.extract or "",
-                language=doc.language,
-                metadata={
-                    "wikibase_item": doc.wikibase_item,
-                    "source_document_version": doc.source_document_version,
-                    "source_document_timestamp": doc.source_document_timestamp.isoformat()
-                    if doc.source_document_timestamp
-                    else None,
-                },
-            )
-            source_articles.append(source_article)
-
-        # Use the existing _get_canonical_events to process the articles
-        all_event_ids = await self._get_canonical_events(
-            articles=source_articles,
-            data_source_preference="entity_source",
-            request_id=request_id,
-            progress_callback=None,
-            db=db,
-        )
-
-        if not all_event_ids:
-            logger.info(
-                f"{log_prefix}No events extracted from entity '{entity.entity_name}' source documents"
-            )
-            return []
-
-        # Fetch and convert events to API format
-        events = await self.event_handler.get_events_by_ids(list(all_event_ids), db=db)
-
-        # Convert to TimelineEventForAPI format
-        api_events = []
-        for event in events:
-            try:
-                # Create a basic TimelineEventForAPI object
-                api_event = TimelineEventForAPI(
-                    id=str(event.id),
-                    event_date_str=event.event_date_str,
-                    description=event.description,
-                    main_entities=[],  # Would need to populate from associations
-                    date_info=ParsedDateInfo(**event.date_info)
-                    if event.date_info
-                    else None,
-                    is_merged=False,  # Single source events are not merged
-                    sources=[],  # Would need to populate from raw event associations
-                    relevance_score=None,  # No relevance scoring for direct extraction
-                )
-                api_events.append(api_event)
-            except Exception as e:
-                logger.warning(
-                    f"{log_prefix}Failed to convert event {event.id} to API format: {e}"
-                )
-                continue
-
-        logger.info(
-            f"{log_prefix}Successfully extracted {len(api_events)} events from entity '{entity.entity_name}'"
-        )
-        return api_events
-
-    async def _run_synthetic_viewpoint_task(
+    async def _run_generic_timeline_task(
         self,
         task: Task,
         task_config: ArticleAcquisitionConfig,
         progress_callback: ProgressCallback,
         request_id: str,
+        *,
+        # Processing mode parameters
+        skip_keyword_extraction: bool = False,
+        skip_article_acquisition: bool = False,
+        skip_relevance_filtering: bool = False,
+        # Data source parameters
+        viewpoint_topic_override: str | None = None,
+        effective_data_source_override: str | None = None,
+        source_articles: list[SourceArticle] | None = None,
+        keywords_extracted_override: list[str] | None = None,
+        articles_processed_override: int | None = None,
     ) -> TimelineGenerationResult:
-        """Run traditional synthetic viewpoint processing."""
-        # Stage 2: Data source preference determination and validation
-        effective_data_source = "online_wikipedia"
-        if task.config and task.config.get("data_source_preference"):
-            ds_from_config = task.config["data_source_preference"]
-            if ds_from_config.lower() != "none":
-                effective_data_source = ds_from_config
+        """Generic timeline generation method that supports all task types with configurable pipeline stages."""
+        log_prefix = f"[BG Task {task.id}] "
 
-        # Stage 3: Viewpoint existence verification and creation
-        (
-            viewpoint_id,
-            needs_processing,
-        ) = await self._ensure_viewpoint_exists_for_task(
+        # Determine effective parameters based on task type and overrides
+        viewpoint_text = viewpoint_topic_override or task.topic_text.strip()
+
+        # Stage 1: Data source preference determination
+        if effective_data_source_override:
+            effective_data_source = effective_data_source_override
+        else:
+            effective_data_source = "online_wikipedia"
+            if task.config and task.config.get("data_source_preference"):
+                ds_from_config = task.config["data_source_preference"]
+                if ds_from_config.lower() != "none":
+                    effective_data_source = ds_from_config
+
+        # Stage 2: Viewpoint existence verification and creation
+        viewpoint_id, needs_processing = await self._ensure_viewpoint_exists_for_task(
             task=task,
             data_source_preference=effective_data_source,
             request_id=request_id,
+            viewpoint_text_override=viewpoint_text,
         )
 
-        # Stage 5: Viewpoint validation and error handling
         if not viewpoint_id:
             raise RuntimeError("Failed to create or find viewpoint for task")
 
-        # Stage 6: Processing requirement assessment and optimization
-        # Check if we can reuse existing completed viewpoint to avoid redundant processing
+        # Stage 3: Processing requirement assessment and optimization
         if not needs_processing:
             logger.info(
-                f"[BG Task {task.id}] Reusing existing completed viewpoint {viewpoint_id}"
+                f"{log_prefix}Reusing existing completed viewpoint {viewpoint_id}"
             )
-            # FIXED: Return existing events instead of empty list
             async with AppAsyncSessionLocal() as db:
                 viewpoint_details = (
                     await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
@@ -1613,131 +1397,285 @@ class TimelineOrchestratorService:
                 if viewpoint_details and viewpoint_details.get("timeline_events"):
                     existing_events = viewpoint_details["timeline_events"]
                     logger.info(
-                        f"[BG Task {task.id}] Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events"
+                        f"{log_prefix}Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events"
                     )
                     return TimelineGenerationResult(
                         events=existing_events,
                         viewpoint_id=viewpoint_id,
                         events_count=len(existing_events),
-                        keywords_extracted=[],  # Could extract from viewpoint metadata if needed
-                        articles_processed=0,  # No articles processed since reusing
+                        keywords_extracted=keywords_extracted_override or [],
+                        articles_processed=articles_processed_override or 0,
                     )
                 else:
                     logger.warning(
-                        f"[BG Task {task.id}] Existing viewpoint {viewpoint_id} has no events"
+                        f"{log_prefix}Existing viewpoint {viewpoint_id} has no events"
                     )
-            # Return empty result since viewpoint already exists but has no events
             return TimelineGenerationResult(events=[])
 
-        # Stage 8: Core timeline generation pipeline execution
-        return await self._populate_existing_viewpoint_with_timeline(
-            viewpoint_id=viewpoint_id,
-            viewpoint_text=task.topic_text,
-            data_source_preference=effective_data_source,
-            progress_callback=progress_callback,
-            request_id=request_id,
-            task_id=task.id,
-            task_config=task_config,
-        )
-
-    async def _run_entity_canonical_task(
-        self,
-        task: Task,
-        task_config: ArticleAcquisitionConfig,
-        progress_callback: ProgressCallback,
-        request_id: str,
-    ) -> TimelineGenerationResult:
-        """Run entity canonical processing by reusing synthetic viewpoint pipeline."""
-        log_prefix = f"[BG Task {task.id}] "
-
-        if progress_callback:
-            await progress_callback.report(
-                f"Starting entity canonical processing for entity {task.entity_id}",
-                "entity_canonical_start",
-                {"entity_id": str(task.entity_id)},
-                request_id,
+        # Stage 4: Processing pipeline execution
+        if skip_keyword_extraction and skip_article_acquisition and source_articles:
+            # Direct processing mode for entity/document canonical tasks
+            return await self._process_direct_articles_pipeline(
+                viewpoint_id=viewpoint_id,
+                viewpoint_text=viewpoint_text,
+                source_articles=source_articles,
+                effective_data_source=effective_data_source,
+                skip_relevance_filtering=skip_relevance_filtering,
+                progress_callback=progress_callback,
+                request_id=request_id,
+                keywords_extracted_override=keywords_extracted_override,
+                articles_processed_override=articles_processed_override,
+            )
+        else:
+            # Traditional synthetic viewpoint processing
+            return await self._populate_existing_viewpoint_with_timeline(
+                viewpoint_id=viewpoint_id,
+                viewpoint_text=viewpoint_text,
+                data_source_preference=effective_data_source,
+                progress_callback=progress_callback,
+                request_id=request_id,
+                task_id=task.id,
+                task_config=task_config,
             )
 
-        # Step 1: Get entity and its source documents
-        entity = await self.entity_handler.get_entity_with_sources_by_id(task.entity_id)
-        if not entity:
-            logger.error(f"{log_prefix}Entity {task.entity_id} not found")
+    async def _process_direct_articles_pipeline(
+        self,
+        viewpoint_id: uuid.UUID,
+        viewpoint_text: str,
+        source_articles: list[SourceArticle],
+        effective_data_source: str,
+        skip_relevance_filtering: bool,
+        progress_callback: ProgressCallback,
+        request_id: str,
+        keywords_extracted_override: list[str] | None = None,
+        articles_processed_override: int | None = None,
+    ) -> TimelineGenerationResult:
+        """Process articles directly without keyword extraction and article acquisition stages."""
+        log_prefix = f"[RequestID: {request_id}] "
+
+        # Stage 1: Get canonical events from source articles
+        all_canonical_event_ids = await self._get_canonical_events(
+            articles=source_articles,
+            data_source_preference=effective_data_source,
+            request_id=request_id,
+            progress_callback=progress_callback,
+        )
+
+        if not all_canonical_event_ids:
+            logger.warning(f"{log_prefix}No canonical events found")
+            await self.viewpoint_service.mark_viewpoint_failed_with_transaction(
+                viewpoint_id
+            )
             return TimelineGenerationResult(events=[])
+
+        # Stage 2: Event processing pipeline
+        async with AppAsyncSessionLocal() as db:
+            # Handle relevance filtering based on configuration
+            if skip_relevance_filtering:
+                # No relevance filtering - all events are considered relevant
+                event_id_to_score = dict.fromkeys(all_canonical_event_ids, 1.0)
+            else:
+                # Apply relevance filtering
+                event_id_to_score = await self._filter_events_by_relevance(
+                    all_canonical_event_ids,
+                    viewpoint_text,
+                    request_id,
+                    progress_callback,
+                    db=db,
+                )
+
+            if not event_id_to_score:
+                logger.warning(f"{log_prefix}No relevant events found after filtering")
+                await self.viewpoint_service.mark_viewpoint_failed_with_transaction(
+                    viewpoint_id
+                )
+                return TimelineGenerationResult(events=[])
+
+            # Stage 3: Event merging and deduplication
+            merged_event_groups = await self._merge_events(
+                relevant_event_ids=list(event_id_to_score.keys()),
+                language_code="en",  # TODO: Make this configurable
+                db=db,
+                request_id=request_id,
+                progress_callback=progress_callback,
+            )
+
+            # Stage 4: Final viewpoint population
+            final_events = await self._populate_existing_viewpoint_with_events(
+                viewpoint_id=viewpoint_id,
+                merged_event_groups=merged_event_groups,
+                event_id_to_score=event_id_to_score,
+                request_id=request_id,
+                progress_callback=progress_callback,
+                db=db,
+            )
+
+            await db.commit()
+
+        logger.info(f"{log_prefix}Processing completed with {len(final_events)} events")
+
+        return TimelineGenerationResult(
+            events=final_events,
+            viewpoint_id=viewpoint_id,
+            events_count=len(final_events),
+            keywords_extracted=keywords_extracted_override or [],
+            articles_processed=articles_processed_override or len(source_articles),
+        )
+
+    async def _prepare_entity_source_articles(
+        self,
+        entity_id: uuid.UUID,
+        request_id: str,
+        log_prefix: str,
+    ) -> tuple[list[SourceArticle], str, str]:
+        """Prepare source articles from entity documents."""
+        # Get entity and its source documents
+        entity = await self.entity_handler.get_entity_with_sources_by_id(entity_id)
+        if not entity:
+            logger.error(f"{log_prefix}Entity {entity_id} not found")
+            return [], "", ""
 
         source_documents = entity.source_documents
         if not source_documents:
             logger.warning(
                 f"{log_prefix}Entity '{entity.entity_name}' has no source documents"
             )
-            return TimelineGenerationResult(events=[])
+            return [], entity.entity_name, ""
 
-        # Step 2: Get full content for each source document using ArticleAcquisitionService
         # Convert source documents to source articles with full content
         from app.services.article_acquisition import ArticleAcquisitionService
 
         article_acquisition_service = ArticleAcquisitionService()
         source_articles = []
 
-        # Process all source documents - each (source_type, url) combination is a unique data source
         for doc in source_documents:
-            # Create basic SourceArticle with metadata
-            basic_source_article = SourceArticle(
-                source_name=doc.source_type or "entity_source",
-                source_url=doc.wikipedia_url,
-                source_identifier=doc.wiki_pageid or str(doc.id),
-                title=doc.title,
-                text_content=doc.extract or "",  # Start with extract as fallback
-                language=doc.language,
-                metadata={
-                    "wikibase_item": doc.wikibase_item,
+            source_article = await self._convert_document_to_source_article(
+                doc,
+                article_acquisition_service,
+                request_id,
+                log_prefix,
+                entity_metadata={
                     "entity_name": entity.entity_name,
                     "entity_id": str(entity.id),
                 },
             )
+            source_articles.append(source_article)
 
-            # Try to get full content based on source_name
+        # Determine effective data source
+        unique_source_types = list(
+            {doc.source_type for doc in source_documents if doc.source_type}
+        )
+        effective_data_source = (
+            ",".join(sorted(unique_source_types))
+            if unique_source_types
+            else "entity_source"
+        )
+
+        logger.info(
+            f"{log_prefix}Processing {len(source_articles)} source articles from {len(source_documents)} source documents"
+        )
+
+        return source_articles, entity.entity_name, effective_data_source
+
+    async def _prepare_document_source_article(
+        self,
+        source_document_id: uuid.UUID,
+        request_id: str,
+        log_prefix: str,
+    ) -> tuple[SourceArticle | None, str, str]:
+        """Prepare source article from single document."""
+        from app.db_handlers import SourceDocumentDBHandler
+        from app.services.article_acquisition import ArticleAcquisitionService
+
+        source_doc_handler = SourceDocumentDBHandler()
+        source_document = await source_doc_handler.get(source_document_id)
+        if not source_document:
+            logger.error(f"{log_prefix}Source document {source_document_id} not found")
+            return None, "", ""
+
+        article_acquisition_service = ArticleAcquisitionService()
+        source_article = await self._convert_document_to_source_article(
+            source_document,
+            article_acquisition_service,
+            request_id,
+            log_prefix,
+            document_metadata={
+                "document_title": source_document.title,
+                "document_id": str(source_document.id),
+            },
+        )
+
+        effective_data_source = source_document.source_type or "document_source"
+
+        return source_article, source_document.title, effective_data_source
+
+    async def _convert_document_to_source_article(
+        self,
+        doc,
+        article_acquisition_service,
+        request_id: str,
+        log_prefix: str,
+        entity_metadata: dict | None = None,
+        document_metadata: dict | None = None,
+    ) -> SourceArticle:
+        """Convert source document to SourceArticle with full content."""
+        # Create basic SourceArticle with metadata
+        metadata = {
+            "wikibase_item": doc.wikibase_item,
+            **(entity_metadata or {}),
+            **(document_metadata or {}),
+        }
+
+        basic_source_article = SourceArticle(
+            source_name=doc.source_type or "entity_source",
+            source_url=doc.wikipedia_url,
+            source_identifier=doc.wiki_pageid or str(doc.id),
+            title=doc.title,
+            text_content=doc.extract or "",  # Start with extract as fallback
+            language=doc.language,
+            metadata=metadata,
+        )
+
+        # Try to get full content using ArticleAcquisitionService
+        if doc.source_type and doc.source_type != "entity_source":
             try:
-                strategy = None
-                if doc.source_type == "online_wikipedia":
-                    strategy = article_acquisition_service.strategies.get(
-                        "online_wikipedia"
+                # Prepare comprehensive query data for ArticleAcquisitionService
+                query_data = {
+                    "viewpoint_text": f"Processing: {doc.title}",
+                    "keywords": [doc.title],
+                    "target_lang": doc.language,
+                    "user_language": doc.language,
+                    "article_limit": 1,
+                    "parent_request_id": request_id,
+                    "data_source_preference": doc.source_type,  # This is crucial
+                    "config": {},  # Empty config for basic operation
+                }
+
+                # Use ArticleAcquisitionService to get full articles
+                full_articles = await article_acquisition_service.acquire_articles(
+                    query_data
+                )
+
+                if full_articles and len(full_articles) > 0:
+                    # Find the matching article by title or use the first one
+                    matching_article = None
+                    for article in full_articles:
+                        if article.title == doc.title:
+                            matching_article = article
+                            break
+
+                    # If no exact title match, use the first article
+                    if not matching_article:
+                        matching_article = full_articles[0]
+
+                    # Update the content with full article text
+                    basic_source_article.text_content = matching_article.text_content
+                    logger.info(
+                        f"{log_prefix}Got full content for {doc.title} ({doc.source_type}): {len(matching_article.text_content)} chars"
                     )
-                elif (
-                    doc.source_type == "dataset_wikipedia_en"
-                    or doc.source_type == "dataset_wikipedia_en_hybrid"
-                ):
-                    strategy = article_acquisition_service.strategies.get(
-                        "dataset_wikipedia_en"
-                    )
-
-                if strategy:
-                    # Prepare query data for the strategy
-                    query_data = {
-                        "viewpoint_text": f"Entity Timeline: {entity.entity_name}",
-                        "keywords": [doc.title],
-                        "target_lang": doc.language,
-                        "user_language": doc.language,
-                        "article_limit": 1,
-                        "parent_request_id": request_id,
-                    }
-
-                    # Get full articles from the strategy
-                    full_articles = await strategy.get_articles(query_data)
-
-                    if full_articles and len(full_articles) > 0:
-                        # Use the first result and update the content
-                        full_article = full_articles[0]
-                        basic_source_article.text_content = full_article.text_content
-                        logger.info(
-                            f"{log_prefix}Got full content for {doc.title} ({doc.source_type}): {len(full_article.text_content)} chars"
-                        )
-                    else:
-                        logger.warning(
-                            f"{log_prefix}Could not get full content for {doc.title} ({doc.source_type}), using extract"
-                        )
                 else:
                     logger.warning(
-                        f"{log_prefix}No strategy found for source_type {doc.source_type}, using extract"
+                        f"{log_prefix}Could not get full content for {doc.title} ({doc.source_type}), using extract"
                     )
 
             except Exception as e:
@@ -1748,413 +1686,9 @@ class TimelineOrchestratorService:
                 logger.warning(
                     f"{log_prefix}Falling back to extract for {doc.title} ({doc.source_type})"
                 )
-
-            source_articles.append(basic_source_article)
-
-        logger.info(
-            f"{log_prefix}Processing {len(source_articles)} source articles from {len(source_documents)} source documents"
-        )
-
-        # Step 3: Create or get synthetic viewpoint for this entity (reuse existing logic)
-        viewpoint_topic = f"Entity Timeline: {entity.entity_name}"
-        # Collect unique source types from the source documents
-        unique_source_types = list(
-            {doc.source_type for doc in source_documents if doc.source_type}
-        )
-        effective_data_source = (
-            ",".join(sorted(unique_source_types))
-            if unique_source_types
-            else "entity_source"
-        )
-
-        async with AppAsyncSessionLocal() as db:
-            # Re-attach task to current session
-            task = await db.merge(task)
-
-            # Check if viewpoint already exists
-            existing_viewpoint = None
-            if settings.reuse_composite_viewpoint:
-                existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
-                    topic=viewpoint_topic,
-                    data_source_preference=effective_data_source,
-                    status="completed",
-                    db=db,
-                )
-
-            if existing_viewpoint:
-                logger.info(
-                    f"{log_prefix}Found existing completed viewpoint {existing_viewpoint.id}"
-                )
-                task.viewpoint_id = existing_viewpoint.id
-                await db.flush()
-                await db.commit()
-
-                # FIXED: Return existing events instead of empty list
-                viewpoint_details = (
-                    await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
-                        existing_viewpoint.id, db=db
-                    )
-                )
-                if viewpoint_details and viewpoint_details.get("timeline_events"):
-                    existing_events = viewpoint_details["timeline_events"]
-                    logger.info(
-                        f"{log_prefix}Reusing existing viewpoint {existing_viewpoint.id} with {len(existing_events)} events"
-                    )
-                    return TimelineGenerationResult(
-                        events=existing_events,
-                        viewpoint_id=existing_viewpoint.id,
-                        events_count=len(existing_events),
-                        keywords_extracted=[entity.entity_name],
-                        articles_processed=len(source_articles),
-                    )
-                else:
-                    logger.warning(
-                        f"{log_prefix}Existing viewpoint {existing_viewpoint.id} has no events, proceeding with new processing"
-                    )
-                    # If existing viewpoint has no events, proceed with processing
-
-            # Create new viewpoint
-            new_viewpoint = Viewpoint(
-                topic=viewpoint_topic,
-                viewpoint_type="synthetic",
-                status="processing",
-                data_source_preference=effective_data_source,
-            )
-            db.add(new_viewpoint)
-            await db.flush()
-
-            task.viewpoint_id = new_viewpoint.id
-            await db.flush()
-            await db.commit()
-
-            viewpoint_id = new_viewpoint.id
-            needs_processing = True
-
-        if not viewpoint_id:
-            raise RuntimeError(
-                "Failed to create or find viewpoint for entity canonical task"
-            )
-
-        if not needs_processing:
+        else:
             logger.info(
-                f"{log_prefix}Reusing existing completed viewpoint {viewpoint_id}"
-            )
-            return TimelineGenerationResult(events=[])
-
-        # Step 4: Process using existing synthetic viewpoint pipeline (skip keyword extraction)
-        # Instead of _populate_existing_viewpoint_with_timeline, we use the core components:
-
-        # Get canonical events from source articles
-        all_canonical_event_ids = await self._get_canonical_events(
-            articles=source_articles,
-            data_source_preference=effective_data_source,
-            request_id=request_id,
-            progress_callback=progress_callback,
-        )
-
-        if not all_canonical_event_ids:
-            logger.warning(
-                f"{log_prefix}No canonical events found for entity '{entity.entity_name}'"
-            )
-            # Mark viewpoint as failed
-            await self.viewpoint_service.mark_viewpoint_failed_with_transaction(
-                viewpoint_id
-            )
-            return TimelineGenerationResult(events=[])
-
-        # Step 5: Use existing pipeline to populate viewpoint with events
-        async with AppAsyncSessionLocal() as db:
-            # No relevance filtering needed for entity canonical (all events are relevant)
-            event_id_to_score = dict.fromkeys(all_canonical_event_ids, 1.0)
-
-            # Use existing event merge pipeline to handle deduplication
-            merged_event_groups = await self._merge_events(
-                relevant_event_ids=all_canonical_event_ids,
-                language_code="en",  # TODO: Get from entity metadata
-                db=db,
-                request_id=request_id,
-                progress_callback=progress_callback,
+                f"{log_prefix}No valid source_type for {doc.title}, using extract content"
             )
 
-            # Populate viewpoint with events (reuse existing logic)
-            final_events = await self._populate_existing_viewpoint_with_events(
-                viewpoint_id=viewpoint_id,
-                merged_event_groups=merged_event_groups,
-                event_id_to_score=event_id_to_score,
-                request_id=request_id,
-                progress_callback=progress_callback,
-                db=db,
-            )
-
-            await db.commit()
-
-        if progress_callback:
-            await progress_callback.report(
-                f"Entity canonical processing completed. Generated {len(final_events)} events.",
-                "entity_canonical_complete",
-                {"event_count": len(final_events)},
-                request_id,
-            )
-
-        logger.info(
-            f"{log_prefix}Entity canonical processing completed with {len(final_events)} events"
-        )
-
-        return TimelineGenerationResult(
-            events=final_events,
-            viewpoint_id=viewpoint_id,  # Now we have a proper synthetic viewpoint
-            events_count=len(final_events),
-            keywords_extracted=[entity.entity_name],  # Use entity name as "keyword"
-            articles_processed=len(source_articles),
-        )
-
-    async def _run_document_canonical_task(
-        self,
-        task: Task,
-        task_config: ArticleAcquisitionConfig,
-        progress_callback: ProgressCallback,
-        request_id: str,
-    ) -> TimelineGenerationResult:
-        """Run document canonical processing by reusing synthetic viewpoint pipeline."""
-        log_prefix = f"[BG Task {task.id}] "
-
-        if progress_callback:
-            await progress_callback.report(
-                f"Starting document canonical processing for document {task.source_document_id}",
-                "document_canonical_start",
-                {"source_document_id": str(task.source_document_id)},
-                request_id,
-            )
-
-        # Step 1: Get the source document
-        from app.db_handlers import SourceDocumentDBHandler
-
-        source_doc_handler = SourceDocumentDBHandler()
-        source_document = await source_doc_handler.get(task.source_document_id)
-        if not source_document:
-            logger.error(
-                f"{log_prefix}Source document {task.source_document_id} not found"
-            )
-            return TimelineGenerationResult(events=[])
-
-        # Step 2: Get full content for the source document using ArticleAcquisitionService
-        # Convert source document to source article with full content
-        from app.services.article_acquisition import ArticleAcquisitionService
-
-        article_acquisition_service = ArticleAcquisitionService()
-
-        # Create basic SourceArticle with metadata
-        source_article = SourceArticle(
-            source_name=source_document.source_type or "document_source",
-            source_url=source_document.wikipedia_url,
-            source_identifier=source_document.wiki_pageid or str(source_document.id),
-            title=source_document.title,
-            text_content=source_document.extract
-            or "",  # Start with extract as fallback
-            language=source_document.language,
-            metadata={
-                "wikibase_item": source_document.wikibase_item,
-                "document_title": source_document.title,
-                "document_id": str(source_document.id),
-            },
-        )
-
-        # Try to get full content based on source_name
-        try:
-            strategy = None
-            if source_document.source_type == "online_wikipedia":
-                strategy = article_acquisition_service.strategies.get(
-                    "online_wikipedia"
-                )
-            elif (
-                source_document.source_type == "dataset_wikipedia_en"
-                or source_document.source_type == "dataset_wikipedia_en_hybrid"
-            ):
-                strategy = article_acquisition_service.strategies.get(
-                    "dataset_wikipedia_en"
-                )
-
-            if strategy:
-                # Prepare query data for the strategy
-                query_data = {
-                    "viewpoint_text": f"Document Timeline: {source_document.title}",
-                    "keywords": [source_document.title],
-                    "target_lang": source_document.language,
-                    "user_language": source_document.language,
-                    "article_limit": 1,
-                    "parent_request_id": request_id,
-                }
-
-                # Get full articles from the strategy
-                full_articles = await strategy.get_articles(query_data)
-
-                if full_articles and len(full_articles) > 0:
-                    # Use the first result and update the content
-                    full_article = full_articles[0]
-                    source_article.text_content = full_article.text_content
-                    logger.info(
-                        f"{log_prefix}Got full content for {source_document.title}: {len(full_article.text_content)} chars"
-                    )
-                else:
-                    logger.warning(
-                        f"{log_prefix}Could not get full content for {source_document.title}, using extract"
-                    )
-            else:
-                logger.warning(
-                    f"{log_prefix}No strategy found for source_type {source_document.source_type}, using extract"
-                )
-
-        except Exception as e:
-            logger.error(
-                f"{log_prefix}Error getting full content for {source_document.title}: {e}",
-                exc_info=True,
-            )
-            logger.warning(
-                f"{log_prefix}Falling back to extract for {source_document.title}"
-            )
-
-        # Step 3: Create or get synthetic viewpoint for this document (reuse existing logic)
-        viewpoint_topic = f"Document Timeline: {source_document.title}"
-        effective_data_source = source_document.source_type or "document_source"
-
-        async with AppAsyncSessionLocal() as db:
-            # Re-attach task to current session
-            task = await db.merge(task)
-
-            # Check if viewpoint already exists
-            existing_viewpoint = None
-            if settings.reuse_composite_viewpoint:
-                existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
-                    topic=viewpoint_topic,
-                    data_source_preference=effective_data_source,
-                    status="completed",
-                    db=db,
-                )
-
-            if existing_viewpoint:
-                logger.info(
-                    f"{log_prefix}Found existing completed viewpoint {existing_viewpoint.id}"
-                )
-                task.viewpoint_id = existing_viewpoint.id
-                await db.flush()
-                await db.commit()
-
-                # FIXED: Return existing events instead of empty list
-                viewpoint_details = (
-                    await self.viewpoint_handler.get_complete_viewpoint_details_by_id(
-                        existing_viewpoint.id, db=db
-                    )
-                )
-                if viewpoint_details and viewpoint_details.get("timeline_events"):
-                    existing_events = viewpoint_details["timeline_events"]
-                    logger.info(
-                        f"{log_prefix}Reusing existing viewpoint {existing_viewpoint.id} with {len(existing_events)} events"
-                    )
-                    return TimelineGenerationResult(
-                        events=existing_events,
-                        viewpoint_id=existing_viewpoint.id,
-                        events_count=len(existing_events),
-                        keywords_extracted=[source_document.title],
-                        articles_processed=1,
-                    )
-                else:
-                    logger.warning(
-                        f"{log_prefix}Existing viewpoint {existing_viewpoint.id} has no events, proceeding with new processing"
-                    )
-                    # If existing viewpoint has no events, proceed with processing
-
-            # Create new viewpoint
-            new_viewpoint = Viewpoint(
-                topic=viewpoint_topic,
-                viewpoint_type="synthetic",
-                status="processing",
-                data_source_preference=effective_data_source,
-            )
-            db.add(new_viewpoint)
-            await db.flush()
-
-            task.viewpoint_id = new_viewpoint.id
-            await db.flush()
-            await db.commit()
-
-            viewpoint_id = new_viewpoint.id
-            needs_processing = True
-
-        if not viewpoint_id:
-            raise RuntimeError(
-                "Failed to create or find viewpoint for document canonical task"
-            )
-
-        if not needs_processing:
-            logger.info(
-                f"{log_prefix}Reusing existing completed viewpoint {viewpoint_id}"
-            )
-            return TimelineGenerationResult(events=[])
-
-        # Step 4: Process using existing synthetic viewpoint pipeline (skip keyword extraction)
-
-        # Get canonical events from source article
-        all_canonical_event_ids = await self._get_canonical_events(
-            articles=[source_article],
-            data_source_preference=effective_data_source,
-            request_id=request_id,
-            progress_callback=progress_callback,
-        )
-
-        if not all_canonical_event_ids:
-            logger.warning(
-                f"{log_prefix}No canonical events found for document '{source_document.title}'"
-            )
-            # Mark viewpoint as failed
-            await self.viewpoint_service.mark_viewpoint_failed_with_transaction(
-                viewpoint_id
-            )
-            return TimelineGenerationResult(events=[])
-
-        # Step 5: Use existing pipeline to populate viewpoint with events
-        async with AppAsyncSessionLocal() as db:
-            # No relevance filtering needed for document canonical (all events are relevant)
-            event_id_to_score = dict.fromkeys(all_canonical_event_ids, 1.0)
-
-            # Use existing event merge pipeline to handle deduplication
-            merged_event_groups = await self._merge_events(
-                relevant_event_ids=all_canonical_event_ids,
-                language_code="en",  # TODO: Get from source document metadata
-                db=db,
-                request_id=request_id,
-                progress_callback=progress_callback,
-            )
-
-            # Populate viewpoint with events (reuse existing logic)
-            final_events = await self._populate_existing_viewpoint_with_events(
-                viewpoint_id=viewpoint_id,
-                merged_event_groups=merged_event_groups,
-                event_id_to_score=event_id_to_score,
-                request_id=request_id,
-                progress_callback=progress_callback,
-                db=db,
-            )
-
-            await db.commit()
-
-        if progress_callback:
-            await progress_callback.report(
-                f"Document canonical processing completed. Generated {len(final_events)} events.",
-                "document_canonical_complete",
-                {"event_count": len(final_events)},
-                request_id,
-            )
-
-        logger.info(
-            f"{log_prefix}Document canonical processing completed with {len(final_events)} events"
-        )
-
-        return TimelineGenerationResult(
-            events=final_events,
-            viewpoint_id=viewpoint_id,  # Now we have a proper synthetic viewpoint
-            events_count=len(final_events),
-            keywords_extracted=[
-                source_document.title
-            ],  # Use document title as "keyword"
-            articles_processed=1,  # One source document processed
-        )
+        return basic_source_article
