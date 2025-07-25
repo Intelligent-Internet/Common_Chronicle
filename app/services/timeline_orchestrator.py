@@ -1568,7 +1568,7 @@ class TimelineOrchestratorService:
         effective_data_source = (
             ",".join(sorted(unique_source_types))
             if unique_source_types
-            else "entity_source"
+            else "online_wikipedia"
         )
 
         logger.info(
@@ -1627,7 +1627,7 @@ class TimelineOrchestratorService:
         }
 
         basic_source_article = SourceArticle(
-            source_name=doc.source_type or "entity_source",
+            source_name=doc.source_type or "online_wikipedia",
             source_url=doc.wikipedia_url,
             source_identifier=doc.wiki_pageid or str(doc.id),
             title=doc.title,
@@ -1637,7 +1637,7 @@ class TimelineOrchestratorService:
         )
 
         # Try to get full content using ArticleAcquisitionService
-        if doc.source_type and doc.source_type != "entity_source":
+        if doc.source_type:
             try:
                 # Prepare comprehensive query data for ArticleAcquisitionService
                 query_data = {

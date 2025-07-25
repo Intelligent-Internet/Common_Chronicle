@@ -71,7 +71,7 @@ class SourceDocument(Base, TimestampMixin, UUIDMixin):
     source_type = Column(
         String(50),
         nullable=True,
-        comment="Type of source (wikipedia/web_crawl/news_article/etc.)",
+        comment="Type of source (dataset_wikipedia_en/online_wikipedia/online_wikinews)",
     )
 
     title = Column(

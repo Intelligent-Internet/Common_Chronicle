@@ -117,6 +117,7 @@ class ViewpointDBHandler(BaseDBHandler[Viewpoint]):
                         source_page_title=getattr(source_doc, "title", None),
                         source_url=getattr(source_doc, "wikipedia_url", None),
                         source_document_id=str(source_doc.id) if source_doc else None,
+                        source_type=getattr(source_doc, "source_type", None),
                     )
 
                 # FIXED: Only add non-empty source snippets to avoid empty values in API response

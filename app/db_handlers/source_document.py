@@ -93,7 +93,7 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
                 # Use EntityService to properly create entity with wikibase_item
                 entity_service = AsyncEntityService()
                 entity_requests = [(title, "UNKNOWN", language)]
-                source_type = article_data.get("source_name", "wikipedia")
+                source_type = article_data.get("source_name", "online_wikipedia")
 
                 try:
                     entity_responses = (

@@ -3,6 +3,7 @@ import type { TimelineEvent, EventSourceInfo } from '../types';
 import ContentCard from './ContentCard';
 import InkBlotButton from './InkBlotButton';
 import VerticalWavyLine from './VerticalWavyLine';
+import SourceTypeIcon from './SourceTypeIcon';
 import {
   formatEventDate,
   getDataSourceLabel,
@@ -548,29 +549,18 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                           const representativeRef = sourceRefs[0];
                           const representativeSource = sources[representativeRef];
 
-                          return representativeSource?.source_url ? (
+                          return representativeSource ? (
                             <div className="flex items-center gap-3 text-sm">
-                              <a
-                                href={representativeSource.source_url || ''}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
-                                title={`Visit source: ${representativeSource.source_url || ''}`}
-                              >
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                                  ></path>
-                                </svg>
-                              </a>
+                              <SourceTypeIcon
+                                sourceType={representativeSource.source_type}
+                                className="w-4 h-4 flex-shrink-0"
+                                href={representativeSource.source_url || undefined}
+                                title={
+                                  representativeSource.source_url
+                                    ? `Visit source: ${representativeSource.source_url}`
+                                    : undefined
+                                }
+                              />
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {onCreateDocumentTask &&
                                 representativeSource?.source_document_id ? (
@@ -672,27 +662,16 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
                                   return (
                                     <div key={idx} className="text-xs font-alt">
                                       <div className="flex items-center gap-2">
-                                        <a
-                                          href={source.source_url || '#'}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-pewter hover:text-slate dark:text-mist dark:hover:text-white flex-shrink-0"
-                                          title={`Visit source: ${source.source_url || 'No URL available'}`}
-                                        >
-                                          <svg
-                                            className="w-3 h-3"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth="2"
-                                              d="M9 5l7 7-7-7"
-                                            ></path>
-                                          </svg>
-                                        </a>
+                                        <SourceTypeIcon
+                                          sourceType={source.source_type}
+                                          className="w-3 h-3 flex-shrink-0"
+                                          href={source.source_url || undefined}
+                                          title={
+                                            source.source_url
+                                              ? `Visit source: ${source.source_url}`
+                                              : 'No URL available'
+                                          }
+                                        />
                                         {onCreateDocumentTask && source.source_document_id ? (
                                           <button
                                             onClick={(e) => {

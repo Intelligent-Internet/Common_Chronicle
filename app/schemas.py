@@ -514,6 +514,7 @@ class EventSourceInfoForAPI(BaseModel):
     source_page_title: str | None = None
     source_url: str | None = None
     source_document_id: str | None = None
+    source_type: str | None = None
 
     @field_validator("source_language", mode="before")
     @classmethod

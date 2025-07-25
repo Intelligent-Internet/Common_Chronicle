@@ -4,6 +4,7 @@ import type { ExtendedUserTaskRecord } from '../services/indexedDB.service';
 import { getTaskTypeDisplayName, getDataSourceDisplayNames } from '../utils/taskUtils';
 
 import ContentCard from './ContentCard';
+import SourceTypeIcon from './SourceTypeIcon';
 
 const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
   const formatDate = (dateString: string) => {
@@ -30,6 +31,19 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
   };
 
   const sourceText = getDataSourceDisplayNames(task.dataSourcePref).join(', ');
+
+  // Get primary source type for icon display based on dataSourcePref
+  const getPrimarySourceType = (dataSourcePref: string | null | undefined) => {
+    if (!dataSourcePref || dataSourcePref === 'default') {
+      return 'dataset_wikipedia_en';
+    }
+
+    // Handle comma-separated multiple sources - return the first one
+    const sources = dataSourcePref.split(',').map((s) => s.trim());
+    return sources[0] || 'dataset_wikipedia_en';
+  };
+
+  const primarySourceType = getPrimarySourceType(task.dataSourcePref);
 
   const statusDisplay =
     task.status === 'completed'
@@ -67,18 +81,7 @@ const TimelineCard: React.FC<{ task: ExtendedUserTaskRecord }> = ({ task }) => {
               <span className="ml-2">{formatDate(task.createdAt)}</span>
             </div>
             <div className="flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 text-pewter dark:text-mist"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                <path
-                  fillRule="evenodd"
-                  d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <SourceTypeIcon sourceType={primarySourceType} className="w-4 h-4 mr-2" />
               <span className="font-medium">Source:</span>
               <span className="ml-2">{sourceText}</span>
             </div>

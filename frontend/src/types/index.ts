@@ -89,6 +89,7 @@ export interface EventSourceInfo {
   source_page_title: string | null;
   source_url: string | null;
   source_document_id: string | null; // Add source document ID for document timeline creation
+  source_type: string | null; // Type of source (dataset_wikipedia_en/online_wikipedia/online_wikinews)
 }
 
 // LLMRequestForFrontend and LLMResponseForFrontend from timeline.ts

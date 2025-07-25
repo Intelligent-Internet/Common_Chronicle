@@ -63,7 +63,7 @@ class Viewpoint(Base, UUIDMixin, TimestampMixin):
     data_source_preference = Column(
         String(255),
         nullable=False,
-        comment="Preferred data source for content generation (e.g., 'wikipedia', 'wikinews')",
+        comment="Preferred data source for content generation (dataset_wikipedia_en/online_wikipedia/online_wikinews)",
     )
 
     canonical_source_id = Column(
