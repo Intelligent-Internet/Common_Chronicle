@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import settings
 from app.db import get_app_db
 from app.db_handlers import EntityDBHandler, SourceDocumentDBHandler, TaskDBHandler
 from app.dependencies.auth import get_current_user_optional
@@ -44,6 +45,7 @@ async def create_task(
     task_data: CreateTaskRequest,
     current_user: User | None = Depends(get_current_user_optional),
     task_db_handler: TaskDBHandler = Depends(),
+    db: AsyncSession = Depends(get_app_db),
 ):
     """
     Create a new synthetic viewpoint timeline generation task.
@@ -64,6 +66,30 @@ async def create_task(
         else:
             log_piece = "anonymous/public user"
 
+        # Determine data source preference from config
+        data_source_preference = "online_wikipedia"  # default
+        if task_data.config and task_data.config.get("data_source_preference"):
+            ds_from_config = task_data.config["data_source_preference"]
+            if ds_from_config.lower() != "none":
+                data_source_preference = ds_from_config
+
+        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
+
+        if settings.reuse_composite_viewpoint:
+            reusable_task = await task_db_handler.find_reusable_completed_task(
+                topic=task_data.topic_text.strip(),
+                data_source_preference=data_source_preference,
+                task_type="synthetic_viewpoint",
+                db=db,
+            )
+
+            if reusable_task:
+                logger.info(
+                    f"Reusing existing completed task {reusable_task.id} for topic: '{task_data.topic_text[:50]}...' by {log_piece}"
+                )
+                return TaskResponse.model_validate(reusable_task.to_dict())
+
+        # No reusable task found, create new task
         task_dict = {
             "task_type": "synthetic_viewpoint",
             "topic_text": task_data.topic_text,
@@ -72,7 +98,7 @@ async def create_task(
             "owner_id": current_user.id if current_user else None,
             "is_public": final_is_public,
         }
-        task_dict = await task_db_handler.create_task(obj_dict=task_dict)
+        task_dict = await task_db_handler.create_task(obj_dict=task_dict, db=db)
         logger.info(
             f"Created new synthetic task: {task_dict.get('id')} for {log_piece}"
         )
@@ -124,6 +150,32 @@ async def create_entity_canonical_task(
         else:
             log_piece = "anonymous/public user"
 
+        # Determine data source preference from config
+        data_source_preference = "online_wikipedia"  # default
+        if task_data.config and task_data.config.get("data_source_preference"):
+            ds_from_config = task_data.config["data_source_preference"]
+            if ds_from_config.lower() != "none":
+                data_source_preference = ds_from_config
+
+        # Construct topic for entity canonical task (matches timeline_orchestrator.py logic)
+        entity_topic = f"Entity Timeline: {entity.entity_name}"
+
+        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
+        if settings.reuse_composite_viewpoint:
+            reusable_task = await task_db_handler.find_reusable_completed_task(
+                topic=entity_topic,
+                data_source_preference=data_source_preference,
+                task_type="entity_canonical",
+                db=db,
+            )
+
+            if reusable_task:
+                logger.info(
+                    f"Reusing existing completed entity canonical task {reusable_task.id} for entity {entity_id} ({entity.entity_name}) by {log_piece}"
+                )
+                return TaskResponse.model_validate(reusable_task.to_dict())
+
+        # No reusable task found, create new task
         task_dict = {
             "task_type": "entity_canonical",
             "entity_id": entity_id,
@@ -133,7 +185,7 @@ async def create_entity_canonical_task(
             "owner_id": current_user.id if current_user else None,
             "is_public": final_is_public,
         }
-        task_dict = await task_db_handler.create_task(obj_dict=task_dict)
+        task_dict = await task_db_handler.create_task(obj_dict=task_dict, db=db)
         logger.info(
             f"Created new entity canonical task: {task_dict.get('id')} for entity {entity_id} by {log_piece}"
         )
@@ -190,6 +242,32 @@ async def create_document_canonical_task(
         else:
             log_piece = "anonymous/public user"
 
+        # Determine data source preference from config
+        data_source_preference = source_document.source_type or "document_source"
+        if task_data.config and task_data.config.get("data_source_preference"):
+            ds_from_config = task_data.config["data_source_preference"]
+            if ds_from_config.lower() != "none":
+                data_source_preference = ds_from_config
+
+        # Construct topic for document canonical task (matches timeline_orchestrator.py logic)
+        document_topic = f"Document Timeline: {source_document.title}"
+
+        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
+        if settings.reuse_composite_viewpoint:
+            reusable_task = await task_db_handler.find_reusable_completed_task(
+                topic=document_topic,
+                data_source_preference=data_source_preference,
+                task_type="document_canonical",
+                db=db,
+            )
+
+            if reusable_task:
+                logger.info(
+                    f"Reusing existing completed document canonical task {reusable_task.id} for document {source_document_id} ({source_document.title}) by {log_piece}"
+                )
+                return TaskResponse.model_validate(reusable_task.to_dict())
+
+        # No reusable task found, create new task
         task_dict = {
             "task_type": "document_canonical",
             "source_document_id": source_document_id,
@@ -199,7 +277,7 @@ async def create_document_canonical_task(
             "owner_id": current_user.id if current_user else None,
             "is_public": final_is_public,
         }
-        task_dict = await task_db_handler.create_task(obj_dict=task_dict)
+        task_dict = await task_db_handler.create_task(obj_dict=task_dict, db=db)
         logger.info(
             f"Created new document canonical task: {task_dict.get('id')} for document {source_document_id} by {log_piece}"
         )

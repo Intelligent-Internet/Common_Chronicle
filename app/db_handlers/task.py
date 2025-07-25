@@ -276,6 +276,74 @@ class TaskDBHandler(BaseDBHandler[Task]):
             raise
 
     @check_local_db
+    async def find_reusable_completed_task(
+        self,
+        topic: str,
+        data_source_preference: str,
+        task_type: str = "synthetic_viewpoint",
+        *,
+        db: AsyncSession = None,
+    ) -> Task | None:
+        """
+        Find a reusable completed task based on topic and data source preference.
+
+        This method looks for existing completed tasks that have the same topic_text
+        and data_source_preference, and have an associated completed viewpoint.
+        Used to avoid creating duplicate tasks when REUSE_COMPOSITE_VIEWPOINT is enabled.
+        """
+        try:
+            # First, find a completed viewpoint with matching topic and data_source_preference
+            viewpoint_handler = ViewpointDBHandler()
+            existing_viewpoint = await viewpoint_handler.get_by_attributes(
+                topic=topic,
+                data_source_preference=data_source_preference,
+                status="completed",
+                db=db,
+            )
+
+            if not existing_viewpoint:
+                logger.debug(
+                    f"No completed viewpoint found for topic: '{topic}' with data_source: '{data_source_preference}'"
+                )
+                return None
+
+            # Then, find a completed task associated with this viewpoint
+            stmt = (
+                select(Task)
+                .where(
+                    Task.viewpoint_id == existing_viewpoint.id,
+                    Task.status == "completed",
+                    Task.task_type == task_type,
+                )
+                .options(selectinload(Task.owner))  # Preload owner for API response
+                .order_by(Task.created_at.desc())  # Get the most recent one
+            )
+
+            result = await db.execute(stmt)
+            reusable_task = result.scalars().first()
+
+            if reusable_task:
+                logger.info(
+                    f"Found reusable completed task {reusable_task.id} for topic: '{topic}' "
+                    f"with data_source: '{data_source_preference}' and task_type: '{task_type}'"
+                )
+            else:
+                logger.debug(
+                    f"No completed task found for viewpoint {existing_viewpoint.id} "
+                    f"with task_type: '{task_type}'"
+                )
+
+            return reusable_task
+
+        except Exception as e:
+            logger.error(
+                f"Error finding reusable task for topic '{topic}' "
+                f"with data_source '{data_source_preference}': {e}",
+                exc_info=True,
+            )
+            return None
+
+    @check_local_db
     async def get_owned_task_by_user(
         self, task_id: uuid.UUID, user_id: uuid.UUID, *, db: AsyncSession = None
     ) -> Task | None:
