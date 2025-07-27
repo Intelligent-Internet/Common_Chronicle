@@ -290,7 +290,7 @@ You are a master historian and data entry specialist. Your sole task is to analy
 Your output MUST be a single, valid JSON object that conforms to the following schema:
 - `original_text`: The exact input string. (string, required)
 - `display_text`: A clean, human-readable version of the date. (string, required)
-- `precision`: The granularity of the date. Must be one of: "day", "month", "year", "decade", "century", "millennium", "era", "unknown". (string, required)
+- `precision`: The granularity of the date. Must be one of: "day", "month", "year", "season", "decade", "century", "millennium", "era", "unknown". (string, required)
 - `start_year`: The start year as an integer. Negative for BCE. (integer, optional)
 - `start_month`: The start month (1-12). (integer, optional)
 - `start_day`: The start day (1-31). (integer, optional)
@@ -306,6 +306,11 @@ Your output MUST be a single, valid JSON object that conforms to the following s
 - For "before" expressions (e.g., "before 1961", "prior to 1961"), the referenced year is the END point, not the start. Set `end_year` to the referenced year and `start_year` to an appropriate earlier year or null.
 - Nth Century CE: `start_year` is (N-1)*100 + 1, `end_year` is N*100.
 - Nth Century BCE: `start_year` is -N*100, `end_year` is -((N-1)*100 + 1).
+- **SEASON HANDLING**: For seasonal expressions (e.g., "spring 1944", "winter of 2016", "2016年春季"), use "season" precision and map seasons to appropriate month ranges:
+  - Spring: March-May (start_month=3, end_month=5)
+  - Summer: June-August (start_month=6, end_month=8)
+  - Autumn/Fall: September-November (start_month=9, end_month=11)
+  - Winter: December-February (start_month=12, end_month=2 of next year if needed)
 
 **Special Handling for Cultural and Mythological Time Expressions:**
 - For mythological, legendary, or folklore references from specific cultures, use "era" precision and estimate time ranges based on cultural and historical knowledge.
@@ -477,6 +482,25 @@ Output:
 
 ---
 **Example 9:**
+Input: "Spring 2016"
+Output:
+```json
+{
+  "original_text": "Spring 2016",
+  "display_text": "Spring 2016",
+  "precision": "season",
+  "start_year": 2016,
+  "start_month": 3,
+  "start_day": null,
+  "end_year": 2016,
+  "end_month": 5,
+  "end_day": null,
+  "is_bce": false
+}
+```
+
+---
+**Example 10:**
 Input: "Africa"
 Output:
 ```json
@@ -510,7 +534,7 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
 - `parsed_info`: An object containing the parsed date information. This object MUST conform to the following schema:
     - `original_text`: The `date_str` from the input object. (string, required)
     - `display_text`: A clean, human-readable version of the date. (string, required)
-    - `precision`: The granularity of the date. Must be one of: "day", "month", "year", "decade", "century", "millennium", "era", "unknown". (string, required)
+    - `precision`: The granularity of the date. Must be one of: "day", "month", "year", "season", "decade", "century", "millennium", "era", "unknown". (string, required)
     - `start_year`, `start_month`, `start_day`: Integer fields. Negative for BCE. (integer, optional)
     - `end_year`, `end_month`, `end_day`: Integer fields. Required for periods. Negative for BCE. (integer, optional)
     - `is_bce`: True if the date is in the BCE era. (boolean, required)
@@ -523,6 +547,11 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
 - Nth Century BCE: `start_year` is -N*100, `end_year` is -((N-1)*100 + 1).
 - If a date is too vague (e.g., "ancient times"), use "unknown" precision and null for date component fields.
 - For mythological, legendary, or folklore references, use "era" precision and estimate time ranges based on cultural and historical knowledge.
+- **SEASON HANDLING**: For seasonal expressions (e.g., "spring 1944", "winter of 2016", "2016年春季"), use "season" precision and map seasons to appropriate month ranges:
+  - Spring: March-May (start_month=3, end_month=5)
+  - Summer: June-August (start_month=6, end_month=8)
+  - Autumn/Fall: September-November (start_month=9, end_month=11)
+  - Winter: December-February (start_month=12, end_month=2 of next year if needed)
 
 ---
 **Example:**
@@ -561,6 +590,10 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
   {
     "id": "event_theta",
     "date_str": "Africa"
+  },
+  {
+    "id": "event_iota",
+    "date_str": "Spring 2016"
   }
 ]
 ```
@@ -653,6 +686,17 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
       "precision": "unknown",
       "start_year": null, "start_month": null, "start_day": null,
       "end_year": null, "end_month": null, "end_day": null,
+      "is_bce": false
+    }
+  },
+  {
+    "id": "event_iota",
+    "parsed_info": {
+      "original_text": "Spring 2016",
+      "display_text": "Spring 2016",
+      "precision": "season",
+      "start_year": 2016, "start_month": 3, "start_day": null,
+      "end_year": 2016, "end_month": 5, "end_day": null,
       "is_bce": false
     }
   }

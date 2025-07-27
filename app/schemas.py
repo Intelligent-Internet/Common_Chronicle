@@ -393,9 +393,18 @@ class ParsedDateInfo(BaseModel):
         ..., description="A clean, human-readable version of the date."
     )
     precision: Literal[
-        "day", "month", "year", "decade", "century", "millennium", "era", "unknown"
+        "day",
+        "month",
+        "year",
+        "season",
+        "decade",
+        "century",
+        "millennium",
+        "era",
+        "unknown",
     ] = Field(
-        ..., description="The granularity of the date (e.g., 'year', 'century', 'era')."
+        ...,
+        description="The granularity of the date (e.g., 'year', 'season', 'century', 'era').",
     )
     start_year: int | None = Field(
         None, description="The start year as an integer. Negative for BCE."
@@ -452,6 +461,16 @@ class ParsedDateInfo(BaseModel):
                 if self.end_month is None and self.start_month is not None:
                     e_month = s_month
                 e_day = get_last_day_of_month(e_year, e_month)
+            elif self.precision == "season":
+                # For season precision, use the provided month range
+                # The LLM should have already set appropriate start_month and end_month
+                if self.end_month is not None:
+                    e_month = int(self.end_month)
+                    e_day = get_last_day_of_month(e_year, e_month)
+                else:
+                    # Fallback: if no end_month, assume it's a 3-month season
+                    e_month = min(12, s_month + 2)
+                    e_day = get_last_day_of_month(e_year, e_month)
             elif self.precision == "decade":
                 e_year = s_year + 9
                 e_month = 12

@@ -10,7 +10,16 @@ export interface ProcessedEntityInfo {
 export interface ParsedDateInfo {
   original_text: string;
   display_text: string;
-  precision: 'day' | 'month' | 'year' | 'decade' | 'century' | 'millennium' | 'era' | 'unknown';
+  precision:
+    | 'day'
+    | 'month'
+    | 'year'
+    | 'season'
+    | 'decade'
+    | 'century'
+    | 'millennium'
+    | 'era'
+    | 'unknown';
   start_year: number | null;
   start_month: number | null;
   start_day: number | null;
