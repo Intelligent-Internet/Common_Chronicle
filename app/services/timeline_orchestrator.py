@@ -1386,7 +1386,7 @@ class TimelineOrchestratorService:
         # Stage 3: Processing requirement assessment and optimization
         if not needs_processing:
             logger.info(
-                f"{log_prefix}Reusing existing completed viewpoint {viewpoint_id}"
+                f"{log_prefix}Found existing completed viewpoint {viewpoint_id}. Verifying event count..."
             )
             async with AppAsyncSessionLocal() as db:
                 viewpoint_details = (
@@ -1394,49 +1394,53 @@ class TimelineOrchestratorService:
                         viewpoint_id, db=db
                     )
                 )
-                if viewpoint_details and viewpoint_details.get("timeline_events"):
-                    existing_events = viewpoint_details["timeline_events"]
-                    logger.info(
-                        f"{log_prefix}Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events"
-                    )
-                    return TimelineGenerationResult(
-                        events=existing_events,
-                        viewpoint_id=viewpoint_id,
-                        events_count=len(existing_events),
-                        keywords_extracted=keywords_extracted_override or [],
-                        articles_processed=articles_processed_override or 0,
-                    )
-                else:
-                    logger.warning(
-                        f"{log_prefix}Existing viewpoint {viewpoint_id} has no events"
-                    )
-            return TimelineGenerationResult(events=[])
+
+            # If the viewpoint has events, reuse it.
+            if viewpoint_details and viewpoint_details.get("timeline_events"):
+                existing_events = viewpoint_details["timeline_events"]
+                logger.info(
+                    f"{log_prefix}Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events."
+                )
+                return TimelineGenerationResult(
+                    events=existing_events,
+                    viewpoint_id=viewpoint_id,
+                    events_count=len(existing_events),
+                    keywords_extracted=keywords_extracted_override or [],
+                    articles_processed=articles_processed_override or 0,
+                )
+            else:
+                # If viewpoint is empty, it needs processing.
+                logger.warning(
+                    f"{log_prefix}Existing viewpoint {viewpoint_id} is empty. Forcing reprocessing."
+                )
+                needs_processing = True
 
         # Stage 4: Processing pipeline execution
-        if skip_keyword_extraction and skip_article_acquisition and source_articles:
-            # Direct processing mode for entity/document canonical tasks
-            return await self._process_direct_articles_pipeline(
-                viewpoint_id=viewpoint_id,
-                viewpoint_text=viewpoint_text,
-                source_articles=source_articles,
-                effective_data_source=effective_data_source,
-                skip_relevance_filtering=skip_relevance_filtering,
-                progress_callback=progress_callback,
-                request_id=request_id,
-                keywords_extracted_override=keywords_extracted_override,
-                articles_processed_override=articles_processed_override,
-            )
-        else:
-            # Traditional synthetic viewpoint processing
-            return await self._populate_existing_viewpoint_with_timeline(
-                viewpoint_id=viewpoint_id,
-                viewpoint_text=viewpoint_text,
-                data_source_preference=effective_data_source,
-                progress_callback=progress_callback,
-                request_id=request_id,
-                task_id=task.id,
-                task_config=task_config,
-            )
+        if needs_processing:
+            if skip_keyword_extraction and skip_article_acquisition and source_articles:
+                # Direct processing mode for entity/document canonical tasks
+                return await self._process_direct_articles_pipeline(
+                    viewpoint_id=viewpoint_id,
+                    viewpoint_text=viewpoint_text,
+                    source_articles=source_articles,
+                    effective_data_source=effective_data_source,
+                    skip_relevance_filtering=skip_relevance_filtering,
+                    progress_callback=progress_callback,
+                    request_id=request_id,
+                    keywords_extracted_override=keywords_extracted_override,
+                    articles_processed_override=articles_processed_override,
+                )
+            else:
+                # Traditional synthetic viewpoint processing
+                return await self._populate_existing_viewpoint_with_timeline(
+                    viewpoint_id=viewpoint_id,
+                    viewpoint_text=viewpoint_text,
+                    data_source_preference=effective_data_source,
+                    progress_callback=progress_callback,
+                    request_id=request_id,
+                    task_id=task.id,
+                    task_config=task_config,
+                )
 
     async def _process_direct_articles_pipeline(
         self,
