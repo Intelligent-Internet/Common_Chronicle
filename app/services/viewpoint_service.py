@@ -14,8 +14,10 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
 
@@ -38,9 +40,11 @@ from app.models import (
     Viewpoint,
     ViewpointEventAssociation,
 )
+from app.models.raw_event_entity_association import RawEventEntityAssociation
 from app.models.source_document import SourceDocument
 from app.schemas import ProcessedEntityInfo, ProcessedEvent, SourceArticle
 from app.services.canonical_event_service import CanonicalEventService
+from app.services.embedding_event_merger import EmbeddingEventMerger
 from app.services.entity_service import AsyncEntityService
 from app.services.llm_extractor import (
     extract_events_from_chunks,
@@ -58,13 +62,18 @@ class ViewpointService:
     def __init__(self):
         self.viewpoint_db_handler = ViewpointDBHandler()
         self.event_db_handler = EventDBHandler()
+        self.raw_event_db_handler = BaseDBHandler(RawEvent)
         self.event_entity_assoc_handler = BaseDBHandler(EventEntityAssociation)
-        self.event_source_contrib_handler = BaseDBHandler(RawEvent)
+        self.raw_event_entity_assoc_handler = BaseDBHandler(RawEventEntityAssociation)
         self.event_source_assoc_handler = BaseDBHandler(EventRawEventAssociation)
         self.viewpoint_event_assoc_handler = BaseDBHandler(ViewpointEventAssociation)
         self.entity_db_handler = EntityDBHandler()
         self.entity_service = AsyncEntityService()
-        self.canonical_event_service = CanonicalEventService()
+        # --- Service Instantiation with Dependency Injection ---
+        embedding_merger = EmbeddingEventMerger()
+        self.canonical_event_service = CanonicalEventService(
+            embedding_merger=embedding_merger
+        )
 
     async def _atomic_create_viewpoint_data(
         self,
@@ -127,8 +136,10 @@ class ViewpointService:
             f"out of {len(raw_events_data_with_entities)} original events"
         )
 
-        # 3. Prepare all RawEvent objects and use CanonicalEventService for semantic deduplication
+        # 3. Iterate through deduplicated data and process raw events
         staged_data = []
+        # In this first loop, we prepare all objects without committing.
+        # This includes creating RawEvent objects and linking them to entities.
         for event_data in deduplicated_events:
             # a. Calculate deduplication signature (recalculate to ensure consistency)
             deduplication_signature = hashlib.sha256(
@@ -136,13 +147,20 @@ class ViewpointService:
             ).hexdigest()
 
             # b. Check if same RawEvent already exists (database level check)
-            existing_raw_event = (
-                await self.event_source_contrib_handler.get_by_attributes(
-                    source_document_id=source_document.id,
-                    deduplication_signature=deduplication_signature,
-                    db=db,
+            query = select(RawEvent).options(
+                selectinload(RawEvent.entity_associations).selectinload(
+                    RawEventEntityAssociation.entity
                 )
             )
+            existing_raw_event = await self.raw_event_db_handler.get_by_attributes(
+                db=db,
+                query=query,
+                source_document_id=source_document.id,
+                deduplication_signature=deduplication_signature,
+            )
+
+            raw_event_obj = None
+            is_new_raw_event = False
 
             if existing_raw_event:
                 # Use existing RawEvent
@@ -160,121 +178,112 @@ class ViewpointService:
                     source_document_id=source_document.id,
                     source_text_snippet=event_data.get("source_text_snippet"),
                 )
+                db.add(raw_event_obj)
+                is_new_raw_event = True
 
+            # 4. For new raw events, we'll create entity associations after getting the RawEvent ID
             staged_data.append(
                 {
                     "raw_event_obj": raw_event_obj,
-                    "linked_entities": event_data.get("linked_entities", []),
-                    "is_existing_raw_event": existing_raw_event is not None,
+                    "linked_entities": event_data.get("linked_entities", [])
+                    if is_new_raw_event
+                    else [],
+                    "is_new_raw_event": is_new_raw_event,
                 }
             )
 
-        # 4. Add only new RawEvents to session and flush to get IDs
-        new_raw_events = [
-            item["raw_event_obj"]
-            for item in staged_data
-            if not item["is_existing_raw_event"]
-        ]
-
-        if new_raw_events:
-            db.add_all(new_raw_events)
-            logger.debug(
-                f"{log_prefix}Adding {len(new_raw_events)} new RawEvent objects to session"
-            )
-            await db.flush()  # Flush to get RawEvent IDs
-
-        # 5. Use CanonicalEventService to create or merge Events with semantic deduplication
-        logger.info(
-            f"{log_prefix}Starting semantic deduplication for {len(staged_data)} raw events"
+        # Flush session to ensure all new RawEvents get IDs first
+        await db.flush()
+        logger.debug(
+            f"{log_prefix}Flushed session to persist {len(staged_data)} raw events."
         )
-        canonical_events = []
+
+        # Now create entity associations for new raw events
         for item in staged_data:
-            raw_event = item["raw_event_obj"]
+            raw_event_obj = item["raw_event_obj"]
+            linked_entities = item["linked_entities"]
+            is_new_raw_event = item["is_new_raw_event"]
+
+            if is_new_raw_event and linked_entities:
+                # Extract entity IDs from linked_entities
+                entity_ids = [
+                    entity_dict["entity_id"] for entity_dict in linked_entities
+                ]
+
+                # Verify entities exist and create associations only for valid entities
+                for entity_id in entity_ids:
+                    # Check if entity actually exists in database
+                    entity = await self.entity_db_handler.get(entity_id, db=db)
+                    if entity is not None:
+                        association = RawEventEntityAssociation(
+                            raw_event_id=raw_event_obj.id, entity_id=entity_id
+                        )
+                        db.add(association)
+                    else:
+                        logger.warning(
+                            f"{log_prefix}Entity {entity_id} not found in database, skipping association for RawEvent {raw_event_obj.id}"
+                        )
+
+        # Final flush to persist all associations
+        await db.flush()
+        logger.debug(f"{log_prefix}Flushed session to persist entity associations.")
+
+        # Extract just the raw_event objects for processing
+        staged_data = [item["raw_event_obj"] for item in staged_data]
+
+        # 5. Process all RawEvents to get or create canonical Events
+        canonical_events = []
+        for raw_event in staged_data:
             try:
-                # Use CanonicalEventService to create or find existing Event
-                canonical_event = (
-                    await self.canonical_event_service.create_or_merge_event(
-                        db, raw_event, item["linked_entities"]
-                    )
+                # The service now handles its own logic using persisted associations
+                canonical_event = await self.canonical_event_service.process_raw_event(
+                    db, raw_event
                 )
-                canonical_events.append(
-                    {
-                        "event_obj": canonical_event,
-                        "linked_entities": item["linked_entities"],
-                    }
-                )
+                canonical_events.append(canonical_event)
                 logger.debug(
                     f"{log_prefix}Processed RawEvent {raw_event.id} -> Event {canonical_event.id}"
                 )
             except Exception as e:
                 logger.error(
-                    f"{log_prefix}Error processing RawEvent {raw_event.id}: {e}"
+                    f"{log_prefix}Error processing RawEvent {raw_event.id}: {e}",
+                    exc_info=True,
                 )
                 continue
 
         logger.info(
-            f"{log_prefix}Semantic deduplication completed: {len(staged_data)} raw events -> {len(canonical_events)} canonical events"
+            f"{log_prefix}Processing completed: {len(staged_data)} raw events -> {len(canonical_events)} canonical events"
         )
 
-        # Get unique event IDs (some Events may be reused due to semantic similarity)
-        event_ids = list({item["event_obj"].id for item in canonical_events})
+        # Get unique event IDs, as semantic deduplication might reuse events
+        event_ids = list({event.id for event in canonical_events})
 
-        # 6. Prepare Viewpoint-Event associations and Entity associations
-        viewpoint_event_associations_to_create = []
-        event_entity_associations_to_create = []
-        unique_viewpoint_event_pairs = set()
-        unique_event_entity_pairs = set()
+        # 6. Associate unique Events with the Viewpoint
+        if event_ids:
+            # Create associations for all unique event IDs at once
+            viewpoint_event_associations_to_create = []
+            unique_viewpoint_event_pairs = set()
 
-        for item in canonical_events:
-            event = item["event_obj"]
+            for event_id in event_ids:
+                vp_event_pair = (new_viewpoint.id, event_id)
+                if vp_event_pair not in unique_viewpoint_event_pairs:
+                    viewpoint_event_associations_to_create.append(
+                        {"viewpoint_id": new_viewpoint.id, "event_id": event_id}
+                    )
+                    unique_viewpoint_event_pairs.add(vp_event_pair)
 
-            # a. Viewpoint <-> Event (avoid duplicates for reused Events)
-            vp_event_pair = (new_viewpoint.id, event.id)
-            if vp_event_pair not in unique_viewpoint_event_pairs:
-                viewpoint_event_associations_to_create.append(
-                    {"viewpoint_id": new_viewpoint.id, "event_id": event.id}
+            if viewpoint_event_associations_to_create:
+                stmt = pg_insert(ViewpointEventAssociation).values(
+                    viewpoint_event_associations_to_create
                 )
-                unique_viewpoint_event_pairs.add(vp_event_pair)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["viewpoint_id", "event_id"]
+                )
+                await db.execute(stmt)
+                logger.debug(
+                    f"{log_prefix}Bulk inserted {len(viewpoint_event_associations_to_create)} viewpoint-event associations with ON CONFLICT"
+                )
 
-            # b. Event <-> Entity (avoid duplicates for reused Events)
-            for entity_dict in item["linked_entities"]:
-                entity_id = entity_dict.get("entity_id")
-                if entity_id:
-                    pair = (event.id, entity_id)
-                    if pair not in unique_event_entity_pairs:
-                        event_entity_associations_to_create.append(
-                            {"event_id": event.id, "entity_id": entity_id}
-                        )
-                        unique_event_entity_pairs.add(pair)
-                    else:
-                        logger.debug(
-                            f"{log_prefix}Skipping duplicate entity association: event_id={event.id}, entity_id={entity_id}"
-                        )
-
-        # 7. Batch insert all association objects using ON CONFLICT DO NOTHING
-        if viewpoint_event_associations_to_create:
-            stmt = pg_insert(ViewpointEventAssociation).values(
-                viewpoint_event_associations_to_create
-            )
-            stmt = stmt.on_conflict_do_nothing(
-                index_elements=["viewpoint_id", "event_id"]
-            )
-            await db.execute(stmt)
-            logger.debug(
-                f"{log_prefix}Bulk inserted {len(viewpoint_event_associations_to_create)} viewpoint-event associations with ON CONFLICT"
-            )
-
-        if event_entity_associations_to_create:
-            stmt = pg_insert(EventEntityAssociation).values(
-                event_entity_associations_to_create
-            )
-            stmt = stmt.on_conflict_do_nothing(index_elements=["event_id", "entity_id"])
-            await db.execute(stmt)
-            logger.debug(
-                f"{log_prefix}Bulk inserted {len(event_entity_associations_to_create)} event-entity associations with ON CONFLICT"
-            )
-
-        # 8. Update Viewpoint status to "completed" and add to commit
+        # 7. Update Viewpoint status to "completed" and add to commit
         new_viewpoint.status = "completed"
         db.add(new_viewpoint)
 

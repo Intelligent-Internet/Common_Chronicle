@@ -10,6 +10,7 @@ from app.models.event import Event
 from app.models.event_entity_association import EventEntityAssociation
 from app.models.event_raw_event_association import EventRawEventAssociation
 from app.models.raw_event import RawEvent
+from app.models.raw_event_entity_association import RawEventEntityAssociation
 from app.models.source_document import SourceDocument
 from app.models.task import Task
 from app.models.user import User
@@ -30,6 +31,7 @@ __all__ = [
     # Association models
     "EventEntityAssociation",
     "EventRawEventAssociation",
+    "RawEventEntityAssociation",
     "ViewpointEventAssociation",
     # Processing models
     "ViewpointProgressStep",

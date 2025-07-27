@@ -123,12 +123,13 @@ class BaseDBHandler(Generic[ModelType]):
 
     @check_local_db
     async def get_by_attributes(
-        self, *, db: AsyncSession = None, **kwargs
+        self, *, db: AsyncSession = None, query: select = None, **kwargs
     ) -> ModelType | None:
         """Get a single record by a set of attributes."""
         options_to_load = kwargs.pop("options", None)
 
-        stmt = select(self.model).filter_by(**kwargs)
+        stmt = query if query is not None else select(self.model)
+        stmt = stmt.filter_by(**kwargs)
 
         if options_to_load:
             stmt = stmt.options(*options_to_load)

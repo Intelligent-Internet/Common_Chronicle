@@ -94,6 +94,12 @@ class RawEvent(Base, UUIDMixin, TimestampMixin):
         doc="Links to normalized events created from this raw event",
     )
 
+    entity_associations = relationship(
+        "RawEventEntityAssociation",
+        back_populates="raw_event",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self):
         return (
             f"<RawEvent(id={self.id}, "

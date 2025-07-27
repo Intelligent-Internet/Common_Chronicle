@@ -82,6 +82,12 @@ class Entity(Base, TimestampMixin, UUIDMixin):
         doc="Events this entity is involved in or referenced by",
     )
 
+    raw_event_associations = relationship(
+        "RawEventEntityAssociation",
+        back_populates="entity",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self):
         return (
             f"<Entity(id={self.id}, "
