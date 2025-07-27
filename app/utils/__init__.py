@@ -14,7 +14,7 @@ from app.utils.auth import (
     verify_password,
 )
 from app.utils.json_parser import extract_json_from_llm_response
-from app.utils.logger import PerformanceLogger, log_performance, setup_logger
+from app.utils.logger import setup_logger
 from app.utils.retry_utils import async_retry_db, is_retryable_db_error
 from app.utils.wiki_optimization import (
     WikiErrorType,
@@ -35,8 +35,6 @@ __all__ = [
     "extract_json_from_llm_response",
     # Logging utilities
     "setup_logger",
-    "PerformanceLogger",
-    "log_performance",
     # Retry utilities
     "async_retry_db",
     "is_retryable_db_error",

@@ -12,7 +12,7 @@ Key Features:
 import datetime
 import logging
 import os
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 LOG_DIR = Path("logs")
@@ -20,7 +20,6 @@ LOG_DIR.mkdir(exist_ok=True)
 
 # Global variables to ensure all loggers use the same log file
 _GLOBAL_LOG_FILE = None
-_GLOBAL_RUN_DATE = None
 
 LOG_FILE_BASENAME = "timeline_app"
 
@@ -33,29 +32,21 @@ CONSOLE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DEFAULT_LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # Log rotation settings
-MAX_LOG_SIZE_MB = 10  # Maximum size per log file in MB
+MAX_LOG_SIZE_MB = 5  # Maximum size per log file in MB
 MAX_LOG_SIZE_BYTES = MAX_LOG_SIZE_MB * 1024 * 1024
 MAX_BACKUP_COUNT = 10  # Maximum number of backup files per day
 
+if _GLOBAL_LOG_FILE is None:
+    # Calculate timestamp only once when first needed
+    now = datetime.datetime.now()
+    run_timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
 
-def _get_global_log_file() -> Path:
-    """Get or create the global log file path. Ensures all loggers use the same file."""
-    global _GLOBAL_LOG_FILE, _GLOBAL_RUN_DATE
+    # Create date-based directory
+    date_dir = LOG_DIR / now.strftime("%Y-%m-%d")
+    date_dir.mkdir(exist_ok=True)
 
-    if _GLOBAL_LOG_FILE is None:
-        # Calculate timestamp only once when first needed
-        now = datetime.datetime.now()
-        _GLOBAL_RUN_DATE = now.strftime("%Y-%m-%d")
-        run_timestamp = now.strftime("%Y-%m-%d_%H-%M-%S")
-
-        # Create date-based directory
-        date_dir = LOG_DIR / _GLOBAL_RUN_DATE
-        date_dir.mkdir(exist_ok=True)
-
-        # Set the global log file path
-        _GLOBAL_LOG_FILE = date_dir / f"{LOG_FILE_BASENAME}_{run_timestamp}.log"
-
-    return _GLOBAL_LOG_FILE
+    # Set the global log file path
+    _GLOBAL_LOG_FILE = date_dir / f"{LOG_FILE_BASENAME}_{run_timestamp}.log"
 
 
 class SafeRotatingFileHandler(RotatingFileHandler):
@@ -74,27 +65,6 @@ class SafeRotatingFileHandler(RotatingFileHandler):
             sys.stderr.flush()
 
 
-class SafeTimedRotatingFileHandler(TimedRotatingFileHandler):
-    """Windows-compatible time-based rotation handler with graceful error handling."""
-
-    def doRollover(self):
-        """Override doRollover to handle Windows file permission issues gracefully."""
-        try:
-            super().doRollover()
-        except (OSError, PermissionError) as e:
-            # Log the error to stderr since we can't use the logger itself
-            import sys
-
-            error_msg = f"Log rotation failed: {e}. Continuing with current log file.\n"
-            sys.stderr.write(error_msg)
-            sys.stderr.flush()
-
-            # Reset the rollover time to try again later
-            if hasattr(self, "rolloverAt"):
-                # Add 1 hour to retry later
-                self.rolloverAt = self.rolloverAt + 3600
-
-
 class CombinedRotatingFileHandler(logging.Handler):
     """
     Combined handler that rotates logs based on size and uses a global log file.
@@ -110,11 +80,10 @@ class CombinedRotatingFileHandler(logging.Handler):
 
     def _setup_current_handler(self):
         """Set up the current rotating file handler using the global log file."""
-        global_log_file = _get_global_log_file()
 
         # Create size-based rotating handler
         self.current_handler = SafeRotatingFileHandler(
-            global_log_file,
+            _GLOBAL_LOG_FILE,
             maxBytes=self.max_bytes,
             backupCount=self.backup_count,
             encoding="utf-8",
@@ -192,24 +161,6 @@ def setup_logger(name: str, level: str = None) -> logging.Logger:
     return logger
 
 
-def set_module_log_level(module_name: str, level: str):
-    """Dynamically set the log level for a specific module."""
-    logger = logging.getLogger(module_name)
-    log_level = _get_log_level(level)
-    logger.setLevel(log_level)
-
-    # Update handlers as well
-    for handler in logger.handlers:
-        handler.setLevel(log_level)
-
-    logger.info(f"Log level for '{module_name}' changed to {level}")
-
-
-def get_current_log_file() -> Path:
-    """Return the current log file path."""
-    return _get_global_log_file()
-
-
 def list_log_files() -> list[Path]:
     """Return a list of all log files in the log directory."""
     all_files = []
@@ -279,75 +230,3 @@ def cleanup_old_logs(keep_days: int = 7):
         print(
             f"Log cleanup completed: {deleted_count} files deleted, {failed_count} files failed to delete"
         )
-
-
-def force_cleanup_large_logs(max_size_mb: int = MAX_LOG_SIZE_MB):
-    """
-    Force cleanup of large log files to prevent disk space issues.
-    Enhanced to handle Windows file locking issues gracefully.
-    """
-    max_size_bytes = max_size_mb * 1024 * 1024
-    cleaned_count = 0
-
-    for log_file in list_log_files():
-        try:
-            if log_file.stat().st_size > max_size_bytes:
-                # For very large files, try to truncate instead of delete
-                # This preserves the file handle for any active processes
-                try:
-                    with open(log_file, "w", encoding="utf-8") as f:
-                        f.write(
-                            f"# Log file truncated due to size ({log_file.stat().st_size / 1024 / 1024:.1f}MB) at {datetime.datetime.now()}\n"
-                        )
-                    print(f"Truncated large log file: {log_file}")
-                    cleaned_count += 1
-                except PermissionError:
-                    print(f"Cannot truncate log file {log_file}: file is in use")
-        except Exception as e:
-            print(f"Error checking log file size {log_file}: {e}")
-
-    if cleaned_count > 0:
-        print(f"Large log cleanup completed: {cleaned_count} files truncated")
-
-
-class PerformanceLogger:
-    """Utility class for performance logging."""
-
-    def __init__(self, logger: logging.Logger, operation_name: str):
-        self.logger = logger
-        self.operation_name = operation_name
-        self.start_time = None
-
-    def __enter__(self):
-        self.start_time = datetime.datetime.now()
-        self.logger.debug(f"Starting operation: {self.operation_name}")
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.start_time:
-            duration = datetime.datetime.now() - self.start_time
-            duration_ms = duration.total_seconds() * 1000
-
-            if exc_type:
-                self.logger.error(
-                    f"Operation '{self.operation_name}' failed after {duration_ms:.2f}ms: {exc_val}"
-                )
-            else:
-                self.logger.info(
-                    f"Operation '{self.operation_name}' completed in {duration_ms:.2f}ms"
-                )
-
-
-def log_performance(logger: logging.Logger, operation_name: str):
-    """
-    Decorator for logging function performance.
-    """
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            with PerformanceLogger(logger, operation_name):
-                return func(*args, **kwargs)
-
-        return wrapper
-
-    return decorator
