@@ -1,7 +1,75 @@
-EXTRACT_TIMELINE_EVENTS_PROMPT = """
+# ===========================================
+# COMMON COMPONENTS
+# ===========================================
+
+# Common JSON formatting rules - used across multiple prompts
+JSON_FORMATTING_RULES = """
+**IMPORTANT: JSON Formatting Rules**
+- The entire output must be a single, valid JSON structure.
+- All string values must be enclosed in double quotes.
+- Any double quotes (`"`) that are part of a string's content must be properly escaped with a backslash (e.g., `\\"`, like in `"text": "He said \\"hello\\""`).
+- It is often safer to use single quotes (') for quotations inside a string value to avoid parsing issues.
+"""
+
+# ===========================================
+# ENHANCED PROMPTS WITH CHAIN OF THOUGHT
+# ===========================================
+
+EXTRACT_TIMELINE_EVENTS_PROMPT = (
+    """
 You are a professional historian assistant specializing in extracting timeline event information
 from historical texts and outputting it in a structured format.
+
+🔴 CRITICAL: Your response MUST be a JSON array starting with [ and ending with ]. No exceptions.
+
 Your task is to identify and extract all timeline-related historical events from the text. Focus on capturing the information exactly as it is presented.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Text Analysis**: Read through the entire text to understand the context and identify potential events
+2. **Event Identification**: Locate sentences or phrases that describe historical events with temporal information
+3. **Date Extraction**: For each event, identify and extract the temporal expressions (dates, time periods, etc.)
+4. **Entity Recognition**: Identify key people, organizations, locations, and concepts involved in each event
+5. **Context Inference**: For vague or relative time expressions, analyze surrounding text to infer more specific temporal context
+6. **Quality Check**: Verify that each extracted event has valid temporal information and can be placed on a chronological timeline
+7. **JSON Structure**: Organize the extracted information into the required JSON format
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON array output. Only provide the final JSON array after your thinking process.
+
+**🚨 STOP: READ THIS CAREFULLY 🚨**
+Your response MUST be EXACTLY this format:
+[
+  {"event_description": "...", "event_date_str": "...", ...},
+  {"event_description": "...", "event_date_str": "...", ...}
+]
+
+❌ WRONG: {"event_description": "..."}, {"event_description": "..."}
+✅ CORRECT: [{"event_description": "..."}, {"event_description": "..."}]
+
+If you output anything other than a JSON array, your response will be rejected.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON array containing all events. Each event is a JSON object within this array. The format must be:
+```json
+[
+  {
+    "event_description": "...",
+    "event_date_str": "...",
+    "enhanced_event_date_str": null,
+    "main_entities": [...],
+    "source_text_snippet": "..."
+  },
+  {
+    "event_description": "...",
+    "event_date_str": "...",
+    "enhanced_event_date_str": null,
+    "main_entities": [...],
+    "source_text_snippet": "..."
+  }
+]
+```
+
+DO NOT output multiple separate JSON objects. DO NOT output individual events outside of the array structure.
 
 For each event, please extract the following information:
 
@@ -51,8 +119,6 @@ For each event, please extract the following information:
    - When the event_date_str contains only time of day (e.g., "15:50 UTC"), analyze the surrounding context to infer and provide the date information
    - Examples: "2010s-2020s" for "recent years", "1847-1850" if context suggests Irish Famine period, "July 21, 1969" if context indicates Apollo 11 mission for "15:50 UTC"
    - If the event_date_str is already specific and precise, set this field to null.
-
-
 
 4.  **main_entities**: Required. Identify the key entities (people, organizations, locations, etc.) involved. This field must not be empty. Each entity must contain a "name", a "language" (e.g., "en", "zh", "ja"), and a "type" (e.g., person, organization, location).
 
@@ -125,75 +191,53 @@ For each event, please extract the following information:
 - If an event has no chronologically meaningful temporal information and cannot be reasonably inferred from context, exclude it from the output entirely
 - It is better to exclude events than to fabricate or misinterpret temporal data, but always try to infer context first
 
+"""
+    + JSON_FORMATTING_RULES
+    + """
+
+**🔴 FORMAT ENFORCEMENT 🔴**
+REMEMBER: You MUST wrap ALL events in a single JSON array [ ].
+Do NOT output individual JSON objects separated by commas.
+
 **COMMON MISTAKES TO AVOID:**
 - Do NOT extract events where the only "time" reference is actually a location (e.g., "In British Columbia", "In New York")
 - Do NOT extract events with only vague relative time expressions without temporal anchors (e.g., "after the policy changed" without knowing when the policy changed)
 - Do NOT confuse spatial prepositions with temporal ones (e.g., "In [place]" vs "In [time period]")
 
-Please output the results in **JSON format**, as a list of event objects. Do NOT calculate, convert, or standardize any dates.
+**FINAL REMINDER: Your output must be a single JSON array containing all events. Start with [ and end with ]. Each event is an object within this array.**
 
+**CRITICAL: JSON ARRAY FORMAT ONLY**
+- Your response must START with [ and END with ]
+- ALL events must be inside this single array
+- Do NOT output separate JSON objects like: {...}, {...}
+- Do NOT output multiple arrays
+- CORRECT format: [{"event_description": "...", ...}, {"event_description": "...", ...}]
+
+If no timeline-related historical events are found, please output an empty list: []
+
+**EXAMPLE OUTPUT FORMAT:**
 ```json
 [
-  {{
+  {
     "event_description": "The practice of a marriage ring in Byzantine Empire began.",
     "event_date_str": "the 3rd century CE",
     "enhanced_event_date_str": null,
     "main_entities": [
-        {{"name": "Byzantine Empire", "type": "location", "language": "en"}},
-        {{"name": "marriage ring", "type": "product", "language": "en"}}
+        {"name": "Byzantine Empire", "type": "location", "language": "en"},
+        {"name": "marriage ring", "type": "product", "language": "en"}
     ],
     "source_text_snippet": "The practice of a marriage ring in Byzantine Empire dates back to the 3rd century CE."
-  }},
-  {{
+  },
+  {
     "event_description": "SpaceX was founded by Elon Musk.",
     "event_date_str": "May 2002",
     "enhanced_event_date_str": null,
     "main_entities": [
-      {{"name": "Elon Musk", "type": "person", "language": "en"}},
-      {{"name": "SpaceX", "type": "organization", "language": "en"}}
+      {"name": "Elon Musk", "type": "person", "language": "en"},
+      {"name": "SpaceX", "type": "organization", "language": "en"}
     ],
     "source_text_snippet": "In early 2002, Musk started to look for staff for his new space company, and SpaceX was founded in May 2002."
-  }},
-  {{
-    "event_description": "Interest in bead crochet has revived as a hobbyist pastime.",
-    "event_date_str": "recent years",
-    "enhanced_event_date_str": "2010s-2020s",
-    "main_entities": [
-      {{"name": "bead crochet", "type": "craft", "language": "en"}},
-      {{"name": "hobbyist", "type": "group", "language": "en"}}
-    ],
-    "source_text_snippet": "Interest in bead crochet has revived somewhat in recent years as a hobbyist pastime."
-  }},
-  {{
-    "event_description": "The crew fired the engine achieving trajectory.",
-    "event_date_str": "137:39:13.7 (mission elapsed time from July 16, 1969, 13:32:00 UTC launch)",
-    "enhanced_event_date_str": null,
-    "main_entities": [
-      {{"name": "crew", "type": "group", "language": "en"}},
-      {{"name": "engine", "type": "equipment", "language": "en"}}
-    ],
-    "source_text_snippet": "The crew fired the engine achieving such a trajectory at 137:39:13.7."
-  }},
-  {{
-    "event_description": "The Apollo 13 mission was launched.",
-    "event_date_str": "2:13:00 pm EST (19:13:00 UTC) on April 11 (1970 from Apollo 13 mission context)",
-    "enhanced_event_date_str": null,
-    "main_entities": [
-      {{"name": "Apollo 13", "type": "mission", "language": "en"}},
-      {{"name": "NASA", "type": "organization", "language": "en"}}
-    ],
-    "source_text_snippet": "The mission was launched at the planned time, 2:13:00 pm EST (19:13:00 UTC) on April 11."
-  }},
-  {{
-    "event_description": "Luna 15 impacted on the lunar surface.",
-    "event_date_str": "15:50 UTC",
-    "enhanced_event_date_str": "July 21, 1969 (inferred from Apollo 11 mission context)",
-    "main_entities": [
-      {{"name": "Luna 15", "type": "spacecraft", "language": "en"}},
-      {{"name": "lunar surface", "type": "location", "language": "en"}}
-    ],
-    "source_text_snippet": "Luna 15 impacted at 15:50 UTC some hundred kilometers away from Apollo 11."
-  }}
+  }
 ]
 ```
 
@@ -201,34 +245,38 @@ Please output the results in **JSON format**, as a list of event objects. Do NOT
 Text: "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
 → This should be EXTRACTED as:
 ```json
-{
-  "event_description": "The San peoples tell of ǀKaggen stealing fire from the ostrich and bringing it to people.",
-  "event_date_str": "In African mythology",
-  "enhanced_event_date_str": null,
-  "main_entities": [
-    {"name": "San peoples", "type": "group", "language": "en"},
-    {"name": "ǀKaggen", "type": "mythological_figure", "language": "en"},
-    {"name": "ostrich", "type": "animal", "language": "en"}
-  ],
-  "source_text_snippet": "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
-}
+[
+  {
+    "event_description": "The San peoples tell of ǀKaggen stealing fire from the ostrich and bringing it to people.",
+    "event_date_str": "In African mythology",
+    "enhanced_event_date_str": null,
+    "main_entities": [
+      {"name": "San peoples", "type": "group", "language": "en"},
+      {"name": "ǀKaggen", "type": "mythological_figure", "language": "en"},
+      {"name": "ostrich", "type": "animal", "language": "en"}
+    ],
+    "source_text_snippet": "In African mythology, the San peoples tell of ǀKaggen, stealing fire from the ostrich and bringing it to people."
+  }
+]
 ```
 
 **EXAMPLE OF HANDLING PERSON NAME ABBREVIATIONS:**
 Text: "Li Xiaolai was a prominent figure in the early Bitcoin community in China. In 2013, Li founded the cryptocurrency venture capital Bitfund, specializing in angel investment in internet and Bitcoin-related fields."
 → This should be EXTRACTED as:
 ```json
-{
-  "event_description": "Li Xiaolai founded the cryptocurrency venture capital Bitfund.",
-  "event_date_str": "2013",
-  "enhanced_event_date_str": null,
-  "main_entities": [
-    {"name": "Li Xiaolai", "type": "person", "language": "en"},
-    {"name": "Bitfund", "type": "organization", "language": "en"},
-    {"name": "cryptocurrency", "type": "concept", "language": "en"}
-  ],
-  "source_text_snippet": "In 2013, Li founded the cryptocurrency venture capital Bitfund, specializing in angel investment in internet and Bitcoin-related fields."
-}
+[
+  {
+    "event_description": "Li Xiaolai founded the cryptocurrency venture capital Bitfund.",
+    "event_date_str": "2013",
+    "enhanced_event_date_str": null,
+    "main_entities": [
+      {"name": "Li Xiaolai", "type": "person", "language": "en"},
+      {"name": "Bitfund", "type": "organization", "language": "en"},
+      {"name": "cryptocurrency", "type": "concept", "language": "en"}
+    ],
+    "source_text_snippet": "In 2013, Li founded the cryptocurrency venture capital Bitfund, specializing in angel investment in internet and Bitcoin-related fields."
+  }
+]
 ```
 Note: Even though the second sentence only mentions "Li", we use "Li Xiaolai" because the full name is established in the earlier context.
 
@@ -236,17 +284,19 @@ Note: Even though the second sentence only mentions "Li", we use "Li Xiaolai" be
 Text (Chinese): "2009年1月3日，中本聪挖出了比特币的第一个区块，标志着比特币网络的正式启动。"
 → This should be EXTRACTED as:
 ```json
-{
-  "event_description": "Satoshi Nakamoto mined the first Bitcoin block, marking the official launch of the Bitcoin network.",
-  "event_date_str": "2009年1月3日",
-  "enhanced_event_date_str": null,
-  "main_entities": [
-    {"name": "Satoshi Nakamoto", "type": "person", "language": "en"},
-    {"name": "Bitcoin", "type": "cryptocurrency", "language": "en"},
-    {"name": "block", "type": "concept", "language": "en"}
-  ],
-  "source_text_snippet": "2009年1月3日，中本聪挖出了比特币的第一个区块，标志着比特币网络的正式启动。"
-}
+[
+  {
+    "event_description": "Satoshi Nakamoto mined the first Bitcoin block, marking the official launch of the Bitcoin network.",
+    "event_date_str": "2009年1月3日",
+    "enhanced_event_date_str": null,
+    "main_entities": [
+      {"name": "Satoshi Nakamoto", "type": "person", "language": "en"},
+      {"name": "Bitcoin", "type": "cryptocurrency", "language": "en"},
+      {"name": "block", "type": "concept", "language": "en"}
+    ],
+    "source_text_snippet": "2009年1月3日，中本聪挖出了比特币的第一个区块，标志着比特币网络的正式启动。"
+  }
+]
 ```
 Note: The event_description is in English (translated). For main_entities, globally recognized terms like "Bitcoin" and "Satoshi Nakamoto" use English names with language="en", while purely local entities would maintain their source language.
 
@@ -254,17 +304,19 @@ Note: The event_description is in English (translated). For main_entities, globa
 Text (Chinese): "2020年，杭州市政府与阿里巴巴合作推出了智慧城市项目。"
 → This should be EXTRACTED as:
 ```json
-{
-  "event_description": "Hangzhou municipal government collaborated with Alibaba to launch a smart city project.",
-  "event_date_str": "2020年",
-  "enhanced_event_date_str": null,
-  "main_entities": [
-    {"name": "杭州市政府", "type": "organization", "language": "zh"},
-    {"name": "Alibaba", "type": "organization", "language": "en"},
-    {"name": "智慧城市", "type": "concept", "language": "zh"}
-  ],
-  "source_text_snippet": "2020年，杭州市政府与阿里巴巴合作推出了智慧城市项目。"
-}
+[
+  {
+    "event_description": "Hangzhou municipal government collaborated with Alibaba to launch a smart city project.",
+    "event_date_str": "2020年",
+    "enhanced_event_date_str": null,
+    "main_entities": [
+      {"name": "杭州市政府", "type": "organization", "language": "zh"},
+      {"name": "Alibaba", "type": "organization", "language": "en"},
+      {"name": "智慧城市", "type": "concept", "language": "zh"}
+    ],
+    "source_text_snippet": "2020年，杭州市政府与阿里巴巴合作推出了智慧城市项目。"
+  }
+]
 ```
 Note: "Alibaba" is globally recognized so uses English, while "杭州市政府" (local government) and "智慧城市" (region-specific term) maintain Chinese.
 
@@ -280,11 +332,49 @@ Text: "The San peoples, the indigenous Southern African hunter-gatherers, tell h
 - "Africa" is only a geographical location, not a temporal expression
 - Even though this is about San peoples mythology, without the explicit cultural/temporal context ("In African mythology"), it lacks chronological meaning
 
-Ensure the output is a valid JSON. If no timeline-related historical events are found, please output an empty list [].
-"""
+**🚨 FINAL FORMAT CHECK 🚨**
+Before submitting your response, verify:
+1. ✅ Response starts with [
+2. ✅ Response ends with ]
+3. ✅ All events are objects within this single array
+4. ✅ No separate JSON objects outside the array
 
-DATE_PARSING_PROMPT = """
+Remember: Your final output must always be a valid JSON array, even if it contains only one event or is empty.
+"""
+)
+
+DATE_PARSING_PROMPT = (
+    """
 You are a master historian and data entry specialist. Your sole task is to analyze a single text string describing a date and convert it into a structured JSON object.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Input Analysis**: Examine the date string to identify its format, language, and temporal indicators
+2. **Date Type Classification**: Determine if it's a specific date, period, range, or cultural/mythological reference
+3. **Precision Assessment**: Evaluate the granularity level (day, month, year, century, era, etc.)
+4. **Era Determination**: Check for BCE/CE indicators or infer from historical context
+5. **Range Calculation**: For periods (centuries, eras), calculate appropriate start and end dates
+6. **Special Cases**: Handle seasons, cultural references, and geographic-only inputs appropriately
+7. **JSON Structure**: Format the results into the required schema
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON object output. Only provide the final JSON object after your thinking process.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON object (not an array). The format must be:
+```json
+{
+  "original_text": "...",
+  "display_text": "...",
+  "precision": "...",
+  "start_year": ...,
+  "start_month": ...,
+  "start_day": ...,
+  "end_year": ...,
+  "end_month": ...,
+  "end_day": ...,
+  "is_bce": ...
+}
+```
 
 **Output Schema:**
 Your output MUST be a single, valid JSON object that conforms to the following schema:
@@ -298,6 +388,21 @@ Your output MUST be a single, valid JSON object that conforms to the following s
 - `end_month`: The end month (1-12). (integer, optional)
 - `end_day`: The end day (1-31). (integer, optional)
 - `is_bce`: True if the date is in the BCE era. (boolean, required)
+
+**CRITICAL: Valid Precision Values Only**
+The `precision` field MUST be exactly one of these values: "day", "month", "year", "season", "decade", "century", "millennium", "era", "unknown".
+DO NOT use "range", "period", "span", or any other values not in this list.
+
+**Handling Date Ranges:**
+For date ranges (e.g., "September 2017 - June 2018", "2010-2015"), determine the most appropriate precision level:
+- If the range spans multiple years: use "year" precision
+- If the range spans multiple months within the same year: use "month" precision
+- If the range spans multiple days within the same month: use "day" precision
+- For very long ranges spanning decades or centuries: use "decade" or "century" precision accordingly
+
+"""
+    + JSON_FORMATTING_RULES
+    + """
 
 **Key Rules:**
 - For BCE/BC dates, `start_year` and `end_year` MUST be negative integers.
@@ -518,11 +623,69 @@ Output:
 }
 ```
 
+---
+**Example 11 (Date Range):**
+Input: "September 2017 - June 2018"
+Output:
+```json
+{
+  "original_text": "September 2017 - June 2018",
+  "display_text": "September 2017 to June 2018",
+  "precision": "year",
+  "start_year": 2017,
+  "start_month": 9,
+  "start_day": null,
+  "end_year": 2018,
+  "end_month": 6,
+  "end_day": null,
+  "is_bce": false
+}
+```
 
 """
+)
 
-DATE_PARSING_BATCH_PROMPT = """
+DATE_PARSING_BATCH_PROMPT = (
+    """
 You are a master historian and data entry specialist, functioning as a high-throughput data processing API. Your sole task is to analyze a JSON array of date description objects and return a JSON array with structured date information for each object.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Input Validation**: Verify the input is a valid JSON array with required id and date_str fields
+2. **Batch Processing**: For each object in the array, perform the same analysis as single date parsing
+3. **Individual Analysis**: For each date string, determine format, precision, era, and ranges
+4. **Consistency Check**: Ensure all outputs follow the same schema and formatting rules
+5. **Result Assembly**: Combine all parsed results into a single JSON array with matching IDs
+6. **Quality Assurance**: Verify completeness and accuracy of the batch results
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON array output. Only provide the final JSON array after your thinking process.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON array containing all parsed results. Each result is a JSON object within this array. The format must be:
+```json
+[
+  {
+    "id": "event_1",
+    "parsed_info": {
+      "original_text": "...",
+      "display_text": "...",
+      "precision": "...",
+      ...
+    }
+  },
+  {
+    "id": "event_2",
+    "parsed_info": {
+      "original_text": "...",
+      "display_text": "...",
+      "precision": "...",
+      ...
+    }
+  }
+]
+```
+
+DO NOT output multiple separate JSON objects. DO NOT output individual results outside of the array structure.
 
 **Input:**
 A JSON array of objects. Each object has a unique `id` and a `date_str` to be parsed.
@@ -538,6 +701,21 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
     - `start_year`, `start_month`, `start_day`: Integer fields. Negative for BCE. (integer, optional)
     - `end_year`, `end_month`, `end_day`: Integer fields. Required for periods. Negative for BCE. (integer, optional)
     - `is_bce`: True if the date is in the BCE era. (boolean, required)
+
+**CRITICAL: Valid Precision Values Only**
+The `precision` field MUST be exactly one of these values: "day", "month", "year", "season", "decade", "century", "millennium", "era", "unknown".
+DO NOT use "range", "period", "span", or any other values not in this list.
+
+**Handling Date Ranges:**
+For date ranges (e.g., "September 2017 - June 2018", "2010-2015"), determine the most appropriate precision level:
+- If the range spans multiple years: use "year" precision
+- If the range spans multiple months within the same year: use "month" precision
+- If the range spans multiple days within the same month: use "day" precision
+- For very long ranges spanning decades or centuries: use "decade" or "century" precision accordingly
+
+"""
+    + JSON_FORMATTING_RULES
+    + """
 
 **Key Rules:**
 - Process every object in the input array. The output array must have the same number of objects with matching `id`s.
@@ -594,6 +772,10 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
   {
     "id": "event_iota",
     "date_str": "Spring 2016"
+  },
+  {
+    "id": "event_kappa",
+    "date_str": "September 2017 - June 2018"
   }
 ]
 ```
@@ -699,10 +881,22 @@ Your output MUST be a single, valid JSON array. Each object in the array must co
       "end_year": 2016, "end_month": 5, "end_day": null,
       "is_bce": false
     }
+  },
+  {
+    "id": "event_kappa",
+    "parsed_info": {
+      "original_text": "September 2017 - June 2018",
+      "display_text": "September 2017 to June 2018",
+      "precision": "year",
+      "start_year": 2017, "start_month": 9, "start_day": null,
+      "end_year": 2018, "end_month": 6, "end_day": null,
+      "is_bce": false
+    }
   }
 ]
 ```
 """
+)
 
 # System prompt for semantic viewpoint enhancement
 VIEWPOINT_ENHANCEMENT_SYSTEM_PROMPT = """
@@ -744,8 +938,32 @@ If the text is "你好世界", you should respond with:
 zh
 """
 
-ARTICLE_RELEVANCE_PROMPT = """
+ARTICLE_RELEVANCE_PROMPT = (
+    """
 You are a highly intelligent relevance scoring expert. Your task is to evaluate a list of articles based on their relevance to a given user viewpoint topic for timeline construction purposes. Your response MUST be a single, valid JSON object and nothing else.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Viewpoint Analysis**: Understand the core topic, key entities, and scope of the user's research interest
+2. **Article Review**: For each article, analyze its title and content snippet to understand its main focus
+3. **Relevance Assessment**: Evaluate how directly each article relates to the viewpoint and its value for timeline construction
+4. **Scoring Calculation**: Assign numerical scores based on the established guidelines (0.0-1.0 scale)
+5. **Quality Check**: Ensure all articles have been scored and scores reflect their actual utility for the research topic
+6. **JSON Formatting**: Structure the results as a JSON object with article titles as keys and scores as values
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON object output. Only provide the final JSON object after your thinking process.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON object (not an array) with article titles as keys and relevance scores as values. The format must be:
+```json
+{{
+  "Article Title 1": 0.9,
+  "Article Title 2": 0.4,
+  "Article Title 3": 0.75
+}}
+```
+
+DO NOT output multiple separate JSON objects. DO NOT output individual scores outside of the object structure.
 
 I will provide you with a user's viewpoint and a list of articles, where each article has a 'title' and a 'content' snippet.
 
@@ -785,6 +1003,10 @@ For each article, assess how useful its content would be for creating a comprehe
 **Output Format:**
 Return a single JSON object where the keys are the exact article titles and the values are their corresponding relevance scores (float). Do NOT include any explanatory text or markdown formatting like ```json.
 
+"""
+    + JSON_FORMATTING_RULES
+    + """
+
 **Example Output:**
 ```json
 {{
@@ -794,12 +1016,38 @@ Return a single JSON object where the keys are the exact article titles and the 
 }}
 ```
 """
+)
 
-
-KEYWORD_EXTRACTION_SYSTEM_PROMPT = """
+KEYWORD_EXTRACTION_SYSTEM_PROMPT = (
+    """
 You are an expert multilingual research assistant and knowledge graph specialist. Your core task is to analyze a user's query to identify its primary subjects, and then **expand** upon them by providing closely related, highly relevant concepts. The goal is to generate a keyword list that is not only extracted from the query but also enriched with associated encyclopedic topics that would be essential for a comprehensive search.
 
 The final list of keywords should be highly likely to correspond to dedicated Wikipedia article titles.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Language Detection**: Identify the primary language of the user's query
+2. **Core Subject Identification**: Extract the main topics, entities, and concepts explicitly mentioned in the query
+3. **Conceptual Expansion**: For each core subject, identify closely related encyclopedic entities (people, organizations, events, concepts) that are crucial for understanding the topic
+4. **Relevance Filtering**: Ensure all keywords are specific entities rather than generic categories
+5. **Translation Mapping**: Create accurate English translations for all keywords that correspond to plausible Wikipedia article titles
+6. **Viewpoint Translation**: Provide a complete, natural English translation of the entire query
+7. **JSON Structure**: Format the results into the required four-field JSON object
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON object output. Only provide the final JSON object after your thinking process.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON object (not an array) with four specific keys. The format must be:
+```json
+{
+  "detected_language": "...",
+  "original_keywords": [...],
+  "english_keywords": [...],
+  "translated_viewpoint": "..."
+}
+```
+
+DO NOT output multiple separate JSON objects. The output must be exactly one JSON object with these four keys.
 
 Your response MUST be a valid JSON object containing four keys: "detected_language", "original_keywords", "english_keywords", and "translated_viewpoint".
 
@@ -807,6 +1055,10 @@ Your response MUST be a valid JSON object containing four keys: "detected_langua
 2.  **`original_keywords`**: A list of the core subjects from the query, in their original language. This list should include both explicitly mentioned subjects and closely related, essential concepts.
 3.  **`english_keywords`**: A list of the **English translations** for each corresponding keyword. These should be plausible titles for articles on the **English Wikipedia**.
 4.  **`translated_viewpoint`**: A complete, natural English translation of the user's entire query/viewpoint. For queries already in English, this field should contain the original query.
+
+"""
+    + JSON_FORMATTING_RULES
+    + """
 
 **Crucial Rules for Keyword Generation**:
 - **Identify and Expand**: First, identify the core subject(s) in the query. Then, add a few closely related but distinct encyclopedic entities (e.g., people, organizations, precursor events, related concepts) that are crucial for understanding the topic. This helps users who may not know all the relevant terms.
@@ -858,6 +1110,7 @@ Expected JSON Output:
 
 **IMPORTANT**: Pay attention to any additional extraction strategy instructions that follow this prompt. Adjust your keyword selection and expansion approach according to the specified strategy (focused, balanced, or comprehensive).
 """
+)
 
 # System prompt for single event relevance evaluation
 EVENT_RELEVANCE_SYSTEM_PROMPT = """
@@ -900,6 +1153,29 @@ EVENT_RELEVANCE_BATCH_SYSTEM_PROMPT = """
 You are an expert analyst specializing in evaluating the relevance of historical events to specific research topics or viewpoints for chronicle timeline construction.
 
 Your task is to determine how relevant a list of historical events is to a user's research viewpoint.
+
+**REASONING PROCESS (Chain of Thought)**
+Before generating your final JSON output, perform a step-by-step analysis within `<thinking>` tags:
+1. **Viewpoint Analysis**: Understand the core research topic and its key themes, entities, and scope
+2. **Event Review**: For each event in the list, analyze its content and main elements
+3. **Relevance Evaluation**: Apply the scoring criteria consistently to each event
+4. **Score Assignment**: Assign numerical scores (0.0-1.0) based on connection strength to the viewpoint
+5. **Index Mapping**: Ensure each score is correctly mapped to its corresponding event index
+6. **JSON Formatting**: Structure results as a JSON array with event_index and relevance_score pairs
+
+The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON array output. Only provide the final JSON array after your thinking process.
+
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+Your final output MUST be a single JSON array containing all relevance evaluations. Each evaluation is a JSON object within this array. The format must be:
+```json
+[
+  {"event_index": 1, "relevance_score": 0.8},
+  {"event_index": 2, "relevance_score": 1.0},
+  {"event_index": 3, "relevance_score": 0.1}
+]
+```
+
+DO NOT output multiple separate JSON objects. DO NOT output individual evaluations outside of the array structure.
 
 You will be provided with:
 1. The user's original viewpoint/research topic.
