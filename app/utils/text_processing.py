@@ -13,9 +13,7 @@ from app.utils.logger import setup_logger
 logger = setup_logger("text_processing", level="DEBUG")
 
 
-def split_text_into_chunks(
-    text: str, chunk_size: int = 5000, overlap: int = 200
-) -> list[str]:
+def split_text_into_chunks(text, chunk_size=5000, overlap=200):
     """
     Split text into chunks based on natural boundaries with overlap.
 
@@ -23,6 +21,7 @@ def split_text_into_chunks(
     1. Respecting paragraph and sentence boundaries
     2. Maintaining semantic coherence
     3. Creating overlap between chunks to prevent event loss
+    4. Preventing infinite loops through simple progress validation
 
     Args:
         text: The input text to be split
@@ -51,6 +50,14 @@ def split_text_into_chunks(
         )
         overlap = chunk_size // 2
 
+    if overlap < 100:
+        logger.warning(f"overlap ({overlap}) is < 100. Increasing overlap to 100")
+        overlap = 100
+
+    if overlap > 1000:
+        logger.warning(f"overlap ({overlap}) is > 1000. Reducing overlap to 1000")
+        overlap = 1000
+
     text = text.strip()
     text_length = len(text)
 
@@ -70,95 +77,46 @@ def split_text_into_chunks(
 
     # If no paragraph breaks found, split by sentences
     if len(paragraphs) == 1:
-        # Split by sentence endings (., !, ?) followed by whitespace
-        sentences = re.split(r"[.!?]+\s+", text)
-        text_units = sentences
-        logger.debug(
-            f"No paragraph breaks found, using {len(sentences)} sentences as units"
-        )
+        text_units = re.split(r"[.!?]+\s+", text)
     else:
         text_units = paragraphs
-        logger.debug(f"Found {len(paragraphs)} paragraphs as text units")
+
+    processed_units = []
+    for unit in text_units:
+        unit = unit.strip()
+        if not unit:
+            continue
+        if len(unit) > chunk_size:
+            pieces = [unit[i : i + chunk_size] for i in range(0, len(unit), chunk_size)]
+            processed_units.extend(pieces)
+        else:
+            processed_units.append(unit)
 
     chunks = []
     current_chunk = ""
-    current_length = 0
 
-    i = 0
-    while i < len(text_units):
-        unit = text_units[i].strip()
-        unit_length = len(unit)
-
-        # Handle units that are larger than chunk_size
-        if unit_length > chunk_size:
-            # If there's a current chunk, finalize it first
-            if current_chunk:
-                chunks.append(current_chunk.strip())
-                logger.debug(
-                    f"Created chunk {len(chunks)} with length {len(current_chunk)}"
-                )
-                current_chunk = ""
-                current_length = 0
-
-            # Add the oversized unit as its own chunk
-            chunks.append(unit)
-            logger.warning(
-                f"Created oversized chunk {len(chunks)} with length {unit_length} (exceeds chunk_size {chunk_size})"
-            )
-
-            # Start next chunk with overlap from the oversized unit
-            if overlap > 0:
-                overlap_text = unit[-overlap:].strip()
-                current_chunk = overlap_text
-                current_length = len(overlap_text)
-                logger.debug(
-                    f"Started new chunk with overlap text of length {current_length}"
-                )
-            else:
-                current_chunk = ""
-                current_length = 0
-
-            i += 1
-            continue
-
-        # If adding this unit would exceed chunk_size, finalize current chunk
-        if current_length + unit_length > chunk_size and current_chunk:
-            chunks.append(current_chunk.strip())
-            logger.debug(
-                f"Created chunk {len(chunks)} with length {len(current_chunk)}"
-            )
-
-            # Start new chunk with overlap
-            if overlap > 0 and current_chunk:
-                # Take the last 'overlap' characters from current chunk
-                overlap_text = current_chunk[-overlap:].strip()
-                current_chunk = overlap_text
-                current_length = len(overlap_text)
-            else:
-                current_chunk = ""
-                current_length = 0
-
-            # Don't increment i, try to add the same unit to the new chunk
-            continue
-
-        # Add unit to current chunk
-        if current_chunk:
-            current_chunk += "\n\n" + unit
-            current_length += 2 + unit_length  # Account for the newlines
-        else:
-            current_chunk = unit
-            current_length = unit_length
-
-        i += 1
-
-    # Add the final chunk if it has content
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
+    for i, unit in enumerate(processed_units):
         logger.debug(
-            f"Created final chunk {len(chunks)} with length {len(current_chunk)}"
+            f"Processing unit {i} of {len(processed_units)}; current_chunk: {len(current_chunk)}"
         )
+        if len(current_chunk) == 0:
+            current_chunk = unit
+        if len(current_chunk) + 2 + len(unit) <= chunk_size:
+            current_chunk += "\n\n" + unit
+        else:
+            chunks.append(current_chunk)
 
-    logger.info(f"Text splitting complete: created {len(chunks)} chunks")
+            if len(current_chunk) <= overlap + 200:
+                overlap = max(overlap // 2, 100)
+                logger.warning(f"Reducing overlap to {overlap}")
+
+            if len(current_chunk) > overlap:
+                current_chunk = current_chunk[-overlap:] + "\n\n" + unit
+            else:
+                current_chunk = unit
+
+    if current_chunk:
+        chunks.append(current_chunk)
 
     # Log chunk size distribution for debugging
     chunk_sizes = [len(chunk) for chunk in chunks]
