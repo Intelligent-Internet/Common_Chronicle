@@ -9,6 +9,7 @@ Event.
 """
 
 from sqlalchemy import Column, ForeignKey, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 
 from app.models.base import SCHEMA_NAME, Base, TimestampMixin, UUIDMixin
@@ -31,12 +32,14 @@ class RawEventEntityAssociation(Base, UUIDMixin, TimestampMixin):
     )
 
     raw_event_id = Column(
+        PG_UUID(as_uuid=True),
         ForeignKey(f"{SCHEMA_NAME}.raw_events.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         doc="The ID of the associated raw event.",
     )
     entity_id = Column(
+        PG_UUID(as_uuid=True),
         ForeignKey(f"{SCHEMA_NAME}.entities.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
