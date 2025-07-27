@@ -5,7 +5,8 @@ Your task is to identify and extract all timeline-related historical events from
 
 For each event, please extract the following information:
 
-1.  **event_description**: Required. A brief description of the event.
+1.  **event_description**: Required. A brief description of the event. **IMPORTANT: Always provide the event description in English, regardless of the source text language.** If the source text is in a non-English language, translate the event description to English while maintaining accuracy and context.
+
 2.  **event_date_str**: Required. The original, verbatim text from the source that describes the date of the event. This is crucial for preserving context. Examples: "the 3rd century CE", "since the time of the Roman Empire", "In early 2002", "May 6, 2002", "recent years", "within a few years".
 
    **CRITICAL REQUIREMENTS FOR event_date_str:**
@@ -55,14 +56,30 @@ For each event, please extract the following information:
 
 4.  **main_entities**: Required. Identify the key entities (people, organizations, locations, etc.) involved. This field must not be empty. Each entity must contain a "name", a "language" (e.g., "en", "zh", "ja"), and a "type" (e.g., person, organization, location).
 
-   **CRITICAL ENTITY NAMING RULES:**
-   - The entity "name" MUST match the language of the source text
-   - If the source text is in Chinese, use Chinese names (e.g., "北京" not "Beijing")
-   - If the source text is in English, use English names (e.g., "Beijing" not "北京")
-   - The "language" field should match the language of the source text
-   - Extract entity names exactly as they appear in the source text whenever possible
-   - If an entity name appears in the source text, use that exact form
-   - If an entity is referenced but not explicitly named in the source, use the appropriate language version based on the source text language
+   **INTELLIGENT ENTITY NAMING RULES:**
+
+   **For Globally Significant Entities - Use English Names:**
+   - **International organizations**: NASA, WHO, UN, FIFA, etc.
+   - **Global companies/brands**: Apple, Tesla, Google, Microsoft, etc.
+   - **Cryptocurrencies**: Bitcoin, Ethereum, etc. (not 比特币, 以太坊)
+   - **Global technology concepts**: Internet, Blockchain, AI, etc.
+   - **International standards**: HTTP, TCP/IP, ISO standards, etc.
+   - **Global products/services**: iPhone, Android, Windows, etc.
+   - **Internationally recognized scientific terms**: DNA, COVID-19, etc.
+   - **Global historical events/periods**: World War II, Cold War, etc.
+
+   **For Regional/Cultural Entities - Use Source Text Language:**
+   - **Regional personalities**: Local business leaders, regional politicians, cultural figures
+   - **Local organizations**: Regional universities, local governments, cultural institutions
+   - **Culture-specific concepts**: Traditional practices, local customs, regional terminology
+   - **Geographic locations**: Use source language unless internationally standardized (e.g., Beijing vs 北京 depends on context)
+   - **Regional brands/companies**: Companies primarily known in specific regions
+
+   **Decision Guidelines:**
+   - If an entity has a widely recognized, standardized English name used globally, prefer the English version
+   - If an entity is primarily known within a specific cultural/linguistic context, use the source language
+   - When in doubt, consider: "Would international media typically use the English name or the local name?"
+   - The "language" field should reflect the language of the chosen name (e.g., "en" for English names, "zh" for Chinese names)
 
    **SPECIAL HANDLING FOR PERSON NAMES AND ABBREVIATIONS:**
    - When encountering person names that appear to be shortened forms, abbreviations, or incomplete names (e.g., "Li", "Zhang", "Smith"), analyze the entire text context to determine if a more complete name can be inferred
@@ -214,6 +231,42 @@ Text: "Li Xiaolai was a prominent figure in the early Bitcoin community in China
 }
 ```
 Note: Even though the second sentence only mentions "Li", we use "Li Xiaolai" because the full name is established in the earlier context.
+
+**EXAMPLE OF HANDLING NON-ENGLISH SOURCE TEXT WITH INTELLIGENT ENTITY NAMING:**
+Text (Chinese): "2009年1月3日，中本聪挖出了比特币的第一个区块，标志着比特币网络的正式启动。"
+→ This should be EXTRACTED as:
+```json
+{
+  "event_description": "Satoshi Nakamoto mined the first Bitcoin block, marking the official launch of the Bitcoin network.",
+  "event_date_str": "2009年1月3日",
+  "enhanced_event_date_str": null,
+  "main_entities": [
+    {"name": "Satoshi Nakamoto", "type": "person", "language": "en"},
+    {"name": "Bitcoin", "type": "cryptocurrency", "language": "en"},
+    {"name": "block", "type": "concept", "language": "en"}
+  ],
+  "source_text_snippet": "2009年1月3日，中本聪挖出了比特币的第一个区块，标志着比特币网络的正式启动。"
+}
+```
+Note: The event_description is in English (translated). For main_entities, globally recognized terms like "Bitcoin" and "Satoshi Nakamoto" use English names with language="en", while purely local entities would maintain their source language.
+
+**EXAMPLE OF REGIONAL ENTITIES MAINTAINING SOURCE LANGUAGE:**
+Text (Chinese): "2020年，杭州市政府与阿里巴巴合作推出了智慧城市项目。"
+→ This should be EXTRACTED as:
+```json
+{
+  "event_description": "Hangzhou municipal government collaborated with Alibaba to launch a smart city project.",
+  "event_date_str": "2020年",
+  "enhanced_event_date_str": null,
+  "main_entities": [
+    {"name": "杭州市政府", "type": "organization", "language": "zh"},
+    {"name": "Alibaba", "type": "organization", "language": "en"},
+    {"name": "智慧城市", "type": "concept", "language": "zh"}
+  ],
+  "source_text_snippet": "2020年，杭州市政府与阿里巴巴合作推出了智慧城市项目。"
+}
+```
+Note: "Alibaba" is globally recognized so uses English, while "杭州市政府" (local government) and "智慧城市" (region-specific term) maintain Chinese.
 
 **EXAMPLES OF EVENTS TO EXCLUDE:**
 Text: "In British Columbia, there was an increase in the intensity and scale of wildfires after local bylaws restricted the use of controlled burns."
