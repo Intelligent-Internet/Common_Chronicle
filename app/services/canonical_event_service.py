@@ -16,6 +16,7 @@ Key features:
 from __future__ import annotations
 
 import time
+import uuid
 
 import numpy as np
 from sqlalchemy import select
@@ -220,22 +221,36 @@ class CanonicalEventService:
             f"Processing RawEvent {raw_event.id}: '{raw_event.original_description[:100]}...'"
         )
 
-        # 1. Load entity associations with proper eager loading to avoid lazy loading
-        from sqlalchemy.orm import selectinload
+        # 1. Load entity associations using separate queries to avoid selectinload UUID sorting issues
 
-        stmt = (
-            select(RawEventEntityAssociation)
-            .join(Entity)  # Inner join to ensure entity exists
-            .where(RawEventEntityAssociation.raw_event_id == raw_event.id)
-            .options(selectinload(RawEventEntityAssociation.entity))
+        # Ensure raw_event.id is properly typed as UUID
+        raw_event_uuid = raw_event.id
+        if isinstance(raw_event_uuid, str):
+            raw_event_uuid = uuid.UUID(raw_event_uuid)
+
+        # First, get the association records
+        assoc_stmt = select(RawEventEntityAssociation).where(
+            RawEventEntityAssociation.raw_event_id == raw_event_uuid
         )
-        result = await db.execute(stmt)
-        entity_associations = result.scalars().all()
+        assoc_result = await db.execute(assoc_stmt)
+        entity_associations = assoc_result.scalars().all()
 
-        # Extract entities from the associations
-        actual_entities = [
-            assoc.entity for assoc in entity_associations if assoc.entity is not None
-        ]
+        # Then, get the entities separately if associations exist
+        actual_entities = []
+        if entity_associations:
+            entity_ids = [assoc.entity_id for assoc in entity_associations]
+            entity_stmt = select(Entity).where(Entity.id.in_(entity_ids))
+            entity_result = await db.execute(entity_stmt)
+            entities_by_id = {
+                entity.id: entity for entity in entity_result.scalars().all()
+            }
+
+            # Match entities back to associations
+            actual_entities = [
+                entities_by_id[assoc.entity_id]
+                for assoc in entity_associations
+                if assoc.entity_id in entities_by_id
+            ]
 
         logger.debug(
             f"Loaded {len(actual_entities)} valid entities for RawEvent {raw_event.id}"

@@ -48,7 +48,9 @@ class RawEventEntityAssociation(Base, UUIDMixin, TimestampMixin):
 
     # Relationships
     raw_event = relationship("RawEvent", back_populates="entity_associations")
-    entity = relationship("Entity", back_populates="raw_event_associations")
+    entity = relationship(
+        "Entity", back_populates="raw_event_associations", foreign_keys=[entity_id]
+    )
 
     def __repr__(self) -> str:
         return f"<RawEventEntityAssociation(raw_event_id='{self.raw_event_id}', entity_id='{self.entity_id}')>"
