@@ -379,6 +379,7 @@ class TimelineOrchestratorService:
                     request_id,
                     progress_callback,
                     db=db,
+                    translated_viewpoint_text=keyword_result.translated_viewpoint,
                 )
 
                 # Pipeline Stage 6: Intelligent event merging and deduplication
@@ -799,6 +800,7 @@ class TimelineOrchestratorService:
         request_id: str,
         progress_callback: ProgressCallback | None,
         db: AsyncSession,
+        translated_viewpoint_text: str | None = None,
     ) -> dict[uuid.UUID, float]:
         """Filter extracted events by relevance to viewpoint text and return event IDs with their relevance scores."""
         if progress_callback:
@@ -833,11 +835,13 @@ class TimelineOrchestratorService:
         # logger.info(f"event_data_list: {event_data_list}")
 
         # Filter events by relevance
+        # Use translated viewpoint text if available, otherwise fall back to original
+        effective_viewpoint_text = translated_viewpoint_text or viewpoint_text
         (
             relevant_event_data_list,
             stats,
         ) = await self.relevance_service.filter_relevant_events(
-            event_data_list, viewpoint_text, request_id
+            event_data_list, effective_viewpoint_text, request_id
         )
 
         # Create a mapping of event IDs to their relevance scores
