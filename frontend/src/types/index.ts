@@ -246,9 +246,71 @@ export interface TaskFormData {
   topic_text: string;
   data_source_pref: string;
   is_public?: boolean;
+  // New advanced configuration
+  advanced_config?: {
+    article_limit?: number;
+    timeline_relevance_threshold?: number;
+    reuse_composite_viewpoint?: boolean;
+    reuse_base_viewpoint?: boolean;
+    search_mode?: 'semantic' | 'hybrid_title_search';
+    vector_weight?: number;
+    bm25_weight?: number;
+  };
 }
 
 // --- START: API Data Structure Types ---
+
+// New interface for task configuration options from backend
+export interface TaskConfigOptions {
+  search_mode: {
+    type: 'select';
+    options: string[];
+    default: string;
+    description: string;
+  };
+  vector_weight: {
+    type: 'number';
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+    description: string;
+  };
+  bm25_weight: {
+    type: 'number';
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+    description: string;
+  };
+  article_limit: {
+    type: 'number';
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+    description: string;
+  };
+  timeline_relevance_threshold: {
+    type: 'number';
+    min: number;
+    max: number;
+    step: number;
+    default: number;
+    description: string;
+  };
+  reuse_composite_viewpoint: {
+    type: 'boolean';
+    default: boolean;
+    description: string;
+  };
+  reuse_base_viewpoint: {
+    type: 'boolean';
+    default: boolean;
+    description: string;
+  };
+}
 
 export interface UserInfo {
   id: string;
@@ -269,6 +331,14 @@ export interface BackendTaskRecord {
   processing_duration: number | null;
   config: {
     data_source_preference?: string;
+    // Extended configuration options
+    article_limit?: number;
+    timeline_relevance_threshold?: number;
+    reuse_composite_viewpoint?: boolean;
+    reuse_base_viewpoint?: boolean;
+    search_mode?: string;
+    vector_weight?: number;
+    bm25_weight?: number;
   } | null;
   notes: string | null;
   created_at: string; // ISO date string
@@ -306,6 +376,14 @@ export interface CreateTaskPayload {
   topic_text?: string;
   config?: {
     data_source_preference?: string;
+    // New advanced configuration parameters
+    article_limit?: number;
+    timeline_relevance_threshold?: number;
+    reuse_composite_viewpoint?: boolean;
+    reuse_base_viewpoint?: boolean;
+    search_mode?: 'semantic' | 'hybrid_title_search';
+    vector_weight?: number;
+    bm25_weight?: number;
   };
   is_public?: boolean;
 }

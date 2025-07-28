@@ -302,6 +302,7 @@ class ViewpointService:
         data_source_preference: str,
         request_id: str | None = None,
         progress_callback: ProgressCallback | None = None,
+        task_config=None,  # ArticleAcquisitionConfig | None = None, but avoid circular import
         db: AsyncSession = None,
     ) -> list[str]:
         log_prefix = f"[RequestID: {request_id}] " if request_id else ""
@@ -317,10 +318,14 @@ class ViewpointService:
         )
 
         # 2. Check if already processed (and if reuse is enabled)
-        if (
-            settings.reuse_base_viewpoint
-            and source_document.processing_status == "completed"
-        ):
+        # Use task-level reuse setting if available, otherwise fall back to global setting
+        should_reuse = (
+            task_config.reuse_base_viewpoint
+            if task_config and hasattr(task_config, "reuse_base_viewpoint")
+            else settings.reuse_base_viewpoint
+        )
+
+        if should_reuse and source_document.processing_status == "completed":
             event_ids = await self.viewpoint_db_handler.get_viewpoint_related_event_ids(
                 canonical_source_id=source_document.id,
                 db=db,

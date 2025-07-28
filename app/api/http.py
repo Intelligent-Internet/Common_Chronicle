@@ -23,6 +23,7 @@ from app.schemas import (
     CreateDocumentCanonicalTaskRequest,
     CreateEntityCanonicalTaskRequest,
     CreateTaskRequest,
+    TaskConfigOptions,
     TaskResponse,
     TaskResultDetailResponse,
     UpdateTaskSharingRequest,
@@ -38,6 +39,17 @@ router = APIRouter(prefix="/api")
 async def read_root():
     """API health check endpoint."""
     return {"message": "Timeline Project API is running!"}
+
+
+@router.get("/config/task-options", response_model=TaskConfigOptions)
+async def get_task_config_options():
+    """
+    Get available task configuration options with their constraints and defaults.
+
+    This endpoint provides frontend applications with the information needed to build
+    dynamic configuration forms, including parameter types, valid ranges, and default values.
+    """
+    return TaskConfigOptions()
 
 
 @router.post("/tasks/", response_model=TaskResponse)
@@ -73,9 +85,19 @@ async def create_task(
             if ds_from_config.lower() != "none":
                 data_source_preference = ds_from_config
 
-        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
+        # Parse task configuration to get reuse preferences
+        task_config_dict = task_data.config or {}
+        try:
+            from app.schemas import ArticleAcquisitionConfig
 
-        if settings.reuse_composite_viewpoint:
+            task_config = ArticleAcquisitionConfig.model_validate(task_config_dict)
+            should_reuse = task_config.reuse_composite_viewpoint
+        except Exception as e:
+            logger.warning(f"Failed to parse task config, using global setting: {e}")
+            should_reuse = settings.reuse_composite_viewpoint
+
+        # Check for reusable task if reuse is enabled (task-level or global setting)
+        if should_reuse:
             reusable_task = await task_db_handler.find_reusable_completed_task(
                 topic=task_data.topic_text.strip(),
                 data_source_preference=data_source_preference,
@@ -85,7 +107,7 @@ async def create_task(
 
             if reusable_task:
                 logger.info(
-                    f"Reusing existing completed task {reusable_task.id} for topic: '{task_data.topic_text[:50]}...' by {log_piece}"
+                    f"Reusing existing completed task {reusable_task.id} for topic: '{task_data.topic_text[:50]}...' by {log_piece} (reuse_composite_viewpoint={should_reuse})"
                 )
                 return TaskResponse.model_validate(reusable_task.to_dict())
 
@@ -160,8 +182,19 @@ async def create_entity_canonical_task(
         # Construct topic for entity canonical task (matches timeline_orchestrator.py logic)
         entity_topic = f"Entity Timeline: {entity.entity_name}"
 
-        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
-        if settings.reuse_composite_viewpoint:
+        # Parse task configuration to get reuse preferences
+        task_config_dict = task_data.config or {}
+        try:
+            from app.schemas import ArticleAcquisitionConfig
+
+            task_config = ArticleAcquisitionConfig.model_validate(task_config_dict)
+            should_reuse = task_config.reuse_composite_viewpoint
+        except Exception as e:
+            logger.warning(f"Failed to parse task config, using global setting: {e}")
+            should_reuse = settings.reuse_composite_viewpoint
+
+        # Check for reusable task if reuse is enabled (task-level or global setting)
+        if should_reuse:
             reusable_task = await task_db_handler.find_reusable_completed_task(
                 topic=entity_topic,
                 data_source_preference=data_source_preference,
@@ -171,7 +204,7 @@ async def create_entity_canonical_task(
 
             if reusable_task:
                 logger.info(
-                    f"Reusing existing completed entity canonical task {reusable_task.id} for entity {entity_id} ({entity.entity_name}) by {log_piece}"
+                    f"Reusing existing completed entity canonical task {reusable_task.id} for entity {entity_id} ({entity.entity_name}) by {log_piece} (reuse_composite_viewpoint={should_reuse})"
                 )
                 return TaskResponse.model_validate(reusable_task.to_dict())
 
@@ -252,8 +285,19 @@ async def create_document_canonical_task(
         # Construct topic for document canonical task (matches timeline_orchestrator.py logic)
         document_topic = f"Document Timeline: {source_document.title}"
 
-        # Check for reusable task if REUSE_COMPOSITE_VIEWPOINT is enabled
-        if settings.reuse_composite_viewpoint:
+        # Parse task configuration to get reuse preferences
+        task_config_dict = task_data.config or {}
+        try:
+            from app.schemas import ArticleAcquisitionConfig
+
+            task_config = ArticleAcquisitionConfig.model_validate(task_config_dict)
+            should_reuse = task_config.reuse_composite_viewpoint
+        except Exception as e:
+            logger.warning(f"Failed to parse task config, using global setting: {e}")
+            should_reuse = settings.reuse_composite_viewpoint
+
+        # Check for reusable task if reuse is enabled (task-level or global setting)
+        if should_reuse:
             reusable_task = await task_db_handler.find_reusable_completed_task(
                 topic=document_topic,
                 data_source_preference=data_source_preference,
@@ -263,7 +307,7 @@ async def create_document_canonical_task(
 
             if reusable_task:
                 logger.info(
-                    f"Reusing existing completed document canonical task {reusable_task.id} for document {source_document_id} ({source_document.title}) by {log_piece}"
+                    f"Reusing existing completed document canonical task {reusable_task.id} for document {source_document_id} ({source_document.title}) by {log_piece} (reuse_composite_viewpoint={should_reuse})"
                 )
                 return TaskResponse.model_validate(reusable_task.to_dict())
 

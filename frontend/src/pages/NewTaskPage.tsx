@@ -24,6 +24,16 @@ const NewTaskPage: React.FC = () => {
         topic_text: formData.topic_text,
         config: {
           data_source_preference: formData.data_source_pref,
+          // Include advanced configuration parameters if provided
+          ...(formData.advanced_config && {
+            article_limit: formData.advanced_config.article_limit,
+            timeline_relevance_threshold: formData.advanced_config.timeline_relevance_threshold,
+            reuse_composite_viewpoint: formData.advanced_config.reuse_composite_viewpoint,
+            reuse_base_viewpoint: formData.advanced_config.reuse_base_viewpoint,
+            search_mode: formData.advanced_config.search_mode,
+            vector_weight: formData.advanced_config.vector_weight,
+            bm25_weight: formData.advanced_config.bm25_weight,
+          }),
         },
         is_public: formData.is_public,
       });

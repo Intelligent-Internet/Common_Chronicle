@@ -5,13 +5,26 @@ import type { CreateTaskPayload, BackendTaskRecord } from '../types';
  * Creates a canonical task and opens it in a new tab
  * @param type - Task type ('entity' or 'document')
  * @param id - Entity ID or Source Document ID
- * @param options - Optional configuration
+ * @param options - Optional configuration including advanced config
  * @returns Promise<BackendTaskRecord>
  */
 export const createAndOpenCanonicalTask = async (
   type: 'entity' | 'document',
   id: string,
-  options?: { config?: Record<string, unknown>; is_public?: boolean }
+  options?: {
+    config?: {
+      data_source_preference?: string;
+      // Advanced configuration parameters
+      article_limit?: number;
+      timeline_relevance_threshold?: number;
+      reuse_composite_viewpoint?: boolean;
+      reuse_base_viewpoint?: boolean;
+      search_mode?: 'semantic' | 'hybrid_title_search';
+      vector_weight?: number;
+      bm25_weight?: number;
+    };
+    is_public?: boolean;
+  }
 ): Promise<BackendTaskRecord> => {
   // Open new tab immediately to avoid popup blockers
   const newTab = window.open('', '_blank');

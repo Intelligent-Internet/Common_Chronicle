@@ -342,12 +342,18 @@ class TimelineOrchestratorService:
 
             # Pipeline Stage 3: Article relevance scoring and filtering
             # Filters articles based on relevance to the viewpoint using LLM scoring
+            # Use task-level timeline_relevance_threshold if available, otherwise fall back to settings
+            task_relevance_threshold = (
+                task_config.timeline_relevance_threshold
+                if task_config
+                else settings.timeline_relevance_threshold
+            )
             relevant_articles = await self._filter_articles_by_relevance(
                 articles,
                 viewpoint_text,
                 request_id,
                 progress_callback,
-                relevance_threshold=settings.event_merger_relevance_threshold,
+                relevance_threshold=task_relevance_threshold,
                 article_limit=task_config.article_limit if task_config else None,
             )
             if not relevant_articles:
@@ -364,7 +370,11 @@ class TimelineOrchestratorService:
             # Processes articles to extract events and create canonical viewpoints
             # Child services manage their own atomic transactions for each article
             all_canonical_event_ids = await self._get_canonical_events(
-                relevant_articles, data_source_preference, request_id, progress_callback
+                relevant_articles,
+                data_source_preference,
+                request_id,
+                progress_callback,
+                task_config,
             )
 
             # Pipeline Stage 5-7: Database transaction for final processing
@@ -680,6 +690,7 @@ class TimelineOrchestratorService:
         data_source_preference: str,
         request_id: str,
         progress_callback: ProgressCallback | None = None,
+        task_config: ArticleAcquisitionConfig | None = None,
         *,
         db: AsyncSession = None,
     ) -> list[uuid.UUID]:
@@ -713,6 +724,7 @@ class TimelineOrchestratorService:
                         data_source_preference=data_source_preference,
                         request_id=request_id,
                         progress_callback=progress_callback,
+                        task_config=task_config,
                         db=db,
                     )
                 )
@@ -1074,6 +1086,7 @@ class TimelineOrchestratorService:
         *,
         db: AsyncSession = None,
         viewpoint_text_override: str | None = None,
+        task_config: ArticleAcquisitionConfig | None = None,
     ) -> tuple[uuid.UUID | None, bool]:
         """Ensure viewpoint exists for task, reusing completed viewpoints when possible."""
         # Re-attach the detached task object to the current session
@@ -1083,7 +1096,14 @@ class TimelineOrchestratorService:
 
         viewpoint_text = viewpoint_text_override or task.topic_text.strip()
 
-        if settings.reuse_composite_viewpoint:
+        # Use task-level reuse setting if available, otherwise fall back to global setting
+        should_reuse = (
+            task_config.reuse_composite_viewpoint
+            if task_config
+            else settings.reuse_composite_viewpoint
+        )
+
+        if should_reuse:
             # First, check if there's an existing completed viewpoint
             existing_viewpoint = await self.viewpoint_handler.get_by_attributes(
                 topic=viewpoint_text,
@@ -1094,7 +1114,7 @@ class TimelineOrchestratorService:
 
             if existing_viewpoint:
                 logger.info(
-                    f"[RequestID: {request_id}] Found existing completed viewpoint {existing_viewpoint.id} for task {task.id}"
+                    f"[RequestID: {request_id}] Found existing completed viewpoint {existing_viewpoint.id} for task {task.id} (reuse_composite_viewpoint={should_reuse})"
                 )
                 # Update task with existing viewpoint_id
                 task.viewpoint_id = existing_viewpoint.id
@@ -1382,6 +1402,7 @@ class TimelineOrchestratorService:
             data_source_preference=effective_data_source,
             request_id=request_id,
             viewpoint_text_override=viewpoint_text,
+            task_config=task_config,
         )
 
         if not viewpoint_id:
@@ -1431,6 +1452,7 @@ class TimelineOrchestratorService:
                     skip_relevance_filtering=skip_relevance_filtering,
                     progress_callback=progress_callback,
                     request_id=request_id,
+                    task_config=task_config,
                     keywords_extracted_override=keywords_extracted_override,
                     articles_processed_override=articles_processed_override,
                 )
@@ -1455,6 +1477,7 @@ class TimelineOrchestratorService:
         skip_relevance_filtering: bool,
         progress_callback: ProgressCallback,
         request_id: str,
+        task_config: ArticleAcquisitionConfig | None = None,
         keywords_extracted_override: list[str] | None = None,
         articles_processed_override: int | None = None,
     ) -> TimelineGenerationResult:
@@ -1467,6 +1490,7 @@ class TimelineOrchestratorService:
             data_source_preference=effective_data_source,
             request_id=request_id,
             progress_callback=progress_callback,
+            task_config=task_config,
         )
 
         if not all_canonical_event_ids:

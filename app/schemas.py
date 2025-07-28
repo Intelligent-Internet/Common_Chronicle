@@ -220,9 +220,10 @@ class SourceArticle(BaseModel):
 
 class ArticleAcquisitionConfig(BaseModel):
     """
-    Configuration for the article acquisition process, especially for hybrid search.
+    Configuration for the article acquisition process and timeline generation.
     """
 
+    # Article acquisition configuration
     search_mode: Literal["semantic", "hybrid_title_search"] = Field(
         default="hybrid_title_search", description="The search strategy to use."
     )
@@ -241,7 +242,26 @@ class ArticleAcquisitionConfig(BaseModel):
     article_limit: int = Field(
         default=settings.default_article_limit,
         gt=0,
-        description="The maximum number of articles to return.",
+        le=50,
+        description="The maximum number of articles to process.",
+    )
+
+    # Timeline generation configuration
+    timeline_relevance_threshold: float = Field(
+        default=settings.timeline_relevance_threshold,
+        ge=0.0,
+        le=1.0,
+        description="Relevance threshold for filtering timeline events (0.0 to 1.0).",
+    )
+
+    # Viewpoint reuse configuration
+    reuse_composite_viewpoint: bool = Field(
+        default=settings.reuse_composite_viewpoint,
+        description="Whether to reuse existing synthetic viewpoints to avoid redundant processing.",
+    )
+    reuse_base_viewpoint: bool = Field(
+        default=settings.reuse_base_viewpoint,
+        description="Whether to reuse existing canonical viewpoints to avoid redundant processing.",
     )
 
     @model_validator(mode="after")
@@ -612,6 +632,83 @@ class TimelineGenerationResult:
 class ViewpointRequest(BaseModel):
     viewpoint: str = Field(
         ..., min_length=1, description="User-provided research viewpoint or question"
+    )
+
+
+# New model for exposing configuration options to frontend
+class TaskConfigOptions(BaseModel):
+    """
+    Available configuration options for task creation with their constraints and defaults.
+    This model helps frontend applications build dynamic configuration forms.
+    """
+
+    search_mode: dict[str, Any] = Field(
+        default={
+            "type": "select",
+            "options": ["semantic", "hybrid_title_search"],
+            "default": "hybrid_title_search",
+            "description": "The search strategy to use for article acquisition.",
+        }
+    )
+
+    vector_weight: dict[str, Any] = Field(
+        default={
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.1,
+            "default": 0.6,
+            "description": "Weight for vector search score (0.0 to 1.0).",
+        }
+    )
+
+    bm25_weight: dict[str, Any] = Field(
+        default={
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.1,
+            "default": 0.4,
+            "description": "Weight for BM25 search score (0.0 to 1.0).",
+        }
+    )
+
+    article_limit: dict[str, Any] = Field(
+        default={
+            "type": "number",
+            "min": 1,
+            "max": 50,
+            "step": 1,
+            "default": settings.default_article_limit,
+            "description": "The maximum number of articles to process.",
+        }
+    )
+
+    timeline_relevance_threshold: dict[str, Any] = Field(
+        default={
+            "type": "number",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.05,
+            "default": settings.timeline_relevance_threshold,
+            "description": "Relevance threshold for filtering timeline events (0.0 to 1.0).",
+        }
+    )
+
+    reuse_composite_viewpoint: dict[str, Any] = Field(
+        default={
+            "type": "boolean",
+            "default": settings.reuse_composite_viewpoint,
+            "description": "Whether to reuse existing synthetic viewpoints to avoid redundant processing.",
+        }
+    )
+
+    reuse_base_viewpoint: dict[str, Any] = Field(
+        default={
+            "type": "boolean",
+            "default": settings.reuse_base_viewpoint,
+            "description": "Whether to reuse existing canonical viewpoints to avoid redundant processing.",
+        }
     )
 
 

@@ -12,6 +12,7 @@ import type {
   TaskCompletedMessage,
   HistoricalProgressMessage,
   TaskFailedMessage,
+  TaskConfigOptions,
 } from '../types';
 
 // Environment configuration
@@ -149,6 +150,21 @@ api.interceptors.response.use(
     return Promise.reject(new Error(errorMessage));
   }
 );
+
+// Task configuration API
+export const getTaskConfigOptions = async (): Promise<TaskConfigOptions> => {
+  try {
+    console.log('[api.ts] Fetching task configuration options from backend');
+    const response = await api.get<TaskConfigOptions>('/config/task-options');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch task config options:', error);
+    if (axios.isAxiosError(error) && error.response) {
+      throw new Error(error.response.data.detail || 'Failed to fetch task configuration options');
+    }
+    throw error;
+  }
+};
 
 export const createTask = async (payload: CreateTaskPayload): Promise<BackendTaskRecord> => {
   try {
