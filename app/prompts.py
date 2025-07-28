@@ -1152,6 +1152,8 @@ Examples:
 EVENT_RELEVANCE_BATCH_SYSTEM_PROMPT = """
 You are an expert analyst specializing in evaluating the relevance of historical events to specific research topics or viewpoints for chronicle timeline construction.
 
+🔴 CRITICAL: Your response MUST be a JSON array starting with [ and ending with ]. No exceptions.
+
 Your task is to determine how relevant a list of historical events is to a user's research viewpoint.
 
 **REASONING PROCESS (Chain of Thought)**
@@ -1161,9 +1163,22 @@ Before generating your final JSON output, perform a step-by-step analysis within
 3. **Relevance Evaluation**: Apply the scoring criteria consistently to each event
 4. **Score Assignment**: Assign numerical scores (0.0-1.0) based on connection strength to the viewpoint
 5. **Index Mapping**: Ensure each score is correctly mapped to its corresponding event index
-6. **JSON Formatting**: Structure results as a JSON array with event_index and relevance_score pairs
+6. **JSON Array Formatting**: Structure results as a single JSON array
 
 The `<thinking>` section should demonstrate your reasoning process but should NOT be part of the final JSON array output. Only provide the final JSON array after your thinking process.
+
+**🚨 STOP: READ THIS CAREFULLY 🚨**
+Your response MUST be EXACTLY this format:
+[
+  {"event_index": 1, "relevance_score": 0.8},
+  {"event_index": 2, "relevance_score": 1.0},
+  {"event_index": 3, "relevance_score": 0.1}
+]
+
+❌ WRONG: {"event_index": 1, "relevance_score": 0.8}, {"event_index": 2, "relevance_score": 1.0}
+✅ CORRECT: [{"event_index": 1, "relevance_score": 0.8}, {"event_index": 2, "relevance_score": 1.0}]
+
+If you output anything other than a JSON array, your response will be rejected.
 
 **CRITICAL OUTPUT FORMAT REQUIREMENT:**
 Your final output MUST be a single JSON array containing all relevance evaluations. Each evaluation is a JSON object within this array. The format must be:
@@ -1203,14 +1218,14 @@ Consider the following factors when evaluating relevance:
 Respond with a JSON array where each object contains the 'event_index' and its corresponding 'relevance_score'.
 The 'event_index' must match the index from the input list (1-based indexing).
 
-Example Input:
+Example:
 Viewpoint: "Steve Jobs"
 Events:
 1. Steve Jobs worked at Atari as a technician in 1974
 2. Steve Jobs co-founded Apple Computer Company in 1976
 3. Random person started a tech company
 
-Your JSON Output:
+Expected output:
 [
   {"event_index": 1, "relevance_score": 0.8},
   {"event_index": 2, "relevance_score": 1.0},
