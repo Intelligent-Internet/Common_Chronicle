@@ -16,20 +16,15 @@ Key features:
 from __future__ import annotations
 
 import time
-import uuid
 
 import numpy as np
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    Entity,
-    Event,
-    EventEntityAssociation,
-    EventRawEventAssociation,
-    RawEvent,
-    RawEventEntityAssociation,
-)
+from app.db_handlers.entity import EntityDBHandler
+from app.db_handlers.event import EventDBHandler
+from app.db_handlers.event_entity_association import EventEntityAssociationDBHandler
+from app.db_handlers.event_rawevent_association import EventRawEventAssociationDBHandler
+from app.models import Entity, Event, EventRawEventAssociation, RawEvent
 from app.schemas import EventDataForMerger, SourceInfoForMerger
 from app.services.embedding_event_merger import EmbeddingEventMerger
 from app.services.event_merger_service import RawEventInput
@@ -52,6 +47,10 @@ class CanonicalEventService:
             embedding_merger: An instance of EmbeddingEventMerger for computing embeddings.
         """
         self._embedding_merger = embedding_merger
+        self.event_handler = EventDBHandler()
+        self.entity_handler = EntityDBHandler()
+        self.event_raw_event_assoc_handler = EventRawEventAssociationDBHandler()
+        self.event_entity_assoc_handler = EventEntityAssociationDBHandler()
         logger.info("Initialized CanonicalEventService with injected embedding service")
 
     def _create_event_text_representation(
@@ -145,14 +144,12 @@ class CanonicalEventService:
         try:
             current_source_doc_id = current_raw_event.source_document_id
 
-            # Efficiently get all source document IDs for the target event
-            result = await db.execute(
-                select(RawEvent.source_document_id)
-                .join(EventRawEventAssociation)
-                .where(EventRawEventAssociation.event_id == target_event.id)
-                .distinct()
+            # Use handler to get all source document IDs for the target event
+            target_source_doc_ids = (
+                await self.event_handler.get_source_document_ids_for_event(
+                    target_event.id, db=db
+                )
             )
-            target_source_doc_ids = {row[0] for row in result}
 
             if current_source_doc_id in target_source_doc_ids:
                 logger.debug("Same source document detected, using high threshold 0.95")
@@ -191,13 +188,12 @@ class CanonicalEventService:
         Does NOT commit the transaction.
         """
         # Check if association already exists to prevent duplicates
-        existing_assoc = await db.scalar(
-            select(EventRawEventAssociation).where(
-                EventRawEventAssociation.event_id == event.id,
-                EventRawEventAssociation.raw_event_id == raw_event.id,
+        association_exists = (
+            await self.event_raw_event_assoc_handler.check_association_exists(
+                event.id, raw_event.id, db=db
             )
         )
-        if not existing_assoc:
+        if not association_exists:
             association = EventRawEventAssociation(
                 event_id=event.id, raw_event_id=raw_event.id
             )
@@ -221,36 +217,10 @@ class CanonicalEventService:
             f"Processing RawEvent {raw_event.id}: '{raw_event.original_description[:100]}...'"
         )
 
-        # 1. Load entity associations using separate queries to avoid selectinload UUID sorting issues
-
-        # Ensure raw_event.id is properly typed as UUID
-        raw_event_uuid = raw_event.id
-        if isinstance(raw_event_uuid, str):
-            raw_event_uuid = uuid.UUID(raw_event_uuid)
-
-        # First, get the association records
-        assoc_stmt = select(RawEventEntityAssociation).where(
-            RawEventEntityAssociation.raw_event_id == raw_event_uuid
+        # 1. Load entity associations using handler
+        actual_entities = await self.entity_handler.get_entities_for_raw_event(
+            raw_event.id, db=db
         )
-        assoc_result = await db.execute(assoc_stmt)
-        entity_associations = assoc_result.scalars().all()
-
-        # Then, get the entities separately if associations exist
-        actual_entities = []
-        if entity_associations:
-            entity_ids = [assoc.entity_id for assoc in entity_associations]
-            entity_stmt = select(Entity).where(Entity.id.in_(entity_ids))
-            entity_result = await db.execute(entity_stmt)
-            entities_by_id = {
-                entity.id: entity for entity in entity_result.scalars().all()
-            }
-
-            # Match entities back to associations
-            actual_entities = [
-                entities_by_id[assoc.entity_id]
-                for assoc in entity_associations
-                if assoc.entity_id in entities_by_id
-            ]
 
         logger.debug(
             f"Loaded {len(actual_entities)} valid entities for RawEvent {raw_event.id}"
@@ -281,18 +251,15 @@ class CanonicalEventService:
 
         # 6. Associate the entities from the raw event with the canonical event
         if actual_entities:
-            # Use batch insert with conflict resolution to handle duplicates
-            from sqlalchemy.dialects.postgresql import insert as pg_insert
-
             entity_associations_data = [
                 {"event_id": result_event.id, "entity_id": entity.id}
                 for entity in actual_entities
                 if entity is not None and entity.id is not None  # Safety check
             ]
 
-            stmt = pg_insert(EventEntityAssociation).values(entity_associations_data)
-            stmt = stmt.on_conflict_do_nothing(index_elements=["event_id", "entity_id"])
-            await db.execute(stmt)
+            await self.event_entity_assoc_handler.bulk_create_associations(
+                entity_associations_data, db=db
+            )
 
             logger.debug(
                 f"Batch inserted {len(entity_associations_data)} entity associations for Event {result_event.id} with conflict resolution"
@@ -317,28 +284,19 @@ class CanonicalEventService:
         try:
             # Stage 1: Find candidate events using a conservative threshold
             conservative_threshold = 0.80
-            distance_threshold = 1 - conservative_threshold
+            embedding_list = embedding.tolist()
 
-            result = await db.execute(
-                select(Event)
-                .where(
-                    Event.description_vector.cosine_distance(embedding.tolist())
-                    < distance_threshold
-                )
-                .order_by(Event.description_vector.cosine_distance(embedding.tolist()))
-                .limit(5)
+            candidates = await self.event_handler.find_similar_events_by_vector(
+                embedding_list, limit=5, threshold=conservative_threshold, db=db
             )
-            candidates = result.scalars().all()
 
             if not candidates:
                 return None
 
             # Stage 2: Apply dynamic threshold to each candidate
             for candidate_event in candidates:
-                actual_distance = await db.scalar(
-                    select(
-                        Event.description_vector.cosine_distance(embedding.tolist())
-                    ).where(Event.id == candidate_event.id)
+                actual_distance = await self.event_handler.calculate_vector_distance(
+                    candidate_event.id, embedding_list, db=db
                 )
                 actual_similarity = 1 - (actual_distance or 1)
 

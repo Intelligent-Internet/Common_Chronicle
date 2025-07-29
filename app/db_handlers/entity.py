@@ -4,17 +4,18 @@ import uuid
 from typing import Any
 
 from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
 from app.db_handlers.base import BaseDBHandler, check_local_db
 from app.models.entity import Entity
+from app.models.raw_event_entity_association import RawEventEntityAssociation
 from app.models.source_document import SourceDocument
 from app.utils.logger import setup_logger
 
-logger = setup_logger(__name__)
+logger = setup_logger("db_handlers.entity")
 
 
 class EntityDBHandler(BaseDBHandler[Entity]):
@@ -48,6 +49,40 @@ class EntityDBHandler(BaseDBHandler[Entity]):
             options=[selectinload(Entity.source_documents)],
             db=db,
         )
+
+    @check_local_db
+    async def get_entities_for_raw_event(
+        self, raw_event_id: uuid.UUID, *, db: AsyncSession = None
+    ) -> list[Entity]:
+        """Get all entities associated with a raw event."""
+        try:
+            # First, get the association records
+            assoc_stmt = select(RawEventEntityAssociation).where(
+                RawEventEntityAssociation.raw_event_id == raw_event_id
+            )
+            assoc_result = await db.execute(assoc_stmt)
+            entity_associations = assoc_result.scalars().all()
+
+            # Then, get the entities separately if associations exist
+            if not entity_associations:
+                return []
+
+            entity_ids = [assoc.entity_id for assoc in entity_associations]
+            entity_stmt = select(Entity).where(Entity.id.in_(entity_ids))
+            entity_result = await db.execute(entity_stmt)
+            entities_by_id = {
+                entity.id: entity for entity in entity_result.scalars().all()
+            }
+
+            # Match entities back to associations
+            return [
+                entities_by_id[assoc.entity_id]
+                for assoc in entity_associations
+                if assoc.entity_id in entities_by_id
+            ]
+        except SQLAlchemyError as e:
+            logger.error(f"Error retrieving entities for raw_event {raw_event_id}: {e}")
+            raise
 
     @check_local_db
     async def get_entity_by_source_attributes(

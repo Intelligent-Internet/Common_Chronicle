@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import uuid
 from functools import wraps
 from typing import Any, Generic, TypeVar
 
@@ -9,18 +8,10 @@ from asyncpg.exceptions import ConnectionDoesNotExistError
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError, IntegrityError, SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import tuple_
 
 from app.db import AppAsyncSessionLocal
 from app.models.base import Base
-from app.models.event import Event
-from app.models.event_entity_association import EventEntityAssociation
-from app.models.event_raw_event_association import EventRawEventAssociation
-from app.models.raw_event import RawEvent
-from app.models.user import User
-from app.models.viewpoint_event_association import ViewpointEventAssociation
-from app.models.viewpoint_progress_step import ViewpointProgressStep
 from app.utils.logger import setup_logger
 
 logger = setup_logger("db_handlers")
@@ -333,94 +324,3 @@ class BaseDBHandler(Generic[ModelType]):
                 exc_info=True,
             )
             raise
-
-
-class EventDBHandler(BaseDBHandler[Event]):
-    def __init__(self):
-        super().__init__(Event)
-
-    @check_local_db
-    async def get_events_by_ids(
-        self, event_ids: list[uuid.UUID], *, db: AsyncSession = None
-    ) -> list[Event]:
-        """Get multiple events by their IDs."""
-        if not event_ids:
-            return []
-
-        try:
-            stmt = select(Event).where(Event.id.in_(event_ids))
-            result = await db.execute(stmt)
-            return result.scalars().all()
-        except SQLAlchemyError as e:
-            logger.error(f"Error retrieving events by IDs: {e}")
-            raise
-
-    @check_local_db
-    async def get_events_by_ids_with_associations(
-        self, event_ids: list[uuid.UUID], *, db: AsyncSession = None
-    ) -> list[Event]:
-        """Get multiple events by their IDs with all associations eagerly loaded."""
-        if not event_ids:
-            return []
-
-        try:
-            stmt = (
-                select(Event)
-                .options(
-                    selectinload(Event.entity_associations).selectinload(
-                        EventEntityAssociation.entity
-                    ),
-                    selectinload(Event.raw_event_association_links)
-                    .selectinload(EventRawEventAssociation.raw_event)
-                    .selectinload(RawEvent.source_document),
-                )
-                .where(Event.id.in_(event_ids))
-            )
-            result = await db.execute(stmt)
-            return result.scalars().all()
-        except SQLAlchemyError as e:
-            logger.error(f"Error retrieving events with associations by IDs: {e}")
-            raise
-
-
-class UserDBHandler(BaseDBHandler[User]):
-    def __init__(self):
-        super().__init__(User)
-
-    @check_local_db
-    async def get_user_by_username(
-        self, username: str, *, db: AsyncSession = None
-    ) -> User | None:
-        """Get a user by username."""
-        try:
-            stmt = select(User).filter(User.username == username)
-            result = await db.execute(stmt)
-            return result.scalar_one_or_none()
-        except SQLAlchemyError as e:
-            logger.error(f"Error retrieving user by username '{username}': {e}")
-            raise
-
-
-class RawEventDBHandler(BaseDBHandler[RawEvent]):
-    def __init__(self):
-        super().__init__(RawEvent)
-
-
-class ViewpointProgressStepDBHandler(BaseDBHandler[ViewpointProgressStep]):
-    def __init__(self):
-        super().__init__(ViewpointProgressStep)
-
-
-class EventEntityAssociationDBHandler(BaseDBHandler[EventEntityAssociation]):
-    def __init__(self):
-        super().__init__(EventEntityAssociation)
-
-
-class EventRawEventAssociationDBHandler(BaseDBHandler[EventRawEventAssociation]):
-    def __init__(self):
-        super().__init__(EventRawEventAssociation)
-
-
-class ViewpointEventAssociationDBHandler(BaseDBHandler[ViewpointEventAssociation]):
-    def __init__(self):
-        super().__init__(ViewpointEventAssociation)

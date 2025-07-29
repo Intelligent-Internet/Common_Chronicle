@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.db_handlers.base import UserDBHandler
+from app.db_handlers.user import UserDBHandler
 from app.dependencies.auth import get_current_user
 from app.models import User
 from app.schemas import MessageResponse, Token, UserInfo, UserLogin, UserRegister

@@ -11,7 +11,7 @@ from app.models.source_document import SourceDocument
 from app.services.entity_service import AsyncEntityService
 from app.utils.logger import setup_logger
 
-logger = setup_logger("source_document_db_handler")
+logger = setup_logger("db_handlers.source_document")
 
 
 class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
@@ -19,7 +19,7 @@ class SourceDocumentDBHandler(BaseDBHandler[SourceDocument]):
         super().__init__(SourceDocument)
 
     @check_local_db
-    async def get_or_create(
+    async def get_or_create_source_document(
         self,
         article_data: dict[str, Any],
         log_prefix: str = "",

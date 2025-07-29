@@ -10,12 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
-from app.db_handlers.base import (
-    BaseDBHandler,
-    ViewpointProgressStepDBHandler,
-    check_local_db,
-)
+from app.db_handlers.base import BaseDBHandler, check_local_db
 from app.db_handlers.viewpoint import ViewpointDBHandler
+from app.db_handlers.viewpoint_progress import ViewpointProgressStepDBHandler
 from app.models import Event, Viewpoint, ViewpointEventAssociation
 
 # Assuming your SQLAlchemy models inherit from a declarative base located in app.models.base
@@ -24,7 +21,7 @@ from app.models.task import Task
 from app.models.viewpoint_progress_step import ViewpointProgressStep
 from app.utils.logger import setup_logger
 
-logger = setup_logger("task_db_handler")
+logger = setup_logger("db_handlers.task")
 
 
 class TaskDBHandler(BaseDBHandler[Task]):
@@ -72,23 +69,6 @@ class TaskDBHandler(BaseDBHandler[Task]):
         except Exception as e:
             # The caller should handle the rollback.
             logger.error(f"Error preparing task {task_id} for status update: {e}")
-            raise
-
-    @check_local_db
-    async def get_pending_tasks(
-        self, limit: int = 10, *, db: AsyncSession = None
-    ) -> list[Task]:
-        try:
-            stmt = (
-                select(Task)
-                .where(Task.status == "pending")
-                .order_by(Task.created_at)
-                .limit(limit)
-            )
-            result = await db.execute(stmt)
-            return result.scalars().all()
-        except Exception as e:
-            logger.error(f"Error retrieving pending tasks: {e}")
             raise
 
     @check_local_db

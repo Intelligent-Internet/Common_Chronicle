@@ -14,10 +14,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.config import settings
 
@@ -29,8 +26,10 @@ from app.db_handlers import (
     BaseDBHandler,
     EntityDBHandler,
     EventDBHandler,
+    RawEventDBHandler,
     SourceDocumentDBHandler,
     ViewpointDBHandler,
+    ViewpointEventAssociationDBHandler,
     check_local_db,
 )
 from app.models import (
@@ -38,7 +37,6 @@ from app.models import (
     EventRawEventAssociation,
     RawEvent,
     Viewpoint,
-    ViewpointEventAssociation,
 )
 from app.models.raw_event_entity_association import RawEventEntityAssociation
 from app.models.source_document import SourceDocument
@@ -62,11 +60,11 @@ class ViewpointService:
     def __init__(self):
         self.viewpoint_db_handler = ViewpointDBHandler()
         self.event_db_handler = EventDBHandler()
-        self.raw_event_db_handler = BaseDBHandler(RawEvent)
+        self.raw_event_db_handler = RawEventDBHandler()
         self.event_entity_assoc_handler = BaseDBHandler(EventEntityAssociation)
         self.raw_event_entity_assoc_handler = BaseDBHandler(RawEventEntityAssociation)
         self.event_source_assoc_handler = BaseDBHandler(EventRawEventAssociation)
-        self.viewpoint_event_assoc_handler = BaseDBHandler(ViewpointEventAssociation)
+        self.viewpoint_event_assoc_handler = ViewpointEventAssociationDBHandler()
         self.entity_db_handler = EntityDBHandler()
         self.entity_service = AsyncEntityService()
         # --- Service Instantiation with Dependency Injection ---
@@ -147,16 +145,10 @@ class ViewpointService:
             ).hexdigest()
 
             # b. Check if same RawEvent already exists (database level check)
-            query = select(RawEvent).options(
-                selectinload(RawEvent.entity_associations).selectinload(
-                    RawEventEntityAssociation.entity
-                )
-            )
-            existing_raw_event = await self.raw_event_db_handler.get_by_attributes(
-                db=db,
-                query=query,
+            existing_raw_event = await self.raw_event_db_handler.get_by_attributes_with_entity_associations(
                 source_document_id=source_document.id,
                 deduplication_signature=deduplication_signature,
+                db=db,
             )
 
             raw_event_obj = None
@@ -272,13 +264,9 @@ class ViewpointService:
                     unique_viewpoint_event_pairs.add(vp_event_pair)
 
             if viewpoint_event_associations_to_create:
-                stmt = pg_insert(ViewpointEventAssociation).values(
-                    viewpoint_event_associations_to_create
+                await self.viewpoint_event_assoc_handler.bulk_create_associations(
+                    viewpoint_event_associations_to_create, db=db
                 )
-                stmt = stmt.on_conflict_do_nothing(
-                    index_elements=["viewpoint_id", "event_id"]
-                )
-                await db.execute(stmt)
                 logger.debug(
                     f"{log_prefix}Bulk inserted {len(viewpoint_event_associations_to_create)} viewpoint-event associations with ON CONFLICT"
                 )
@@ -313,7 +301,7 @@ class ViewpointService:
         # ===== Preparation Phase =====
         # 1. Get or create source document
         source_document_handler = SourceDocumentDBHandler()
-        source_document = await source_document_handler.get_or_create(
+        source_document = await source_document_handler.get_or_create_source_document(
             article_data=article.model_dump(), log_prefix=log_prefix, db=db
         )
 
