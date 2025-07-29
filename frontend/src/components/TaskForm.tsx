@@ -31,7 +31,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, isSubmitting, error }) =>
     timeline_relevance_threshold: 0.6,
     reuse_composite_viewpoint: true,
     reuse_base_viewpoint: true,
-    search_mode: 'hybrid_title_search' as const,
+    search_mode: 'hybrid_title_search' as 'semantic' | 'hybrid_title_search',
     vector_weight: 0.6,
     bm25_weight: 0.4,
   });
