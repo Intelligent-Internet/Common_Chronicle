@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "common-chronicle": {
+      "command": "/path/to/your/Common_Chronicle/.venv/bin/python",
+      "args": ["/path/to/your/Common_Chronicle/main_stdio.py"],
+      "cwd": "/path/to/your/Common_Chronicle",
+      "env": {
+        "PYTHONPATH": "/path/to/your/Common_Chronicle"
+      }
+    }
+  }
+}

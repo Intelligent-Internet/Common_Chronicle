@@ -183,3 +183,4 @@ docs/
 *copy*
 .pre-commit-config.yaml
 logs/
+mcp_config.json

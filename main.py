@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Main application entry point for Common Chronicle timeline generation service.
 
@@ -19,7 +21,6 @@ import uvicorn
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import DBAPIError, OperationalError
 
 from app.api.auth import router as auth_router
 from app.api.http import router as http_router
@@ -28,6 +29,7 @@ from app.api.ws import router as ws_router
 from app.config import settings
 from app.db import check_db_connection, init_db
 from app.services.llm_service import close_all_llm_clients, initialize_all_llm_clients
+from app.services.mcp.mcp_server import mcp_app
 from app.utils.logger import setup_logger
 
 logger = setup_logger("main")
@@ -35,57 +37,38 @@ logger = setup_logger("main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """
+    Merge the lifecycle management of the main application and the MCP server.
+    """
     logger.info("Application startup...")
-    db_ready = False
     try:
         initialize_all_llm_clients()
-        logger.info("LLM client initialized attempt complete.")
+        logger.info("LLM client initialized.")
 
-        logger.info("Attempting to initialize database...")
+        logger.info("Initializing database...")
         await init_db()
-        logger.info("Database initialization attempt complete.")
+        logger.info("Database initialization complete.")
 
-        logger.info("Attempting to check database connectivity...")
+        logger.info("Checking database connectivity...")
         if await check_db_connection():
             logger.info("Database connectivity confirmed.")
-            db_ready = True
         else:
-            logger.critical(
-                "Database connectivity check unexpectedly returned False. Forcing application shutdown."
-            )
-            raise SystemExit(
-                "Application startup failed due to an unexpected database connectivity check result."
-            )
+            logger.critical("Database connectivity check failed.")
+            raise SystemExit("Database connection failed.")
 
-    except (OSError, DBAPIError, OperationalError, RuntimeError) as e:
-        logger.critical(
-            f"Critical database issue during application startup: {type(e).__name__} - {str(e)}",
-            exc_info=True,
-        )
-        logger.critical(settings.db_unavailable_hint)
-        raise SystemExit(
-            f"Application startup failed due to database connection issues: {settings.db_unavailable_hint}"
-        ) from e
     except Exception as e:
-        logger.critical(
-            f"Unexpected error during application startup: {type(e).__name__} - {str(e)}",
-            exc_info=True,
-        )
-        raise SystemExit(
-            "Application startup failed due to an unexpected error."
-        ) from e
+        logger.critical(f"Startup error: {e}")
+        raise SystemExit(f"Startup failed: {e}") from e
 
-    if not db_ready:
-        logger.critical(
-            "Database was not marked as ready after startup sequence. This should not happen. Exiting."
-        )
-        raise SystemExit("Database not ready after startup due to an unknown reason.")
+    logger.info("Timeline Project API startup successful.")
 
-    logger.info("Application startup successful. Database is ready.")
-    yield
-    logger.info("Application shutdown...")
+    # Start MCP server
+    async with mcp_app.lifespan(app):
+        yield
+
+    logger.info("Timeline Project API shutdown...")
     await close_all_llm_clients()
-    logger.info("LLM client closed.")
+    logger.info("Shutdown complete.")
 
 
 def create_app():
@@ -126,6 +109,11 @@ def create_app():
         allow_methods=settings.cors_allow_methods,
         allow_headers=settings.cors_allow_headers,
     )
+
+    # Mount MCP server (based on best practices)
+    app.mount("/mcp", mcp_app)
+    logger.info("MCP server mounted at /mcp")
+
     return app
 
 
@@ -133,12 +121,20 @@ app = create_app()
 
 
 def main():
-    uvicorn.run(
-        "main:app",
-        host=settings.server_host,
-        port=settings.server_port,
-        workers=settings.server_workers,
-    )
+    """
+    Start FastAPI application, MCP server is mounted at /mcp path
+    """
+    port = int(settings.server_port)
+    host = settings.server_host
+
+    logger.info(f"Starting Common Chronicle API server on {host}:{port}")
+    logger.info("MCP server is mounted at /mcp and will be available via HTTP")
+
+    try:
+        uvicorn.run(app, host=host, port=port, workers=settings.server_workers)
+    except Exception as e:
+        logger.error(f"Error starting server: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

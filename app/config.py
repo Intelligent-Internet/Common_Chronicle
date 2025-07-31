@@ -339,6 +339,10 @@ class Settings(BaseSettings):
         default=8080, alias="SERVER_PORT", description="Server port number"
     )
 
+    mcp_port: int = Field(
+        default=8081, alias="MCP_SERVER_PORT", description="API MCP port number"
+    )
+
     server_workers: int = Field(
         default=1, alias="SERVER_WORKERS", description="Number of uvicorn workers"
     )
