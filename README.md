@@ -131,28 +131,27 @@ Want to run Common Chronicle locally? We've got you covered!
 
 **👉 [Complete Setup Guide](./.github/CONTRIBUTING.md#development-environment-setup)** - Detailed installation instructions for developers
 
-**Quick Start:**
+### 🚀 Quick Start
+
 ```bash
 git clone https://github.com/Intelligent-Internet/Common_Chronicle.git
 cd Common_Chronicle
-# Follow the setup guide for full instructions
+uv sync --group dev
 ```
+
+For detailed setup instructions, dependency management, and alternative installation methods, please refer to our **[Contributing Guide](./.github/CONTRIBUTING.md)**.
 
 ### 🚀 A2A Protocol Support
 
 Common Chronicle also supports the A2A (Agent-to-Agent) protocol, allowing it to integrate seamlessly with other AI agents and systems.
 
-**Installation:**
+**Quick Start:**
 ```bash
-pip install -r requirements_a2a.txt
+uv add ".[a2a]"  # Install A2A support
+uv run python -m app.a2a  # Run A2A service on port 11001
 ```
 
-**Running as A2A Service:**
-```bash
-python -m app.a2a
-```
-
-The A2A service will start on port 11001 and provide timeline generation capabilities to other agents in the network.
+For detailed A2A setup and configuration, see our **[Contributing Guide](./.github/CONTRIBUTING.md)**.
 
 ## 📄 License & Credits
 

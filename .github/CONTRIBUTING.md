@@ -104,6 +104,23 @@ This project utilizes a **hybrid task processing model** that combines WebSocket
 - Node.js 18+
 - PostgreSQL 12+
 - Git
+- **uv** (recommended) or pip
+
+### About uv
+
+[uv](https://github.com/astral-sh/uv) is a fast Python package installer and resolver, written in Rust. It's significantly faster than pip and provides better dependency resolution. We recommend using uv for development.
+
+**Install uv:**
+```bash
+# On macOS and Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# On Windows
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or using pip
+pip install uv
+```
 
 ### Backend Setup
 ```bash
@@ -112,13 +129,22 @@ git clone https://github.com/Intelligent-Internet/Common_Chronicle.git
 cd Common_Chronicle
 
 # Set up Python environment
-python -m venv .venv
+# Using uv (recommended)
+uv venv
 source .venv/bin/activate
 # Or on Windows: .venv\Scripts\activate
 
+# Or using traditional venv
+# python -m venv .venv
+# source .venv/bin/activate
+# Or on Windows: .venv\Scripts\activate
+
 # Install dependencies
-pip install -r requirements.txt
-pip install -r requirements_dev.txt
+# Using uv (recommended)
+uv sync --group dev
+
+# Or using pip
+pip install -e ".[all-dev]"
 
 # Set up environment variables
 cp config.env.example .env

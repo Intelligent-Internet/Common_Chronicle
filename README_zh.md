@@ -129,28 +129,27 @@ Common Chronicle 为各类需要高效学习或研究的用户而设计：
 
 **👉 [完整设置指南](./.github/CONTRIBUTING.md#development-environment-setup)** - 为开发者提供的详细安装说明
 
-**快速开始：**
+### 🚀 快速开始
+
 ```bash
 git clone https://github.com/Intelligent-Internet/Common_Chronicle.git
 cd Common_Chronicle
-# 请参考上面的设置指南获取完整说明
+uv sync --group dev
 ```
+
+有关详细设置说明、依赖管理和替代安装方法，请参考我们的 **[贡献指南](./.github/CONTRIBUTING.md)**。
 
 ### 🚀 A2A 协议支持
 
 Common Chronicle 还支持 A2A（Agent-to-Agent）协议，使其能够与其他 AI 代理和系统无缝集成。
 
-**安装：**
+**快速开始：**
 ```bash
-pip install -r requirements_a2a.txt
+uv add ".[a2a]"  # 安装 A2A 支持
+uv run python -m app.a2a  # 在端口 11001 上运行 A2A 服务
 ```
 
-**作为 A2A 服务运行：**
-```bash
-python -m app.a2a
-```
-
-A2A 服务将在端口 11001 上启动，为网络中的其他代理提供时间线生成能力。
+有关详细 A2A 设置和配置，请参阅我们的 **[贡献指南](./.github/CONTRIBUTING.md)**。
 
 ## 📄 许可证与致谢
 
