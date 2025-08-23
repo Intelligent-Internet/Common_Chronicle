@@ -184,3 +184,4 @@ docs/
 .pre-commit-config.yaml
 logs/
 mcp_config.json
+*.sh

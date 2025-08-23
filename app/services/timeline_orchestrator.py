@@ -51,6 +51,7 @@ from app.services.llm_extractor import (
     score_articles_relevance,
 )
 from app.services.process_callback import ProgressCallback
+from app.services.progress import A2AProgressCallback, DualProgressCallback
 from app.services.viewpoint_processor import extract_keywords_from_viewpoint
 from app.services.viewpoint_service import ViewpointService
 from app.utils.logger import setup_logger
@@ -75,12 +76,15 @@ class TimelineOrchestratorService:
         self.viewpoint_handler = ViewpointDBHandler()
         self.task_db_handler = TaskDBHandler()
 
+        self.a2a_event_queue = None
+
     async def run_timeline_generation_task(
         self,
         task: Task,
         request_id: str,
         websocket_callback: Callable | None = None,
-    ):
+        a2a_context=None,
+    ) -> TimelineGenerationResult:
         """Execute timeline generation as background task with lifecycle management."""
         task_id = task.id
         start_time = datetime.now(UTC)
@@ -99,17 +103,24 @@ class TimelineOrchestratorService:
                     status="failed",
                     notes=f"Configuration error: {str(e)}",
                 )
-                return  # Early termination on configuration errors
+                return TimelineGenerationResult(
+                    events=[]
+                )  # Early termination on configuration errors
 
             # Stage 2: Progress tracking system initialization
-            # Set up dual callback system for database and WebSocket updates
+            # Set up dual callback system for database and WebSocket/A2A updates
             db_progress_callback = functools.partial(
                 self._save_task_progress_to_db, task_id
             )
             callbacks = [db_progress_callback]
-            if websocket_callback:
-                callbacks.append(websocket_callback)
-            progress_callback = ProgressCallback(callbacks)
+
+            # Create dual channel progress callback
+            progress_callback = self._create_dual_progress_callback(
+                websocket_callback=websocket_callback,
+                a2a_context=a2a_context,
+                task_id=str(task.id),
+                request_id=request_id,
+            )
 
             logger.info(
                 f"[BG Task {task_id}] Starting background timeline generation for task type: {task.task_type}"
@@ -224,6 +235,8 @@ class TimelineOrchestratorService:
                     ).total_seconds(),
                     notes="Background processing completed successfully",
                 )
+
+                # Do not send A2A final status here; executor will send result artifact then final status
             else:
                 # Handle case where no events were generated despite successful processing
                 logger.warning(
@@ -237,6 +250,8 @@ class TimelineOrchestratorService:
                     ).total_seconds(),
                     notes="Timeline generation resulted in 0 events.",
                 )
+
+                # Do not send A2A final error status here; executor will handle completion/failure signaling
 
         except Exception as e:
             # Comprehensive error handling and recovery
@@ -256,6 +271,20 @@ class TimelineOrchestratorService:
                 notes=f"Critical background task error: {str(e)[:500]}",
                 processing_duration=duration,
             )
+
+            # Do not send A2A final error status here; executor will handle completion/failure signaling
+
+            # Return empty result on error
+            return TimelineGenerationResult(events=[])
+
+        # Ensure we always return a result
+        if generation_result is None:
+            logger.warning(
+                f"[BG Task {task_id}] No generation result, returning empty result"
+            )
+            return TimelineGenerationResult(events=[])
+
+        return generation_result
 
     async def _save_task_progress_to_db(
         self,
@@ -1426,6 +1455,34 @@ class TimelineOrchestratorService:
                 logger.info(
                     f"{log_prefix}Reusing existing viewpoint {viewpoint_id} with {len(existing_events)} events."
                 )
+
+                # Send progress notifications for existing viewpoint reuse
+                if progress_callback:
+                    try:
+                        await progress_callback.report(
+                            f"Found existing viewpoint with {len(existing_events)} events",
+                            "viewpoint_reuse",
+                            {
+                                "viewpoint_id": str(viewpoint_id),
+                                "events_count": len(existing_events),
+                            },
+                            request_id,
+                        )
+
+                        await progress_callback.report(
+                            "Timeline generation completed by reusing existing viewpoint",
+                            "viewpoint_reuse_complete",
+                            {
+                                "viewpoint_id": str(viewpoint_id),
+                                "events_count": len(existing_events),
+                            },
+                            request_id,
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to send progress notifications for viewpoint reuse: {e}"
+                        )
+
                 return TimelineGenerationResult(
                     events=existing_events,
                     viewpoint_id=viewpoint_id,
@@ -1724,3 +1781,66 @@ class TimelineOrchestratorService:
             )
 
         return basic_source_article
+
+    def set_a2a_event_queue(self, event_queue):
+        """Set A2A event queue (called by A2A server)"""
+        logger.info(f"Setting A2A event queue: {event_queue is not None}")
+        if event_queue:
+            logger.info(f"Event queue type: {type(event_queue)}")
+        self.a2a_event_queue = event_queue
+
+    def _create_dual_progress_callback(
+        self,
+        websocket_callback: Callable | None,
+        a2a_context,
+        task_id: str,
+        request_id: str,
+    ) -> DualProgressCallback:
+        """Create dual channel progress callback instance"""
+
+        # Add debug logs
+        logger.info(f"Creating dual progress callback for task {task_id}")
+        logger.info(f"websocket_callback: {websocket_callback is not None}")
+        logger.info(f"a2a_context: {a2a_context is not None}")
+        logger.info(f"a2a_event_queue: {self.a2a_event_queue is not None}")
+
+        if a2a_context:
+            logger.info(f"a2a_context type: {type(a2a_context)}")
+            logger.info(f"a2a_context attributes: {dir(a2a_context)}")
+            if hasattr(a2a_context, "context_id"):
+                logger.info(f"a2a_context.context_id: {a2a_context.context_id}")
+
+        # Determine A2A related parameters
+        a2a_callback = None
+
+        if a2a_context and self.a2a_event_queue:
+            try:
+                # Create A2A progress callback
+                a2a_callback = A2AProgressCallback(
+                    event_queue=self.a2a_event_queue,
+                    task_id=a2a_context.task_id,
+                    context_id=a2a_context.context_id,
+                )
+                logger.info(f"Created A2A progress callback for task {task_id}")
+            except Exception as e:
+                logger.warning(f"Failed to create A2A progress callback: {e}")
+                a2a_callback = None
+        else:
+            if not a2a_context:
+                logger.warning(f"No a2a_context provided for task {task_id}")
+            if not self.a2a_event_queue:
+                logger.warning(f"No a2a_event_queue set for task {task_id}")
+
+        # Create dual channel callback
+        dual_callback = DualProgressCallback(
+            websocket_callback=websocket_callback,
+            a2a_callback=a2a_callback,
+            a2a_event_queue=self.a2a_event_queue,  # Pass A2A event queue
+            a2a_context=a2a_context,  # Pass A2A context
+            request_id=request_id,
+        )
+
+        logger.info(
+            f"Created dual progress callback with channels: {dual_callback.get_enabled_channels()}"
+        )
+        return dual_callback

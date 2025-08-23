@@ -136,6 +136,22 @@ cd Common_Chronicle
 # 请参考上面的设置指南获取完整说明
 ```
 
+### 🚀 A2A 协议支持
+
+Common Chronicle 还支持 A2A（Agent-to-Agent）协议，使其能够与其他 AI 代理和系统无缝集成。
+
+**安装：**
+```bash
+pip install -r requirements_a2a.txt
+```
+
+**作为 A2A 服务运行：**
+```bash
+python -m app.a2a
+```
+
+A2A 服务将在端口 11001 上启动，为网络中的其他代理提供时间线生成能力。
+
 ## 📄 许可证与致谢
 
 **Apache License 2.0 许可证** - 可免费用于学术、教育、商业和个人用途。

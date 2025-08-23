@@ -138,6 +138,22 @@ cd Common_Chronicle
 # Follow the setup guide for full instructions
 ```
 
+### 🚀 A2A Protocol Support
+
+Common Chronicle also supports the A2A (Agent-to-Agent) protocol, allowing it to integrate seamlessly with other AI agents and systems.
+
+**Installation:**
+```bash
+pip install -r requirements_a2a.txt
+```
+
+**Running as A2A Service:**
+```bash
+python -m app.a2a
+```
+
+The A2A service will start on port 11001 and provide timeline generation capabilities to other agents in the network.
+
 ## 📄 License & Credits
 
 **Apache License 2.0** - Free for academic, educational, commercial, and personal use.
