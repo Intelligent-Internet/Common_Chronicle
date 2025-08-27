@@ -1,10 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import type { ReactNode } from 'react';
-import { AuthContext } from './auth';
-import type { AuthContextType, User } from './auth';
 import { loginUser, registerUser, getCurrentUser } from '../services/api';
 
-// Auth provider component
+export interface User {
+  id: string;
+  username: string;
+  created_at: string;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  checkAuthStatus: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
 interface AuthProviderProps {
   children: ReactNode;
 }
@@ -16,7 +40,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isLoggedIn = !!user && !!token;
 
-  // Check authentication status on app startup
   const checkAuthStatus = async () => {
     setIsLoading(true);
     try {
@@ -78,25 +101,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Register function
   const register = async (username: string, password: string) => {
     try {
       const result = await registerUser(username, password);
-      return result;
+      if (result.success) {
+        return { success: true };
+      } else {
+        return { success: false, error: result.error };
+      }
     } catch (error) {
       console.error('Registration error:', error);
       return { success: false, error: 'Network error or server unavailable' };
     }
   };
 
-  // Logout function
   const logout = () => {
     localStorage.removeItem('authToken');
     setUser(null);
     setToken(null);
   };
 
-  // Check auth status on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);

@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import { getCheckboxStateFromString, getDataSourcePreferenceString } from '../utils/timelineUtils';
 import { getTaskConfigOptions } from '../services/api';
-import { useAuth } from '../contexts/auth';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TaskFormProps {
   onSubmit: (formData: TaskFormData) => void;

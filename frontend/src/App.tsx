@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/auth';
+import { useAuth } from './contexts/AuthContext';
 import NewTaskPage from './pages/NewTaskPage';
 import PublicTimelinesPage from './pages/PublicTimelinesPage';
 import TaskPage from './pages/TaskPage';

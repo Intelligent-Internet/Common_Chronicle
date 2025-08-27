@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/auth';
+import { useAuth } from '../../contexts/AuthContext';
 import ContentCard from '../ContentCard';
 import WavyLine from '../WavyLine';
 
