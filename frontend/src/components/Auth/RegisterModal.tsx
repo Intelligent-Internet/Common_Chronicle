@@ -98,7 +98,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({ isOpen, onClose, onSwitch
               Join the Order
             </h2>
             <div className="mt-4 max-w-xs mx-auto">
-              <WavyLine className="text-pewter dark:text-mist" />
+              <WavyLine direction="horizontal" className="text-pewter dark:text-mist" />
             </div>
           </div>
 

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import type { TimelineEvent, EventSourceInfo } from '../types';
 import ContentCard from './ContentCard';
 import InkBlotButton from './InkBlotButton';
-import VerticalWavyLine from './VerticalWavyLine';
+import WavyLine from './WavyLine';
 import SourceTypeIcon from './SourceTypeIcon';
 import {
   formatEventDate,
@@ -234,7 +234,8 @@ const TimelineDisplay: React.FC<TimelineDisplayProps> = ({
         <div className="w-full relative pl-[18rem]" ref={timelineContentRef}>
           {/* The Time Weave - organic timeline spine, now using the performant component */}
           <div className="absolute left-24 top-0 h-full w-8 pointer-events-none">
-            <VerticalWavyLine
+            <WavyLine
+              direction="vertical"
               height={timelineHeight}
               amplitude={2}
               segments={100}

@@ -64,7 +64,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSwitchToRegi
               Scholar Login
             </h2>
             <div className="mt-4 max-w-xs mx-auto">
-              <WavyLine className="text-pewter dark:text-mist" />
+              <WavyLine direction="horizontal" className="text-pewter dark:text-mist" />
             </div>
           </div>
 

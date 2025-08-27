@@ -99,7 +99,7 @@ const NewTaskPage: React.FC = () => {
       </div>
 
       <div className="max-w-md mx-auto mb-6">
-        <WavyLine className="text-pewter dark:text-mist" />
+        <WavyLine direction="horizontal" className="text-pewter dark:text-mist" />
       </div>
 
       <button
@@ -125,7 +125,7 @@ const NewTaskPage: React.FC = () => {
             Define the subject of your historical inquiry to generate a timeline.
           </p>
           <div className="mt-6 max-w-md mx-auto">
-            <WavyLine className="text-pewter dark:text-mist" />
+            <WavyLine direction="horizontal" className="text-pewter dark:text-mist" />
           </div>
         </div>
 

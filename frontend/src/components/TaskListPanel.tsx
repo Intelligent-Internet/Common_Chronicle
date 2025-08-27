@@ -136,7 +136,7 @@ const TaskListPanel: React.FC<TaskListPanelProps> = ({
 
         {/* Decorative wavy line separator */}
         <div className="mb-6">
-          <WavyLine className="text-pewter dark:text-mist" />
+          <WavyLine direction="horizontal" className="text-pewter dark:text-mist" />
         </div>
 
         {isLoading &&

@@ -150,7 +150,10 @@ const Header: React.FC<HeaderProps> = ({
       {/* Enhanced wavy line with gradient blur effect */}
       <div className="relative">
         <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/30 to-transparent dark:from-charcoal/60 dark:via-charcoal/30 h-8 blur-sm"></div>
-        <WavyLine className="text-pewter/70 dark:text-slate/70 relative z-10" />
+        <WavyLine
+          direction="horizontal"
+          className="text-pewter/70 dark:text-slate/70 relative z-10"
+        />
         <div className="absolute inset-x-0 bottom-0 h-4 bg-gradient-to-b from-mist/20 to-transparent dark:from-slate/20 blur-md"></div>
       </div>
     </header>

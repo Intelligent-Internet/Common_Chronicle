@@ -734,7 +734,7 @@ function TaskPage() {
         <div className="relative px-8 pb-8">
           <div className="pt-12 text-center">
             <div className="flex justify-center mb-4">
-              <WavyLine className="w-24 text-parchment-400" />
+              <WavyLine direction="horizontal" className="w-24 text-parchment-400" />
             </div>
             <p className="text-sm text-scholar-500 italic">
               Chronicle Archive - Digital Manuscript System
